@@ -18,10 +18,11 @@
  * the License.
  *
  */
-'use strict';
+//'use strict';
 
 angular.module('adminNg.services')
-.factory('RestServiceMonitor', ['$http', '$location', 'Storage', function($http, $location, Storage) {
+.factory('RestServiceMonitor', ['$http', '$location', 'Storage', 'VersionResource',
+  function($http, $location, Storage, VersionResource) {
   var Monitoring = {};
   var services = {
     service: {},
@@ -36,6 +37,7 @@ angular.module('adminNg.services')
   var OK = 'OK';
   var SERVICES_FRAGMENT = '/systems/services';
   var SERVICE_NAME_ATTRIBUTE = 'service-name';
+  var NEW_VERSION_NAME = 'New version';
 
   Monitoring.run = function() {
     //Clear existing data
@@ -45,6 +47,7 @@ angular.module('adminNg.services')
 
     Monitoring.getActiveMQStats();
     Monitoring.getBasicServiceStats();
+    Monitoring.getDisplayVersion();
   };
 
   Monitoring.getActiveMQStats = function() {
@@ -72,6 +75,40 @@ angular.module('adminNg.services')
     services.service[service].error = true;
     services.error = true;
     services.numErr++;
+  };
+
+  Monitoring.getDisplayVersion = function() {
+    // Try to grab the newest version tag
+    $http.get('https://api.github.com/repos/opencast/opencast/tags').then(function(data) {
+      if (undefined === data.data || undefined === data.data[0].name) {
+        //Monitoring.setError(NEW_VERSION_NAME), MALFORMED_DATA));
+        return;
+      }
+
+      var newVersion = data.data[0].name;
+      var currentVersion = 'default';
+
+      // Try and get the current version
+      VersionResource.query(function(response) {
+        currentVersion= response.version
+          ? response
+          : (angular.isArray(response.versions) ? response.versions[0] : {});
+        currentVersion = currentVersion.version;
+
+        // If the current version does not match, tell the user
+        Monitoring.populateService(NEW_VERSION_NAME);
+        if(currentVersion.toString().startsWith(newVersion.toString())) {
+          services.service[NEW_VERSION_NAME].status = 'Up to date';
+          services.service[NEW_VERSION_NAME].error = false;
+        } else {
+          services.service[NEW_VERSION_NAME].status = newVersion;
+          services.service[NEW_VERSION_NAME].error = true;
+        }
+      });
+    }).catch(function(err){
+      //Monitoring.setError('displayVersion', err.statusText);
+      return;
+    });
   };
 
   Monitoring.getBasicServiceStats = function() {

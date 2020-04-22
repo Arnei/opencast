@@ -81,31 +81,20 @@ angular.module('adminNg.services')
   var newVersion = '';
   var currentVersion = '';
   Monitoring.getDisplayVersion = function() {
-    // Only query github once per page load, because further queries are denied
-    if(!newVersion) {
-      // Try to grab the newest version tag
-      $http.get('https://api.github.com/repos/opencast/opencast/tags').then(function(data) {
-        if (undefined === data.data || undefined === data.data[0].name) {
-          //Monitoring.setError(NEW_VERSION_NAME, MALFORMED_DATA);
-          return;
-        }
-
-        newVersion = data.data[0].name;
-        displayVersionCallbackHTTP();
-
-      }).catch(function(err){
-        //Monitoring.setError(NEW_VERSION_NAME, err.statusText);
+    // Try to grab the newest version tag
+    $http.get('https://api.github.com/repos/opencast/opencast/tags').then(function(data) {
+      if (undefined === data.data || undefined === data.data[0].name) {
+        //Monitoring.setError(NEW_VERSION_NAME, MALFORMED_DATA);
         return;
-      });
-    }
-    else {
-      displayVersionCallbackHTTP();
-    }
-  };
+      }
 
-  function displayVersionCallbackHTTP() {
-    // Might as well try to avoid unnecessary API calls, not like the current build will change at runtime
-    if(!currentVersion) {
+      newVersion = data.data[0].name;
+      displayVersionCallbackHTTP();
+
+    }).catch(function(err){
+      //Monitoring.setError(NEW_VERSION_NAME, err.statusText);
+      return;
+    }).then(function(){
       // Try and get the current version
       VersionResource.query(function(response) {
         currentVersion = response.version
@@ -113,29 +102,23 @@ angular.module('adminNg.services')
           : (angular.isArray(response.versions) ? response.versions[0] : {});
         currentVersion = currentVersion.version;
 
-        displayVersionCallbackVersionResource();
+        // If the current version does not match, tell the user
+        if(newVersion && currentVersion) {
+          if(parseFloat(currentVersion) < parseFloat(newVersion)) {
+            Monitoring.populateService(NEW_VERSION_NAME);
+            services.service[NEW_VERSION_NAME].status = newVersion;
+            services.service[NEW_VERSION_NAME].error = true;
+            services.error = true;
+            services.numErr++;
+          } else {
+            //services.service[NEW_VERSION_NAME].status = 'Up to date';
+            //services.service[NEW_VERSION_NAME].error = false;
+          }
+        }
       });
-    }
-    else {
-      displayVersionCallbackVersionResource();
-    }
-  }
+    });
+  };
 
-  function displayVersionCallbackVersionResource() {
-    // If the current version does not match, tell the user
-    if(newVersion && currentVersion) {
-      if(parseFloat(currentVersion) < parseFloat(newVersion)) {
-        Monitoring.populateService(NEW_VERSION_NAME);
-        services.service[NEW_VERSION_NAME].status = newVersion;
-        services.service[NEW_VERSION_NAME].error = true;
-        services.error = true;
-        services.numErr++;
-      } else {
-        //services.service[NEW_VERSION_NAME].status = 'Up to date';
-        //services.service[NEW_VERSION_NAME].error = false;
-      }
-    }
-  }
 
   Monitoring.getBasicServiceStats = function() {
     $http.get('/services/health.json').then(function(data) {

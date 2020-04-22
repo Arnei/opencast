@@ -37,7 +37,7 @@ angular.module('adminNg.services')
   var OK = 'OK';
   var SERVICES_FRAGMENT = '/systems/services';
   var SERVICE_NAME_ATTRIBUTE = 'service-name';
-  var NEW_VERSION_NAME = 'New version';
+  var NEW_VERSION_NAME = 'New version available';
 
   Monitoring.run = function() {
     //Clear existing data
@@ -77,39 +77,65 @@ angular.module('adminNg.services')
     services.numErr++;
   };
 
+  // Service that notifies the user if a newer opencast version is available
+  var newVersion = '';
+  var currentVersion = '';
   Monitoring.getDisplayVersion = function() {
-    // Try to grab the newest version tag
-    $http.get('https://api.github.com/repos/opencast/opencast/tags').then(function(data) {
-      if (undefined === data.data || undefined === data.data[0].name) {
-        //Monitoring.setError(NEW_VERSION_NAME), MALFORMED_DATA));
+    // Only query github once per page load, because further queries are denied
+    if(!newVersion) {
+      // Try to grab the newest version tag
+      $http.get('https://api.github.com/repos/opencast/opencast/tags').then(function(data) {
+        if (undefined === data.data || undefined === data.data[0].name) {
+          //Monitoring.setError(NEW_VERSION_NAME, MALFORMED_DATA);
+          return;
+        }
+
+        newVersion = data.data[0].name;
+        displayVersionCallbackHTTP();
+
+      }).catch(function(err){
+        //Monitoring.setError(NEW_VERSION_NAME, err.statusText);
         return;
-      }
+      });
+    }
+    else {
+      displayVersionCallbackHTTP();
+    }
+  };
 
-      var newVersion = data.data[0].name;
-      var currentVersion = 'default';
-
+  function displayVersionCallbackHTTP() {
+    // Might as well try to avoid unnecessary API calls, not like the current build will change at runtime
+    if(!currentVersion) {
       // Try and get the current version
       VersionResource.query(function(response) {
-        currentVersion= response.version
+        currentVersion = response.version
           ? response
           : (angular.isArray(response.versions) ? response.versions[0] : {});
         currentVersion = currentVersion.version;
 
-        // If the current version does not match, tell the user
-        Monitoring.populateService(NEW_VERSION_NAME);
-        if(currentVersion.toString().startsWith(newVersion.toString())) {
-          services.service[NEW_VERSION_NAME].status = 'Up to date';
-          services.service[NEW_VERSION_NAME].error = false;
-        } else {
-          services.service[NEW_VERSION_NAME].status = newVersion;
-          services.service[NEW_VERSION_NAME].error = true;
-        }
+        displayVersionCallbackVersionResource();
       });
-    }).catch(function(err){
-      //Monitoring.setError('displayVersion', err.statusText);
-      return;
-    });
-  };
+    }
+    else {
+      displayVersionCallbackVersionResource();
+    }
+  }
+
+  function displayVersionCallbackVersionResource() {
+    // If the current version does not match, tell the user
+    if(newVersion && currentVersion) {
+      if(parseFloat(currentVersion) < parseFloat(newVersion)) {
+        Monitoring.populateService(NEW_VERSION_NAME);
+        services.service[NEW_VERSION_NAME].status = newVersion;
+        services.service[NEW_VERSION_NAME].error = true;
+        services.error = true;
+        services.numErr++;
+      } else {
+        //services.service[NEW_VERSION_NAME].status = 'Up to date';
+        //services.service[NEW_VERSION_NAME].error = false;
+      }
+    }
+  }
 
   Monitoring.getBasicServiceStats = function() {
     $http.get('/services/health.json').then(function(data) {
@@ -142,8 +168,7 @@ angular.module('adminNg.services')
           Monitoring.populateService(name);
           services.service[name].status = service.service_state;
           services.service[name].error = true;
-          services.error = true;
-          services.numErr++;
+
         }
       });
     }).catch(function(err) {
@@ -163,6 +188,11 @@ angular.module('adminNg.services')
       serviceName = event.target.getAttribute(SERVICE_NAME_ATTRIBUTE);
     else
       serviceName = event.target.parentNode.getAttribute(SERVICE_NAME_ATTRIBUTE);
+
+    if (serviceName == NEW_VERSION_NAME) {
+      window.open('https://github.com/opencast/opencast/releases');
+      return;
+    }
 
     if (serviceName != AMQ_NAME) {
       Storage.put('filter', 'services', 'actions', 'true');

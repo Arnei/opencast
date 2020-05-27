@@ -259,7 +259,7 @@
         exception-handler-workflow="partial-error"
         description="Archiving">
       <configurations>
-        <configuration key="source-flavors">*/source,dublincore/*,security/*</configuration>
+        <configuration key="source-flavors">*/source,*/prepared,dublincore/*,security/*</configuration>
       </configurations>
     </operation>
 

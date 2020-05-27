@@ -229,7 +229,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
       throw new WorkflowOperationException(e);
     }
 
-    // Parse Smill Catalog
+    // Parse Smil Catalog
     final SMILParElement timesParallel = (SMILParElement) smilDocumentWithTimes.getBody().getChildNodes().item(0);
     final NodeList timesSequences = timesParallel.getTimeChildren();
     logger.info("ARNE SMIL timesSequences: {}", timesSequences);

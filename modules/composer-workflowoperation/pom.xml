@@ -120,6 +120,7 @@
               OSGI-INF/operations/image-to-video.xml,
               OSGI-INF/operations/image.xml,
               OSGI-INF/operations/multiencode.xml,
+              OSGI-INF/operations/multiple-webcam.xml,
               OSGI-INF/operations/partial-import.xml,
               OSGI-INF/operations/prepare-av.xml,
               OSGI-INF/operations/process-smil.xml,

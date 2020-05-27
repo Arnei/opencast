@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0"
+               name="org.opencastproject.workflow.handler.composer.MultipleWebcamWorkflowOperationHandler"
+               immediate="true">
+  <implementation class="org.opencastproject.workflow.handler.composer.MultipleWebcamWorkflowOperationHandler"/>
+  <property name="service.description" value="Multiple webcam Workflow Operation Handler"/>
+  <property name="workflow.operation" value="multiple-webcam"/>
+  <service>
+    <provide interface="org.opencastproject.workflow.api.WorkflowOperationHandler"/>
+  </service>
+  <reference name="ComposerService" interface="org.opencastproject.composer.api.ComposerService"
+             bind="setComposerService"/>
+  <reference name="Workspace" interface="org.opencastproject.workspace.api.Workspace"
+             bind="setWorkspace"/>
+</scr:component>

@@ -12,4 +12,6 @@
              bind="setComposerService"/>
   <reference name="Workspace" interface="org.opencastproject.workspace.api.Workspace"
              bind="setWorkspace"/>
+  <reference name="ServiceRegistry" interface="org.opencastproject.serviceregistry.api.ServiceRegistry"
+             bind="setServiceRegistry"/>
 </scr:component>

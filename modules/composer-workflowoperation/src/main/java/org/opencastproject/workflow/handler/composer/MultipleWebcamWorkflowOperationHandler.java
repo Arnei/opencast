@@ -28,14 +28,19 @@ import org.opencastproject.composer.layout.Dimension;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
+import org.opencastproject.mediapackage.MediaPackageElementBuilder;
+import org.opencastproject.mediapackage.MediaPackageElementBuilderFactory;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.mediapackage.TrackSupport;
 import org.opencastproject.mediapackage.VideoStream;
+import org.opencastproject.mediapackage.identifier.IdBuilderFactory;
 import org.opencastproject.mediapackage.selector.TrackSelector;
+import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.smil.api.util.SmilUtil;
+import org.opencastproject.util.IoSupport;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Tuple;
 import org.opencastproject.util.data.VCell;
@@ -48,6 +53,8 @@ import org.opencastproject.workspace.api.Workspace;
 
 import com.entwinemedia.fn.data.Opt;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Node;
@@ -58,9 +65,13 @@ import org.w3c.dom.smil.SMILMediaElement;
 import org.w3c.dom.smil.SMILParElement;
 import org.xml.sax.SAXException;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.InputStreamReader;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -69,6 +80,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * The workflow definition for handling multiple webcam videos that have overlapping playtime
+ * Checks which videos of those webcam videos are currently playing and dynamically scales them to fit in a single video
+ *
+ * Relies on a smil with videoBegin and duration times, as is created by ingest through addPartialTrack
+ *
+ * Returns a bunch of numerated videos to the target flavor
+ * FIXME: These videos lack metadata, SO AN IMMEDIATE INSPECT OPERATION IS REQUIRED
+ * These videos are really just parts, SO A CONCAT OPERATION IS VERY HIGHLY RECOMMENDED
+ */
 public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOperationHandler {
 
   /** Workflow configuration keys */
@@ -87,10 +108,11 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
   private static final String FLAVOR_AUDIO_SUFFIX = "-audio";
   private static final String PRESENTER_KEY = "presenter";
 
+  // TODO: Make ffmpeg commands more "opencasty"
   private static final String[] FFMPEG = {"ffmpeg", "-y", "-v", "warning", "-nostats", "-max_error_rate", "1.0"};
-  private static final String FFMPEG_WF_CODEC = "mpeg2video";
+  private static final String FFMPEG_WF_CODEC = "h264"; //"mpeg2video";
   private static final int FFMPEG_WF_FRAMERATE = 24;
-  private static final String[] FFMPEG_WF_ARGS = {"-an", "-codec", FFMPEG_WF_CODEC, "-q:v", "2", "-g", Integer.toString(FFMPEG_WF_FRAMERATE * 10), "-pix_fmt", "yuv420p", "-r", Integer.toString(FFMPEG_WF_FRAMERATE), "-f", "mpegts"};
+  private static final String[] FFMPEG_WF_ARGS = {"-an", "-codec", FFMPEG_WF_CODEC, "-q:v", "2", "-g", Integer.toString(FFMPEG_WF_FRAMERATE * 10), "-pix_fmt", "yuv420p", "-r", Integer.toString(FFMPEG_WF_FRAMERATE)};
   private static final String WF_EXT = "ts";
 
   /** The composer service */
@@ -98,6 +120,9 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
 
   /** The local workspace */
   private Workspace workspace = null;
+
+  private ServiceRegistry serviceRegistry;
+
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -119,6 +144,11 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
   public void setWorkspace(Workspace workspace) {
     this.workspace = workspace;
   }
+
+  public void setServiceRegistry(final ServiceRegistry serviceRegistry) {
+    this.serviceRegistry = serviceRegistry;
+  }
+
 
   /**
    * {@inheritDoc}
@@ -432,56 +462,19 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     }
   }
 
-  class PipeStream extends Thread {
-    public InputStream getIs() {
-      return is;
-    }
-    public void setIs(InputStream is) {
-      this.is = is;
-    }
-    public OutputStream getOs() {
-      return os;
-    }
-    public void setOs(OutputStream os) {
-      this.os = os;
-    }
-
-    private InputStream is;
-    private OutputStream os;
-
-    PipeStream(InputStream is, OutputStream os) {
-      this.is = is;
-      this.os = os;
-    }
-
-    public void run() {
-      byte[] buffer = new byte[1024];
-      int len;
-      try {
-        while ((len = is.read(buffer)) >= 0) {
-          os.write(buffer,0, len);
-        }
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
-  }
-
-
   private WorkflowOperationResult main(MediaPackage src, WorkflowOperationInstance operation,
           List<MediaPackageElement> elementsToClean) throws EncoderException, IOException, NotFoundException,
           MediaPackageException, WorkflowOperationException, ServiceRegistryException {
     final MediaPackage mediaPackage = (MediaPackage) src.clone();
 
-    // read config options
+    // Read config options
     final Opt<String> presenterFlavor = getOptConfig(operation, SOURCE_PRESENTER_FLAVOR);
     final Opt<String> presentationFlavor = getOptConfig(operation, SOURCE_PRESENTATION_FLAVOR);
     final MediaPackageElementFlavor smilFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(operation, SOURCE_SMIL_FLAVOR));
     final MediaPackageElementFlavor targetPresenterFlavor = parseTargetFlavor(
             getConfig(operation, TARGET_PRESENTER_FLAVOR), "presenter");
 
-    //
-    // get tracks
+    // Get tracks
     final TrackSelector presenterTrackSelector = mkTrackSelector(presenterFlavor);
     final TrackSelector presentationTrackSelector = mkTrackSelector(presentationFlavor);
     final List<Track> originalTracks = new ArrayList<Track>();
@@ -533,7 +526,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
         Node node = children.item(j);
         SMILMediaElement e = (SMILMediaElement) node;
 
-        // Avoid any element that is not a video or of type presenter   // TODO: Generalize to allow presentation
+        // Avoid any element that is not a video or of type presenter
+        // TODO: Generalize to allow presentation
         if (NODE_TYPE_VIDEO.equals(e.getNodeName())) {
           Track track = getFromOriginal(e.getId(), originalTracks, sourceType);
           if (!sourceType.get().startsWith(PRESENTER_KEY)) {
@@ -549,11 +543,11 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
           // Aspect Ratio, e.g. 16:9
           List<Track> tmpList = new ArrayList<Track>();
           tmpList.add(track);
-          Dimension trackDimension = determineDimension(tmpList, true);    // TODO: Make forceDivisible an operation key
+          Dimension trackDimension = determineDimension(tmpList, true);    // TODO?: Make forceDivisible an operation key
           videoInfo.aspectRatioHeight = trackDimension.getHeight();
           videoInfo.aspectRatioWidth = trackDimension.getWidth();
 
-          // TODO: Codec, e.g. h264
+          // TODO: Get track codec, e.g. h264
           videoInfo.codec = "vp8";
           // "StartTime" is calculated laters. Describes how far into the video the next portion starts
           // (E.g. If webcam2 is started 10 seconds after webcam1, the startTime for webcam1 in the next portion is 10)
@@ -561,8 +555,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
 
           logger.info("Video information: Width: {}, Height {}, Codec: {}, StartTime: {}", videoInfo.aspectRatioWidth, videoInfo.aspectRatioHeight, videoInfo.codec, videoInfo.startTime);
 
-          events.add(new StartStopEvent(true, track.getURI().toString(), beginInMs, videoInfo));
-          events.add(new StartStopEvent(false, track.getURI().toString(), beginInMs + durationInMs, videoInfo));
+          events.add(new StartStopEvent(true, getTrackPath(track), beginInMs, videoInfo));
+          events.add(new StartStopEvent(false, getTrackPath(track), beginInMs + durationInMs, videoInfo));
         }
       }
     }
@@ -619,32 +613,64 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
       videoEdl.get(i).nextTimeStamp = videoEdl.get(i + 1).timeStamp;
     }
 
+    List<List<String>> commands = new ArrayList<>();
+
     // Compositing cuts
     for (int i = 0; i < videoEdl.size(); i++) {
       if (videoEdl.get(i).timeStamp == videoEdl.get(i).nextTimeStamp) {
         logger.info("Skipping 0-length edl entry");
         continue;
       }
-      compositeCut(layoutArea, videoEdl.get(i));
+      commands.add(compositeCut(layoutArea, videoEdl.get(i)));
     }
+
+//    // Create output file path
+//    String outputFilePath = FilenameUtils.removeExtension(getTrackPath(presentationTracks.get(0)))
+//            .concat('-' + presentationTracks.get(0).getIdentifier()).concat("-multipleWebcams.ts");
+//    logger.info("Output file path: " + outputFilePath);
+//
+//    // Finally run commands
+//    Track finalPresenterTrack = runCommands(commands, outputFilePath, targetPresenterFlavor);
+
+
+    // Create output file path
+    String outputFilePath = FilenameUtils.removeExtension(getTrackPath(presentationTracks.get(0)))
+            .concat('-' + presentationTracks.get(0).getIdentifier()).concat("-multiplewebcams");
+    logger.info("Output file path: " + outputFilePath);
+
+    // Create partial webcam tracks and add them to the mediapackge
+    List<Track> finalPresenterTracks = createPartialTracks(commands, outputFilePath, targetPresenterFlavor);
+
+    for (Track finalPresenterTrack : finalPresenterTracks) {
+      logger.info("Final track {} got flavor '{}'", finalPresenterTrack, finalPresenterTrack.getFlavor());
+      logger.info("Final track hasVideo: {}" , finalPresenterTrack.hasVideo());
+      mediaPackage.add(finalPresenterTrack);
+    }
+
 
     final WorkflowOperationResult result = createResult(mediaPackage, WorkflowOperationResult.Action.CONTINUE, 0);
     logger.debug("Multiple Webcam operation completed");
     return result;
   }
 
-  private void compositeCut(LayoutArea layoutArea, VideoEdl videoEdl)
+  /**
+   * Create a ffmpeg command that generate a videos for the given cutting marks
+   * @param layoutArea
+   *          General layout information for the video
+   *          (Originally it was possible to have multiple layout areas)
+   * @param videoEdl
+   *          The edit decision list for the current cut
+   * @return A command line ready ffmpeg command
+   * @throws WorkflowOperationException
+   * @throws EncoderException
+   */
+  private List<String> compositeCut(LayoutArea layoutArea, VideoEdl videoEdl) throws WorkflowOperationException, EncoderException
   {
     // Stuff that should probably be passed to this function
     int width = 1920;
     int height = 1080;
-    //Video[] videos = new Video[videoEdl.size()];
-    //videos = videoEdl.toArray(videos);
 
-    // Constants
-
-
-    // Start
+    // Duration for this cut
     long duration = videoEdl.nextTimeStamp - videoEdl.timeStamp;
     logger.info("Cut timeStamp {}, duration {}", videoEdl.timeStamp, duration);
 
@@ -658,9 +684,6 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
 
 
     if (videoCount > 0) {
-      int tileOffsetX = layoutArea.x;
-      int tileOffsetY = layoutArea.y;
-
       int tilesH = 0;
       int tilesV = 0;
       int tileWidth = 0;
@@ -672,8 +695,6 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
         int tmpTilesH = (int) Math.ceil((videoCount / (float)tmpTilesV));
         int tmpTileWidth = (int) (2 * Math.floor((float)layoutArea.width / tmpTilesH / 2));
         int tmpTileHeight = (int) (2 * Math.floor((float)layoutArea.height / tmpTilesV / 2));
-
-        logger.info("tmpTileWidth {}, tmpTileHeight {}", tmpTileWidth, tmpTileHeight);
 
         if (tmpTileWidth <= 0 || tmpTileHeight <= 0) {
           continue;
@@ -814,30 +835,256 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     ffmpegCmd.add("-filter_complex");
     ffmpegCmd.add(ffmpegFilter);
     ffmpegCmd.addAll(Arrays.asList(FFMPEG_WF_ARGS));
-    ffmpegCmd.add("-");
+    //ffmpegCmd.add("-");
 
-    // TODO: Open a file and Execute command
     logger.info("Final command:");
     logger.info(String.join(" ", ffmpegCmd));
 
-//    try {
-//      logger.info("Launching command: " + ffmpegCmd);
-//      ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c", String.join(" ", ffmpegCmd));
-//      Process proc = pb.start();
-//
-//      PipeStream out = new PipeStream(proc.getInputStream(), System.out);
-//      PipeStream err = new PipeStream(proc.getErrorStream(), System.err);
-//      out.start();
-//      err.start();
-//
-//      proc.waitFor();
-//      logger.info("Exit value is: " + proc.exitValue());
-//    } catch (InterruptedException e) {
-//      e.printStackTrace();
-//    } catch (IOException e) {
-//      e.printStackTrace();
-//    }
+    return ffmpegCmd;
   }
+
+  /** NOW UNUSED
+   * DUE TO PROBLEMS WITH THE FINAL FILE, WHICH COULD NOT BE FURTHER PROCESSED BY OTHER ENCODING OPERATIONS
+   * Runs multiple ffmpeg commands, and pipes their output over stdout into the same single file
+   * Then creates a track out of the final file
+   */
+  private Track runCommands(List<List<String>> commands, String outputFilePath, MediaPackageElementFlavor flavor) throws WorkflowOperationException, EncoderException {
+    String waveformFilePath = outputFilePath;
+
+    File outputFile = new File(waveformFilePath);
+
+    for (List<String> command : commands) {
+      command.add("-f");
+      command.add("mpgets");
+      command.add("-");
+      logger.info("Running command: {}", command);
+
+      // run ffmpeg
+      ProcessBuilder pb = new ProcessBuilder(command);
+      pb.redirectErrorStream(true);
+      pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputFile));
+      Process ffmpegProcess = null;
+      int exitCode = 1;
+      BufferedReader errStream = null;
+      try {
+        ffmpegProcess = pb.start();
+
+
+        errStream = new BufferedReader(new InputStreamReader(ffmpegProcess.getInputStream()));
+        String line = errStream.readLine();
+        while (line != null) {
+          logger.info(line);
+          line = errStream.readLine();
+        }
+
+        exitCode = ffmpegProcess.waitFor();
+      } catch (IOException ex) {
+        throw new WorkflowOperationException("Start ffmpeg process failed", ex);
+      } catch (InterruptedException ex) {
+        throw new WorkflowOperationException("Waiting for encoder process exited was interrupted unexpectedly", ex);
+      } finally {
+        IoSupport.closeQuietly(ffmpegProcess);
+        IoSupport.closeQuietly(errStream);
+        if (exitCode != 0) {
+          try {
+            logger.warn("FFMPEG process exited with errorcode: " + exitCode);
+            FileUtils.forceDelete(new File(waveformFilePath));
+          } catch (IOException e) {
+            // it is ok, no output file was generated by ffmpeg
+          }
+        }
+      }
+
+      if (exitCode != 0)
+        throw new WorkflowOperationException(String.format("The encoder process exited abnormally with exit code %s "
+                + "using command\n%s", exitCode, String.join(" ", command)));
+    }
+
+
+    // put waveform image into workspace
+    FileInputStream waveformFileInputStream = null;
+    URI waveformFileUri;
+    try {
+      waveformFileInputStream = new FileInputStream(waveformFilePath);
+      waveformFileUri = workspace.putInCollection("multipleWebcams",
+              FilenameUtils.getName(waveformFilePath), waveformFileInputStream);
+      logger.info("Copied the created waveform to the workspace {}", waveformFileUri);
+    } catch (FileNotFoundException ex) {
+      throw new WorkflowOperationException(String.format("Waveform image file '%s' not found", waveformFilePath), ex);
+    } catch (IOException ex) {
+      throw new WorkflowOperationException(String.format(
+              "Can't write waveform image file '%s' to workspace", waveformFilePath), ex);
+    } catch (IllegalArgumentException ex) {
+      throw new WorkflowOperationException(ex);
+    } finally {
+      IoSupport.closeQuietly(waveformFileInputStream);
+      logger.info("Deleted local waveform image file at {}", waveformFilePath);
+      FileUtils.deleteQuietly(new File(waveformFilePath));
+    }
+
+    // create media package element
+    MediaPackageElementBuilder mpElementBuilder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
+    // it is up to the workflow operation handler to set the attachment flavor
+    Track waveformMpe = (Track) mpElementBuilder.elementFromURI(
+            waveformFileUri, MediaPackageElement.Type.Track, flavor);
+    waveformMpe.setIdentifier(IdBuilderFactory.newInstance().newIdBuilder().createNew().compact());
+
+    return waveformMpe;
+  }
+
+  /**
+   * Runs multiple ffmpeg commands. Saves each output in workspace with enumerated filenames
+   * TODO: FIGURE OUT WHY THE PARTIAL TRACKS LACK VITAL METADATA
+   * TODO: CONCATENATE PARTIAL TRACKS RIGHT HERE INSTEAD OF IN LATER OPERATIONS
+   * @param commands
+   *          Fully qualified ffmpeg commands EXCEPT for the output file
+   * @param outputFilePath
+   *          Path to location where enumerated files can be stored.
+   * @param flavor
+   *          Output flavor
+   * @return A list of partial tracks
+   * @throws WorkflowOperationException
+   * @throws EncoderException
+   */
+  private List<Track> createPartialTracks(List<List<String>> commands, String outputFilePath, MediaPackageElementFlavor flavor) throws WorkflowOperationException, EncoderException {
+    String waveformFilePath = outputFilePath;
+
+    List<String> outputPaths = new ArrayList<>();
+    int index = 0;
+    for (List<String> command : commands) {
+      String outputFile = outputFilePath + "part" + index + ".mp4";
+      outputPaths.add(outputFile);
+
+      command.add(outputFile);
+      index++;
+
+      logger.info("Running command: {}", command);
+
+      // Run ffmpeg
+      ProcessBuilder pb = new ProcessBuilder(command);
+      pb.redirectErrorStream(true);
+      Process ffmpegProcess = null;
+      int exitCode = 1;
+      BufferedReader errStream = null;
+      try {
+        ffmpegProcess = pb.start();
+
+
+        errStream = new BufferedReader(new InputStreamReader(ffmpegProcess.getInputStream()));
+        String line = errStream.readLine();
+        while (line != null) {
+          logger.info(line);
+          line = errStream.readLine();
+        }
+
+        exitCode = ffmpegProcess.waitFor();
+      } catch (IOException ex) {
+        throw new WorkflowOperationException("Start ffmpeg process failed", ex);
+      } catch (InterruptedException ex) {
+        throw new WorkflowOperationException("Waiting for encoder process exited was interrupted unexpectedly", ex);
+      } finally {
+        IoSupport.closeQuietly(ffmpegProcess);
+        IoSupport.closeQuietly(errStream);
+        if (exitCode != 0) {
+          try {
+            logger.warn("FFMPEG process exited with errorcode: " + exitCode);
+            FileUtils.forceDelete(new File(waveformFilePath));
+          } catch (IOException e) {
+            // it is ok, no output file was generated by ffmpeg
+          }
+        }
+      }
+
+      if (exitCode != 0)
+        throw new WorkflowOperationException(String.format("The encoder process exited abnormally with exit code %s "
+                + "using command\n%s", exitCode, String.join(" ", command)));
+    }
+
+    List<Track> tracks = new ArrayList<Track>();
+    for (String outputPath : outputPaths) {
+
+      // Put webcam video into workspace
+      // Because tracks require an URI, and I don't know how else to get one
+      FileInputStream outputFileInputStream = null;
+      URI webcamFileUri;
+      try {
+        outputFileInputStream = new FileInputStream(outputPath);
+        webcamFileUri = workspace.putInCollection("multipleWebcams",
+                FilenameUtils.getName(outputPath), outputFileInputStream);
+        logger.info("Copied the created webcam video to the workspace {}", webcamFileUri);
+      } catch (FileNotFoundException ex) {
+        throw new WorkflowOperationException(String.format("Webcam file '%s' not found", outputPath), ex);
+      } catch (IOException ex) {
+        throw new WorkflowOperationException(String.format(
+                "Can't write webcam file '%s' to workspace", outputPath), ex);
+      } catch (IllegalArgumentException ex) {
+        throw new WorkflowOperationException(ex);
+      } finally {
+        IoSupport.closeQuietly(outputFileInputStream);
+        logger.info("Deleted local webcam video file at {}", outputPath);
+        FileUtils.deleteQuietly(new File(outputPath));
+      }
+
+      // Create media package element
+      // So that the tracks can be properly added to a mediapackage
+      MediaPackageElementBuilder mpElementBuilder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
+      Track t = (Track) mpElementBuilder.elementFromURI(
+              webcamFileUri, MediaPackageElement.Type.Track, flavor);
+      t.setIdentifier(IdBuilderFactory.newInstance().newIdBuilder().createNew().compact());
+
+      tracks.add(t);
+    }
+
+    return tracks;
+
+    // Test attempt concatenating the single tracks right here.
+    // Concat operation fails because it cannot find the tracks at their URI. Probably a problem with the missing metadata
+//    Track finalTrack = new TrackImpl();
+//
+//    try {
+//      Job job = composerService.concat(composerService.getProfile("concat.work").getIdentifier(), new Dimension(1920, 1080), false, org.opencastproject.util.data.Collections.toArray(Track.class, tracks));
+//
+//      if (!JobUtil.waitForJob(serviceRegistry, job).isSuccess()) {
+//        throw new WorkflowOperationException("At least one of the jobs did not complete successfully");
+//      }
+//
+//      final Opt<Job> concatJob = JobUtil.update(serviceRegistry, job);
+//      if (concatJob.isSome()) {
+//        final String concatPayload = concatJob.get().getPayload();
+//        if (concatPayload != null) {
+//          final Track concatTrack;
+//          try {
+//            concatTrack = (Track) MediaPackageElementParser.getFromXml(concatPayload);
+//          } catch (MediaPackageException e) {
+//            throw new WorkflowOperationException(e);
+//          }
+//
+//          final String fileName = PRESENTER_KEY;
+//
+//          concatTrack.setFlavor(flavor);
+//
+//          concatTrack.setURI(workspace
+//                  .moveTo(concatTrack.getURI(), mediaPackage.getIdentifier().toString(), concatTrack.getIdentifier(),
+//                          fileName + "." + FilenameUtils.getExtension(concatTrack.getURI().toString())));
+//
+//          logger.info("Concatenated track {} got flavor '{}'", concatTrack, concatTrack.getFlavor());
+//
+//          finalTrack = concatTrack;
+//        }
+//      }
+//    } catch (MediaPackageException e) {
+//      throw new WorkflowOperationException(e);
+//    } catch (NotFoundException e) {
+//      throw new WorkflowOperationException(e);
+//    } catch (IOException e) {
+//      throw new WorkflowOperationException(e);
+//    } catch (ServiceRegistryException e) {
+//      throw new WorkflowOperationException(e);
+//    }
+//
+//    return finalTrack;
+  }
+
 
   private VideoInfo aspectScale(int oldWidth, int oldHeight, int newWidth, int newHeight) {
     if ((float)oldWidth / oldHeight > (float)newWidth / newHeight) {
@@ -967,5 +1214,21 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
       return null;
 
     return Tuple.tuple(track, dimension);
+  }
+
+  private String getTrackPath(Track track) throws WorkflowOperationException {
+    File mediaFile;
+    try {
+      mediaFile = workspace.get(track.getURI());
+    } catch (NotFoundException e) {
+      throw new WorkflowOperationException(
+              "Error finding the media file in the workspace", e);
+    } catch (IOException e) {
+      throw new WorkflowOperationException(
+              "Error reading the media file in the workspace", e);
+    }
+
+    String filePath = mediaFile.getAbsolutePath();
+    return filePath;
   }
 }

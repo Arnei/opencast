@@ -159,66 +159,6 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
             getConfig(operation, SOURCE_PRESENTATION_FLAVOR), "presentation");
     final MediaPackageElementFlavor targetSmilFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(operation, TARGET_SMIL_FLAVOR));
 
-//    // DEBUG
-//    Long[] testTimeList = new Long[]{1L, 2L, 3L, 5L, 6L};
-//    TrackImpl testPresenter1 = new TrackImpl();
-//    testPresenter1.setIdentifier("presenter-track-1");
-//    testPresenter1.setFlavor(new MediaPackageElementFlavor("source", "presenter"));
-//    try {
-//      testPresenter1.setURI(new URI("http://hostname/video.mp4"));
-//    } catch (Exception e) {
-//      logger.info("Could not set URI {}", e);
-//    }
-//    testPresenter1.addStream(new VideoStreamImpl());
-//    testPresenter1.setDuration(1000000000000L);
-//    TrackImpl testPresentation1 = new TrackImpl();
-//    testPresentation1.setIdentifier("presentation-track-1");
-//    testPresentation1.setFlavor(new MediaPackageElementFlavor("source", "presentation"));
-//    try {
-//      testPresentation1.setURI(new URI("http://hostname/videoPRESENTATION.mp4"));
-//    } catch (Exception e) {
-//      logger.info("Could not set URI {}", e);
-//    }
-//    testPresentation1.addStream(new VideoStreamImpl());
-//    testPresentation1.setDuration(1000000000000L);
-//    try {
-//      SmilResponse smilResponse = smilService.createNewSmil(mediaPackage);
-//
-//      for (Long entry : testTimeList) {
-//        Long startTime = entry;
-//        Long duration = entry + 1000L;
-//        // Error handle bad times?
-//
-//        // TODO: Figure out how to actually use these commands correctly
-//        smilResponse = smilService.addParallel(smilResponse.getSmil());
-//        SmilMediaContainer par = (SmilMediaContainer) smilResponse.getEntity();
-//        // add tracks (as array) to par
-//        smilResponse = smilService.addClips(smilResponse.getSmil(), par.getId(),
-//                new Track[]{testPresenter1, testPresentation1}, 15000L, 1000L);
-//      }
-//
-//      Smil smil = smilResponse.getSmil();
-//      logger.info("ARNE SMIL Done Adding tracks");
-//
-//      String cuttingSmilName = "prepared_cutting_smil.smil";
-//      InputStream is = null;
-//      try {
-//        // Put new SMIL into workspace
-//        is = IOUtils.toInputStream(smil.toXML(), "UTF-8");
-//        URI smilURI = workspace.put(mediaPackage.getIdentifier().compact(), smil.getId(), cuttingSmilName, is);
-//        MediaPackageElementBuilder mpeBuilder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
-//        Catalog catalog = (Catalog) mpeBuilder.elementFromURI(smilURI, MediaPackageElement.Type.Catalog,
-//                targetSmilFlavor);
-//        catalog.setIdentifier(smil.getId());
-//        mediaPackage.add(catalog);
-//      } finally {
-//        IOUtils.closeQuietly(is);
-//      }
-//    } catch (Exception ex) {
-//      throw new WorkflowOperationException(
-//              format("Failed to create SMIL catalog for mediapackage %s", mediaPackage.getIdentifier().compact()), ex);
-//    }
-
     // Happy fun time with SMIL
     // Get SMIL catalog
     final List<List<Long>> timeList = new ArrayList<List<Long>>();
@@ -232,12 +172,9 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     // Parse Smil Catalog
     final SMILParElement timesParallel = (SMILParElement) smilDocumentWithTimes.getBody().getChildNodes().item(0);
     final NodeList timesSequences = timesParallel.getTimeChildren();
-    logger.info("ARNE SMIL timesSequences: {}", timesSequences);
     for (int i = 0; i < timesSequences.getLength(); i++) {
       final SMILElement item = (SMILElement) timesSequences.item(i);
-      logger.info("ARNE SMIL item: {}", item);
       NodeList children = item.getChildNodes();
-      logger.info("ARNE SMIL children: {}", children);
 
       for (int j = 0; j < children.getLength(); j++) {
         Node node = children.item(j);
@@ -246,69 +183,65 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
         long beginInMs = Math.round(beginInSeconds * 1000d);
         double durationInSeconds = e.getDur();
         long durationInMs = Math.round(durationInSeconds * 1000d);
-        logger.info("ARNE SMIL Begin in Seconds: {}", beginInSeconds);
-        logger.info("ARNE SMIL Dur in Seconds: {}", durationInSeconds);
-        logger.info("ARNE SMIL Begin in ms: {}", beginInMs);
-        logger.info("ARNE SMIL Dur in ms: {}", durationInMs);
+        logger.info("Seq at {} Begin in Seconds: {}", j, beginInSeconds);
+        logger.info("Seq at {} Dur in Seconds: {}", j, durationInSeconds);
+        logger.info("Seq at {} Begin in ms: {}", j, beginInMs);
+        logger.info("Seq at {} Dur in ms: {}", j, durationInMs);
         timeList.add(new ArrayList<Long>(Arrays.asList(beginInMs, durationInMs)));
       }
-
     }
 
-    // Create the SMIL document
-    logger.info("ARNE SMIL Get Tracks from Mediapackage");
+    // If the catalog was empty, give up
+    if(timeList.size() < 1) {
+      throw new WorkflowOperationException("Source Smil did not contain any timestamps!");
+    }
+
+
+    // Create the new SMIL document
+    // Possible TODO: Handle more than exactly one track per flavor
+    logger.info("Get Tracks from Mediapackage");
 
     List<Track> videosPresentation = $(mediaPackage.getTracks()).filter(
             MediaPackageSupport.Filters.matchesFlavor(presentationFlavor).toFn()).toList();
     for (Track track : videosPresentation) {
-      logger.info("ARNE SMIL videosPresentation track: {}", track);
+      logger.info("VideosPresentation track: {}", track);
     }
-    logger.info("ARNE SMIL videosPresentation size: {}", videosPresentation.size());
     if (videosPresentation.size() != 1) {
-      logger.error("No video or too many videos");
+      throw new WorkflowOperationException(String.format("Videos in flavor %s does not equal 1, but %s",
+              presentationFlavor.toString(), Integer.toString(videosPresentation.size())));
     }
+
     List<Track> videosPresenter = $(mediaPackage.getTracks()).filter(
             MediaPackageSupport.Filters.matchesFlavor(presenterFlavor).toFn()).toList();
     for (Track track : videosPresenter) {
-      logger.info("ARNE SMIL videosPresenter track: {}", track);
+      logger.info("VideosPresenter track: {}", track);
     }
-    logger.info("ARNE SMIL videosPresenter size: {}", videosPresenter.size());
     if (videosPresenter.size() != 1) {
-      logger.error("No video or too many videos");
+      throw new WorkflowOperationException(String.format("Videos in flavor %s does not equal 1, but %s",
+              presenterFlavor.toString(), Integer.toString(videosPresenter.size())));
     }
 
     Track presentationTrack = videosPresentation.get(0);
     Track presenterTrack = videosPresenter.get(0);
 
-    logger.info("ARNE SMIL Start Adding tracks");
-
     try {
       SmilResponse smilResponse = smilService.createNewSmil(mediaPackage);
 
+      logger.info("Start Adding tracks");
       for (List<Long> entry : timeList) {
         Long startTime = entry.get(0);
         Long duration = entry.get(1);
         // Error handle bad times?
-
-        // TODO: Figure out how to actually use these commands correctlysudo
-        //smilResponse = smilService.addParallel(smilResponse.getSmil());
-        //smilResponse = smilService.addClip(smilResponse.getSmil(), smilResponse.getEntity().getId(),
-        //        presenterTrack, startTime, duration);
-        //smilResponse = smilService.addClip(smilResponse.getSmil(), smilResponse.getEntity().getId(),
-        //        presentationTrack, startTime, duration);
-        //smilResponse = smilService.addClips(smilResponse.getSmil(), smilResponse.getEntity().getId(),
-        //        new Track[]{presenterTrack, presentationTrack}, startTime, duration);
 
         smilResponse = smilService.addParallel(smilResponse.getSmil());
         SmilMediaContainer par = (SmilMediaContainer) smilResponse.getEntity();
         // add tracks (as array) to par
         smilResponse = smilService.addClips(smilResponse.getSmil(), par.getId(),
                 new Track[]{presenterTrack, presentationTrack}, startTime, duration);
-
       }
 
       Smil smil = smilResponse.getSmil();
-      logger.info("ARNE SMIL Done Adding tracks");
+      logger.info("Done Adding tracks");
 
       String cuttingSmilName = "prepared_cutting_smil";
       InputStream is = null;

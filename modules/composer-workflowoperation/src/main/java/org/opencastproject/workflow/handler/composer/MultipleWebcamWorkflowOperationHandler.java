@@ -21,10 +21,12 @@
 package org.opencastproject.workflow.handler.composer;
 
 import static java.lang.String.format;
+import static org.opencastproject.util.data.Collections.map;
 
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncoderException;
 import org.opencastproject.composer.layout.Dimension;
+import org.opencastproject.inspection.api.MediaInspectionException;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
@@ -506,12 +508,12 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     final long trackDurationInMs = Math.round(trackDurationInSeconds * 1000f);
 
     // Define a general Layout for the final video
-    // TODO: Find a way to define width and height
+    // TODO: Find a less hardcoded way to define width and height
     LayoutArea layoutArea = new LayoutArea("webcam", 0, 0, 1920, 1080);
 
     // Get Start- and endtime of the final video from SMIL
-    long startTime = 0;
-    long endTime = trackDurationInMs;
+    long finalStartTime = 0;
+    long finalEndTime = trackDurationInMs;
 
     // Create a list of start and stop events, i.e. every time a new video begins or an old one ends
     // Create list from SMIL
@@ -571,7 +573,7 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
 
     // Define starting point
     VideoEdl start = new VideoEdl();
-    start.timeStamp = 0;
+    start.timeStamp = finalStartTime;
     videoEdl.add(start);
 
     // Define mid-points
@@ -579,32 +581,18 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
       if (event.start) {
         logger.info("Add start event at {}", event.timeStamp);
         activeVideos.put(event.filename, event.timeStamp);
-
-        VideoEdl nextEdl = new VideoEdl();
-        nextEdl.timeStamp = event.timeStamp;
-
-        for (Map.Entry<String, Long> filename : activeVideos.entrySet()) {
-          nextEdl.areas.add(new Area(filename.getKey(), event.timeStamp, event.videoInfo.aspectRatioHeight, event.videoInfo.aspectRatioWidth, event.videoInfo.codec, event.timeStamp - filename.getValue()));
-        }
-        videoEdl.add(nextEdl);
+        videoEdl.add(createVideoEdl(event, activeVideos));
       } else {
         logger.info("Add stop event at {}", event.timeStamp);
         activeVideos.remove(event.filename);
-
-        VideoEdl nextEdl = new VideoEdl();
-        nextEdl.timeStamp = event.timeStamp;
-
-        for (Map.Entry<String, Long> filename : activeVideos.entrySet()) {
-          nextEdl.areas.add(new Area(filename.getKey(), event.timeStamp, event.videoInfo.aspectRatioHeight, event.videoInfo.aspectRatioWidth, event.videoInfo.codec, event.timeStamp - filename.getValue()));
-        }
-        videoEdl.add(nextEdl);
+        videoEdl.add(createVideoEdl(event, activeVideos));
       }
     }
 
     // Define ending point
     VideoEdl endVideo = new VideoEdl();
-    endVideo.timeStamp = endTime;
-    endVideo.nextTimeStamp = endTime;
+    endVideo.timeStamp = finalEndTime;
+    endVideo.nextTimeStamp = finalEndTime;
     videoEdl.add(endVideo);
 
     // Pre processing EDL
@@ -918,8 +906,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
       throw new WorkflowOperationException(ex);
     } finally {
       IoSupport.closeQuietly(waveformFileInputStream);
-      logger.info("Deleted local waveform image file at {}", waveformFilePath);
-      FileUtils.deleteQuietly(new File(waveformFilePath));
+//      logger.info("Deleted local waveform image file at {}", waveformFilePath);
+//      FileUtils.deleteQuietly(new File(waveformFilePath));
     }
 
     // create media package element
@@ -968,7 +956,6 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
       BufferedReader errStream = null;
       try {
         ffmpegProcess = pb.start();
-
 
         errStream = new BufferedReader(new InputStreamReader(ffmpegProcess.getInputStream()));
         String line = errStream.readLine();
@@ -1021,8 +1008,9 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
         throw new WorkflowOperationException(ex);
       } finally {
         IoSupport.closeQuietly(outputFileInputStream);
-        logger.info("Deleted local webcam video file at {}", outputPath);
-        FileUtils.deleteQuietly(new File(outputPath));
+
+//        logger.info("Deleted local webcam video file at {}", outputPath);
+//        FileUtils.deleteQuietly(new File(outputPath));
       }
 
       // Create media package element
@@ -1216,6 +1204,14 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     return Tuple.tuple(track, dimension);
   }
 
+  /**
+   * Returns the absolute path of the track
+   *
+   * @param track
+   *          Track whose path you want
+   * @return {@String} containing the absolute path of the given track
+   * @throws WorkflowOperationException
+   */
   private String getTrackPath(Track track) throws WorkflowOperationException {
     File mediaFile;
     try {
@@ -1230,5 +1226,16 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
 
     String filePath = mediaFile.getAbsolutePath();
     return filePath;
+  }
+
+  private VideoEdl createVideoEdl(StartStopEvent event, HashMap<String, Long> activeVideos) {
+    VideoEdl nextEdl = new VideoEdl();
+    nextEdl.timeStamp = event.timeStamp;
+
+    for (Map.Entry<String, Long> filename : activeVideos.entrySet()) {
+      nextEdl.areas.add(new Area(filename.getKey(), event.timeStamp, event.videoInfo.aspectRatioHeight, event.videoInfo.aspectRatioWidth, event.videoInfo.codec, event.timeStamp - filename.getValue()));
+    }
+
+    return nextEdl;
   }
 }

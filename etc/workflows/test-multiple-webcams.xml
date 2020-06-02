@@ -140,6 +140,12 @@
       </configurations>
     </operation>
 
+    <!-- TODO: Change Partial Import to be able to only run on a single flavor -->
+    <!-- Currently, the whole smil is iterated to find matching tracks, no matter the given source-keys -->
+    <!-- This leads to exceptions being thrown when the corresponding track to a given smil id can not be found, -->
+    <!-- for example by not including the flavor where the track resides. -->
+    <!-- No track matching smil Track-id: 610998d9-36fc-43cb-8fdc-a1d8f49be846 -->
+    <!-- at org.opencastproject.workflow.handler.composer.PartialImportWorkflowOperationHandler.getFromOriginal(PartialImportWorkflowOperationHandler.java:941) -->
     <operation id="partial-import"
                description="Post-processing raw audio and video files from capture agent"
                fail-on-error="true"
@@ -166,6 +172,54 @@
         <configuration key="source-flavors">*/prepared</configuration>
         <configuration key="target-tags">+archive</configuration>
         <configuration key="copy">false</configuration>
+      </configurations>
+    </operation>
+
+    <!-- CUT -->
+    <operation
+        id="cut-marks-to-smil"
+        description="JA LOL"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error">
+      <configurations>
+        <configuration key="source-presenter-flavor">presenter/prepared</configuration>
+        <configuration key="source-presentation-flavor">presentation/prepared</configuration>
+        <configuration key="source-smil-flavor">smil/times</configuration>
+        <configuration key="target-smil-flavor">smil/cut</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="tag"
+        max-attempts="2"
+        fail-on-error="true"
+        exception-handler-workflow="error"
+        description="Tagging media package elements">
+      <configurations>
+        <configuration key="source-flavors">*/prepared, smil/*</configuration>
+        <configuration key="target-tags">+archive</configuration>
+        <configuration key="copy">false</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="snapshot"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Archiving">
+      <configurations>
+        <configuration key="source-flavors">*/source,*/prepared,dublincore/*,security/*,smil/*</configuration>
+      </configurations>
+    </operation>
+
+
+    <operation id="editor"
+               description="Cut the recording according to the edit decision list">
+      <configurations>
+        <configuration key="source-flavors">*/prepared</configuration>
+        <configuration key="smil-flavors">smil/cut</configuration>
+        <configuration key="target-smil-flavor">smil/cut</configuration>
+        <configuration key="target-flavor-subtype">prepared</configuration>
       </configurations>
     </operation>
 

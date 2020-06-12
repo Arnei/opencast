@@ -38,7 +38,6 @@ import org.opencastproject.mediapackage.Track;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.smil.api.SmilResponse;
 import org.opencastproject.smil.api.SmilService;
-import org.opencastproject.smil.api.util.SmilUtil;
 import org.opencastproject.smil.entity.api.Smil;
 import org.opencastproject.smil.entity.media.container.api.SmilMediaContainer;
 import org.opencastproject.util.NotFoundException;
@@ -49,22 +48,21 @@ import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workspace.api.Workspace;
 
+import com.google.gson.Gson;
+
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.smil.SMILDocument;
-import org.w3c.dom.smil.SMILElement;
-import org.w3c.dom.smil.SMILMediaElement;
-import org.w3c.dom.smil.SMILParElement;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+
 
 /**
  * The workflow definition for converting a smil containing cut marks into a legal smil for cutting
@@ -79,6 +77,8 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
   private static final String TARGET_PRESENTER_FLAVOR = "target-presenter-flavor";
   private static final String TARGET_PRESENTATION_FLAVOR = "target-presentation-flavor";
   private static final String TARGET_SMIL_FLAVOR = "target-smil-flavor";
+
+  private static final String CUTTING_SMIL_NAME = "prepared_cutting_smil";
 
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(PartialImportWorkflowOperationHandler.class);
@@ -118,6 +118,27 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     this.smilService = smilService;
   }
 
+  private static final Gson gson = new Gson();
+
+  class Times {
+    private Long begin;
+    private Long duration;
+
+    public Long getStartTime() {
+      return begin;
+    }
+    public void setStartTime(Long startTime) {
+      this.begin = startTime;
+    }
+    public Long getDuration() {
+      return duration;
+    }
+    public void setDuration(Long duration) {
+      this.duration = duration;
+    }
+  }
+
+
   /**
    * {@inheritDoc}
    *
@@ -150,8 +171,8 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
           List<MediaPackageElement> elementsToClean) throws EncoderException, IOException, NotFoundException,
           MediaPackageException, WorkflowOperationException, ServiceRegistryException {
     final MediaPackage mediaPackage = (MediaPackage) src.clone();
-    //
-    // read config options
+
+    // Read config options
     final MediaPackageElementFlavor smilFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(operation, SOURCE_SMIL_FLAVOR));
     final MediaPackageElementFlavor presenterFlavor = parseTargetFlavor(
             getConfig(operation, SOURCE_PRESENTER_FLAVOR), "presenter");
@@ -159,99 +180,71 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
             getConfig(operation, SOURCE_PRESENTATION_FLAVOR), "presentation");
     final MediaPackageElementFlavor targetSmilFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(operation, TARGET_SMIL_FLAVOR));
 
-    // Happy fun time with SMIL
-    // Get SMIL catalog
-    final List<List<Long>> timeList = new ArrayList<List<Long>>();
-    final SMILDocument smilDocumentWithTimes;
-    try {
-      smilDocumentWithTimes = SmilUtil.getSmilDocumentFromMediaPackage(mediaPackage, smilFlavor, workspace);
-    } catch (org.xml.sax.SAXException e) {
-      throw new WorkflowOperationException(e);
-    }
+    // Parse JSON
+    Catalog jsonWithTimes = mediaPackage.getCatalogs(smilFlavor)[0];
+    BufferedReader bufferedReader = new BufferedReader(new FileReader(getMediaPackageElementPath(jsonWithTimes)));
+    Times[] cutmarks = gson.fromJson(bufferedReader, Times[].class);
 
-    // Parse Smil Catalog
-    final SMILParElement timesParallel = (SMILParElement) smilDocumentWithTimes.getBody().getChildNodes().item(0);
-    final NodeList timesSequences = timesParallel.getTimeChildren();
-    for (int i = 0; i < timesSequences.getLength(); i++) {
-      final SMILElement item = (SMILElement) timesSequences.item(i);
-      NodeList children = item.getChildNodes();
-
-      for (int j = 0; j < children.getLength(); j++) {
-        Node node = children.item(j);
-        SMILMediaElement e = (SMILMediaElement) node;
-        double beginInSeconds = e.getBegin().item(0).getResolvedOffset();
-        long beginInMs = Math.round(beginInSeconds * 1000d);
-        double durationInSeconds = e.getDur();
-        long durationInMs = Math.round(durationInSeconds * 1000d);
-        logger.info("Seq at {} Begin in Seconds: {}", j, beginInSeconds);
-        logger.info("Seq at {} Dur in Seconds: {}", j, durationInSeconds);
-        logger.info("Seq at {} Begin in ms: {}", j, beginInMs);
-        logger.info("Seq at {} Dur in ms: {}", j, durationInMs);
-        timeList.add(new ArrayList<Long>(Arrays.asList(beginInMs, durationInMs)));
+    // Check parsing results
+    for (Times entry : cutmarks) {
+      logger.info("Entry begin {}, Entry duration {}", entry.begin, entry.duration);
+      if (entry.begin < 0 || entry.duration < 0) {
+        throw new WorkflowOperationException("Times cannot be zero!");
       }
     }
 
     // If the catalog was empty, give up
-    if(timeList.size() < 1) {
-      throw new WorkflowOperationException("Source Smil did not contain any timestamps!");
+    if (cutmarks.length < 1) {
+      logger.warn("Source JSON did not contain any timestamps! Skipping...");
+      return skip(mediaPackage);
     }
 
-
-    // Create the new SMIL document
-    // Possible TODO: Handle more than exactly one track per flavor
+    /** Create the new SMIL document **/
     logger.info("Get Tracks from Mediapackage");
-
-    List<Track> videosPresentation = $(mediaPackage.getTracks()).filter(
-            MediaPackageSupport.Filters.matchesFlavor(presentationFlavor).toFn()).toList();
-    for (Track track : videosPresentation) {
-      logger.info("VideosPresentation track: {}", track);
-    }
-    if (videosPresentation.size() != 1) {
-      throw new WorkflowOperationException(String.format("Videos in flavor %s does not equal 1, but %s",
-              presentationFlavor.toString(), Integer.toString(videosPresentation.size())));
-    }
-
     List<Track> videosPresenter = $(mediaPackage.getTracks()).filter(
             MediaPackageSupport.Filters.matchesFlavor(presenterFlavor).toFn()).toList();
-    for (Track track : videosPresenter) {
-      logger.info("VideosPresenter track: {}", track);
-    }
-    if (videosPresenter.size() != 1) {
-      throw new WorkflowOperationException(String.format("Videos in flavor %s does not equal 1, but %s",
-              presenterFlavor.toString(), Integer.toString(videosPresenter.size())));
+    List<Track> videosPresentation = $(mediaPackage.getTracks()).filter(
+            MediaPackageSupport.Filters.matchesFlavor(presentationFlavor).toFn()).toList();
+
+    // Check for number of videos to avoid an issues
+    // Possible TODO: Handle more than exactly one track per flavor
+    if (videosPresenter.size() != 1 || videosPresentation.size() != 1) {
+      for (Track track : videosPresenter) {
+        logger.info("VideosPresenter track: {}", track);
+      }
+      for (Track track : videosPresentation) {
+        logger.info("VideosPresentation track: {}", track);
+      }
+      throw new WorkflowOperationException("The number of videos in each flavor must be exactly one.");
     }
 
-    Track presentationTrack = videosPresentation.get(0);
     Track presenterTrack = videosPresenter.get(0);
+    Track presentationTrack = videosPresentation.get(0);
+    logger.info("PresenterTrack duration: {}, PresentationTrack duration {}", presenterTrack.getDuration(),
+            presentationTrack.getDuration());
 
     try {
       SmilResponse smilResponse = smilService.createNewSmil(mediaPackage);
 
       logger.info("Start Adding tracks");
-      for (List<Long> entry : timeList) {
-        Long startTime = entry.get(0);
-        Long duration = entry.get(1);
-        // Error handle bad times?
-
+      for (Times mark : cutmarks) {
         smilResponse = smilService.addParallel(smilResponse.getSmil());
         SmilMediaContainer par = (SmilMediaContainer) smilResponse.getEntity();
         // add tracks (as array) to par
-        smilResponse = smilService.addClips(smilResponse.getSmil(), par.getId(),
-                new Track[]{presenterTrack, presentationTrack}, startTime, duration);
+        smilResponse = smilService
+                .addClips(smilResponse.getSmil(), par.getId(), new Track[] { presenterTrack, presentationTrack }, mark.begin, mark.duration);
       }
 
       Smil smil = smilResponse.getSmil();
       logger.info("Done Adding tracks");
-
-      String cuttingSmilName = "prepared_cutting_smil";
       InputStream is = null;
       try {
-        // Put new SMIL into workspace
+        // Put new SMIL into workspace and add to mediapackage
         is = IOUtils.toInputStream(smil.toXML(), "UTF-8");
-        URI smilURI = workspace.put(mediaPackage.getIdentifier().compact(), smil.getId(), cuttingSmilName, is);
+        URI smilURI = workspace.put(mediaPackage.getIdentifier().compact(), smil.getId(), CUTTING_SMIL_NAME, is);
         MediaPackageElementBuilder mpeBuilder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
-        Catalog catalog = (Catalog) mpeBuilder.elementFromURI(smilURI, MediaPackageElement.Type.Catalog,
-                targetSmilFlavor);
+        Catalog catalog = (Catalog) mpeBuilder
+                .elementFromURI(smilURI, MediaPackageElement.Type.Catalog, targetSmilFlavor);
         catalog.setIdentifier(smil.getId());
         mediaPackage.add(catalog);
       } finally {
@@ -262,6 +255,10 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
               format("Failed to create SMIL catalog for mediapackage %s", mediaPackage.getIdentifier().compact()), ex);
     }
 
+    return skip(mediaPackage);
+  }
+
+  private WorkflowOperationResult skip(MediaPackage mediaPackage) {
     final WorkflowOperationResult result = createResult(mediaPackage, WorkflowOperationResult.Action.CONTINUE);
     logger.debug("Partial import operation completed");
     return result;
@@ -284,5 +281,21 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
       throw new WorkflowOperationException(format("Target %s flavor '%s' is malformed", flavorType, flavor));
     }
     return targetFlavor;
+  }
+
+  private String getMediaPackageElementPath(MediaPackageElement mpe) throws WorkflowOperationException {
+    File mediaFile;
+    try {
+      mediaFile = workspace.get(mpe.getURI());
+    } catch (NotFoundException e) {
+      throw new WorkflowOperationException(
+              "Error finding the media file in the workspace", e);
+    } catch (IOException e) {
+      throw new WorkflowOperationException(
+              "Error reading the media file in the workspace", e);
+    }
+
+    String filePath = mediaFile.getAbsolutePath();
+    return filePath;
   }
 }

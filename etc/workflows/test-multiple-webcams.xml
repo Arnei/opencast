@@ -71,10 +71,9 @@
         fail-on-error="true"
         exception-handler-workflow="partial-error">
       <configurations>
-        <configuration key="source-presenter-flavor">presenter/source</configuration>
-        <configuration key="source-presentation-flavor">presentation/source</configuration>
+        <configuration key="source-flavor">presenter/source</configuration>
         <configuration key="source-smil-flavor">smil/source+partial</configuration>
-        <configuration key="target-presenter-flavor">presenter/partial</configuration>
+        <configuration key="target-flavor">presenter/partial</configuration>
       </configurations>
     </operation>
 
@@ -185,7 +184,7 @@
         <configuration key="source-presenter-flavor">presenter/prepared</configuration>
         <configuration key="source-presentation-flavor">presentation/prepared</configuration>
         <configuration key="source-smil-flavor">smil/times</configuration>
-        <configuration key="target-smil-flavor">smil/cut</configuration>
+        <configuration key="target-smil-flavor">smil/cutmarks</configuration>
       </configurations>
     </operation>
 
@@ -213,13 +212,34 @@
     </operation>
 
 
+<!--    <operation id="editor"-->
+<!--               description="Cut the recording according to the edit decision list">-->
+<!--      <configurations>-->
+<!--        <configuration key="source-flavors">*/prepared</configuration>-->
+<!--        <configuration key="smil-flavors">smil/cutmarks</configuration>-->
+<!--        <configuration key="target-smil-flavor">smil/cut</configuration>-->
+<!--        <configuration key="target-flavor-subtype">edited</configuration>-->
+<!--      </configurations>-->
+<!--    </operation>-->
+
+    <operation
+        id="clone"
+        exception-handler-workflow="partial-error">
+      <configurations>
+        <configuration key="source-flavor">smil/cutmarks</configuration>
+        <configuration key="target-flavor">smil/cutting</configuration>
+      </configurations>
+    </operation>
+
     <operation id="editor"
+               exception-handler-workflow="partial-error"
                description="Cut the recording according to the edit decision list">
       <configurations>
         <configuration key="source-flavors">*/prepared</configuration>
-        <configuration key="smil-flavors">smil/cut</configuration>
-        <configuration key="target-smil-flavor">smil/cut</configuration>
-        <configuration key="target-flavor-subtype">prepared</configuration>
+        <configuration key="smil-flavors">smil/cutting</configuration>
+        <configuration key="target-smil-flavor">smil/cutting</configuration>
+        <configuration key="target-flavor-subtype">edited</configuration>
+        <configuration key="interactive">false</configuration>
       </configurations>
     </operation>
 
@@ -232,7 +252,7 @@
         exception-handler-workflow="partial-error"
         description="Encoding video">
       <configurations>
-        <configuration key="source-flavor">*/prepared</configuration>
+        <configuration key="source-flavor">*/edited</configuration>
         <configuration key="target-flavor">*/preview</configuration>
         <configuration key="target-tags">engage-download,engage-streaming,rss,atom</configuration>
         <configuration key="encoding-profile">fast.http</configuration>
@@ -361,7 +381,7 @@
         exception-handler-workflow="partial-error"
         description="Archiving">
       <configurations>
-        <configuration key="source-flavors">*/source,*/prepared,dublincore/*,security/*,smil/*</configuration>
+        <configuration key="source-flavors">*/source,*/prepared,*/edited,dublincore/*,security/*,smil/*</configuration>
       </configurations>
     </operation>
 

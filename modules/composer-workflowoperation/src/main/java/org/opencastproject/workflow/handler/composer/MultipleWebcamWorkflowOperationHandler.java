@@ -21,12 +21,10 @@
 package org.opencastproject.workflow.handler.composer;
 
 import static java.lang.String.format;
-import static org.opencastproject.util.data.Collections.map;
 
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncoderException;
 import org.opencastproject.composer.layout.Dimension;
-import org.opencastproject.inspection.api.MediaInspectionException;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
@@ -39,6 +37,7 @@ import org.opencastproject.mediapackage.TrackSupport;
 import org.opencastproject.mediapackage.VideoStream;
 import org.opencastproject.mediapackage.identifier.IdBuilderFactory;
 import org.opencastproject.mediapackage.selector.TrackSelector;
+import org.opencastproject.mediapackage.track.TrackImpl;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.smil.api.util.SmilUtil;
@@ -95,11 +94,10 @@ import java.util.Map;
 public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOperationHandler {
 
   /** Workflow configuration keys */
-  private static final String SOURCE_PRESENTER_FLAVOR = "source-presenter-flavor";
-  private static final String SOURCE_PRESENTATION_FLAVOR = "source-presentation-flavor";
+  private static final String SOURCE_FLAVOR = "source-flavor";
   private static final String SOURCE_SMIL_FLAVOR = "source-smil-flavor";
 
-  private static final String TARGET_PRESENTER_FLAVOR = "target-presenter-flavor";
+  private static final String TARGET_FLAVOR = "target-flavor";
 
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(PartialImportWorkflowOperationHandler.class);
@@ -108,7 +106,6 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
   private static final String EMPTY_VALUE = "";
   private static final String NODE_TYPE_VIDEO = "video";
   private static final String FLAVOR_AUDIO_SUFFIX = "-audio";
-  private static final String PRESENTER_KEY = "presenter";
 
   // TODO: Make ffmpeg commands more "opencasty"
   private static final String[] FFMPEG = {"ffmpeg", "-y", "-v", "warning", "-nostats", "-max_error_rate", "1.0"};
@@ -470,30 +467,23 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     final MediaPackage mediaPackage = (MediaPackage) src.clone();
 
     // Read config options
-    final Opt<String> presenterFlavor = getOptConfig(operation, SOURCE_PRESENTER_FLAVOR);
-    final Opt<String> presentationFlavor = getOptConfig(operation, SOURCE_PRESENTATION_FLAVOR);
+    final Opt<String> sourceFlavor = getOptConfig(operation, SOURCE_FLAVOR);
     final MediaPackageElementFlavor smilFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(operation, SOURCE_SMIL_FLAVOR));
     final MediaPackageElementFlavor targetPresenterFlavor = parseTargetFlavor(
-            getConfig(operation, TARGET_PRESENTER_FLAVOR), "presenter");
+            getConfig(operation, TARGET_FLAVOR), "presenter");
 
     // Get tracks
-    final TrackSelector presenterTrackSelector = mkTrackSelector(presenterFlavor);
-    final TrackSelector presentationTrackSelector = mkTrackSelector(presentationFlavor);
-    final List<Track> originalTracks = new ArrayList<Track>();
-    final List<Track> presenterTracks = new ArrayList<Track>();
-    final List<Track> presentationTracks = new ArrayList<Track>();
+    final TrackSelector presenterTrackSelector = mkTrackSelector(sourceFlavor);
+    final List<Track> sourceTracks = new ArrayList<Track>();
     // Collecting presenter tracks
     for (Track t : presenterTrackSelector.select(mediaPackage, false)) {
-      logger.info("Found partial presenter track {}", t);
-      originalTracks.add(t);
-      presenterTracks.add(t);
+      logger.info("Found partial source track {}", t);
+      sourceTracks.add(t);
     }
-    // Collecting presentation tracks
-    for (Track t : presentationTrackSelector.select(mediaPackage, false)) {
-      logger.info("Found partial presentation track {}", t);
-      originalTracks.add(t);
-      presentationTracks.add(t);
-    }
+
+    // Define a general Layout for the final video
+    // TODO: Find a less hardcoded way to define width and height
+    LayoutArea layoutArea = new LayoutArea("webcam", 0, 0, 1920, 1080);
 
     // Get SMIL catalog
     final SMILDocument smilDocument;
@@ -507,16 +497,12 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     final float trackDurationInSeconds = parallel.getDur();
     final long trackDurationInMs = Math.round(trackDurationInSeconds * 1000f);
 
-    // Define a general Layout for the final video
-    // TODO: Find a less hardcoded way to define width and height
-    LayoutArea layoutArea = new LayoutArea("webcam", 0, 0, 1920, 1080);
-
     // Get Start- and endtime of the final video from SMIL
     long finalStartTime = 0;
     long finalEndTime = trackDurationInMs;
 
     // Create a list of start and stop events, i.e. every time a new video begins or an old one ends
-    // Create list from SMIL
+    // Create list from SMIL from partial ingests
     List<StartStopEvent> events = new ArrayList<>();
 
     for (int i = 0; i < sequences.getLength(); i++) {
@@ -528,11 +514,13 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
         Node node = children.item(j);
         SMILMediaElement e = (SMILMediaElement) node;
 
-        // Avoid any element that is not a video or of type presenter
-        // TODO: Generalize to allow presentation
+        // Avoid any element that is not a video or of the source type
         if (NODE_TYPE_VIDEO.equals(e.getNodeName())) {
-          Track track = getFromOriginal(e.getId(), originalTracks, sourceType);
-          if (!sourceType.get().startsWith(PRESENTER_KEY)) {
+          Track track = new TrackImpl();
+          try {
+            track = getTrackByID(e.getId(), sourceTracks, sourceType);
+          } catch (IllegalStateException ex) {
+            logger.info("No track corresponding to SMIL ID found, skipping SMIL ID {}", e.getId());
             continue;
           }
           double beginInSeconds = e.getBegin().item(0).getResolvedOffset();
@@ -565,7 +553,6 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
 
     // Sort by timestamps ascending
     Collections.sort(events);
-
 
     // Create an edit decision list
     List<VideoEdl> videoEdl = new ArrayList<VideoEdl>();
@@ -601,9 +588,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
       videoEdl.get(i).nextTimeStamp = videoEdl.get(i + 1).timeStamp;
     }
 
-    List<List<String>> commands = new ArrayList<>();
-
     // Compositing cuts
+    List<List<String>> commands = new ArrayList<>();
     for (int i = 0; i < videoEdl.size(); i++) {
       if (videoEdl.get(i).timeStamp == videoEdl.get(i).nextTimeStamp) {
         logger.info("Skipping 0-length edl entry");
@@ -612,18 +598,10 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
       commands.add(compositeCut(layoutArea, videoEdl.get(i)));
     }
 
-//    // Create output file path
-//    String outputFilePath = FilenameUtils.removeExtension(getTrackPath(presentationTracks.get(0)))
-//            .concat('-' + presentationTracks.get(0).getIdentifier()).concat("-multipleWebcams.ts");
-//    logger.info("Output file path: " + outputFilePath);
-//
-//    // Finally run commands
-//    Track finalPresenterTrack = runCommands(commands, outputFilePath, targetPresenterFlavor);
-
-
     // Create output file path
-    String outputFilePath = FilenameUtils.removeExtension(getTrackPath(presentationTracks.get(0)))
-            .concat('-' + presentationTracks.get(0).getIdentifier()).concat("-multiplewebcams");
+    // TODO: Find a less hacky way to create a path where files can be stored
+    String outputFilePath = FilenameUtils.removeExtension(getTrackPath(sourceTracks.get(0)))
+            .concat('-' + sourceTracks.get(0).getIdentifier()).concat("-multiplewebcams");
     logger.info("Output file path: " + outputFilePath);
 
     // Create partial webcam tracks and add them to the mediapackge
@@ -940,9 +918,9 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     List<String> outputPaths = new ArrayList<>();
     int index = 0;
     for (List<String> command : commands) {
+      // Add output path to command
       String outputFile = outputFilePath + "part" + index + ".mp4";
       outputPaths.add(outputFile);
-
       command.add(outputFile);
       index++;
 
@@ -1008,9 +986,6 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
         throw new WorkflowOperationException(ex);
       } finally {
         IoSupport.closeQuietly(outputFileInputStream);
-
-//        logger.info("Deleted local webcam video file at {}", outputPath);
-//        FileUtils.deleteQuietly(new File(outputPath));
       }
 
       // Create media package element
@@ -1096,15 +1071,14 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     return String.format(Locale.US, "%.3f", s);   // Locale.US to get a . instead of a ,
   }
 
-  private Track getFromOriginal(String trackId, List<Track> originalTracks, VCell<String> type) {
-    for (Track t : originalTracks) {
+  private Track getTrackByID(String trackId, List<Track> tracks, VCell<String> type) {
+    for (Track t : tracks) {
       if (t.getIdentifier().contains(trackId)) {
         logger.debug("Track-Id from smil found in Mediapackage ID: " + t.getIdentifier());
         if (EMPTY_VALUE.equals(type.get())) {
           String suffix = (t.hasAudio() && !t.hasVideo()) ? FLAVOR_AUDIO_SUFFIX : "";
           type.set(t.getFlavor().getType() + suffix);
         }
-        originalTracks.remove(t);
         return t;
       }
     }
@@ -1216,6 +1190,22 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     File mediaFile;
     try {
       mediaFile = workspace.get(track.getURI());
+    } catch (NotFoundException e) {
+      throw new WorkflowOperationException(
+              "Error finding the media file in the workspace", e);
+    } catch (IOException e) {
+      throw new WorkflowOperationException(
+              "Error reading the media file in the workspace", e);
+    }
+
+    String filePath = mediaFile.getAbsolutePath();
+    return filePath;
+  }
+
+  private String getMediaPackageElementPath(MediaPackageElement mpe) throws WorkflowOperationException {
+    File mediaFile;
+    try {
+      mediaFile = workspace.get(mpe.getURI());
     } catch (NotFoundException e) {
       throw new WorkflowOperationException(
               "Error finding the media file in the workspace", e);

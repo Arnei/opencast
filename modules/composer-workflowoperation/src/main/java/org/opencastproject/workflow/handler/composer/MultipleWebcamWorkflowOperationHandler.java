@@ -468,7 +468,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
 
     // Read config options
     final Opt<String> sourceFlavor = getOptConfig(operation, SOURCE_FLAVOR);
-    final MediaPackageElementFlavor smilFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(operation, SOURCE_SMIL_FLAVOR));
+    final MediaPackageElementFlavor smilFlavor = MediaPackageElementFlavor.parseFlavor(
+            getConfig(operation, SOURCE_SMIL_FLAVOR));
     final MediaPackageElementFlavor targetPresenterFlavor = parseTargetFlavor(
             getConfig(operation, TARGET_FLAVOR), "presenter");
 
@@ -543,7 +544,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
           // (E.g. If webcam2 is started 10 seconds after webcam1, the startTime for webcam1 in the next portion is 10)
           videoInfo.startTime = 0;
 
-          logger.info("Video information: Width: {}, Height {}, Codec: {}, StartTime: {}", videoInfo.aspectRatioWidth, videoInfo.aspectRatioHeight, videoInfo.codec, videoInfo.startTime);
+          logger.info("Video information: Width: {}, Height {}, Codec: {}, StartTime: {}", videoInfo.aspectRatioWidth,
+                  videoInfo.aspectRatioHeight, videoInfo.codec, videoInfo.startTime);
 
           events.add(new StartStopEvent(true, getTrackPath(track), beginInMs, videoInfo));
           events.add(new StartStopEvent(false, getTrackPath(track), beginInMs + durationInMs, videoInfo));
@@ -599,7 +601,6 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     }
 
     // Create output file path
-    // TODO: Find a less hacky way to create a path where files can be stored
     String outputFilePath = FilenameUtils.removeExtension(getTrackPath(sourceTracks.get(0)))
             .concat('-' + sourceTracks.get(0).getIdentifier()).concat("-multiplewebcams");
     logger.info("Output file path: " + outputFilePath);
@@ -632,16 +633,12 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
    */
   private List<String> compositeCut(LayoutArea layoutArea, VideoEdl videoEdl) throws WorkflowOperationException, EncoderException
   {
-    // Stuff that should probably be passed to this function
-    int width = 1920;
-    int height = 1080;
-
     // Duration for this cut
     long duration = videoEdl.nextTimeStamp - videoEdl.timeStamp;
     logger.info("Cut timeStamp {}, duration {}", videoEdl.timeStamp, duration);
 
     // Declare ffmpeg command
-    String ffmpegFilter = String.format("color=c=white:s=%dx%d:r=24", width, height);
+    String ffmpegFilter = String.format("color=c=white:s=%dx%d:r=24", layoutArea.width, layoutArea.height);
 
     List<Area> videos = videoEdl.areas;
     int videoCount = videoEdl.areas.size();
@@ -801,7 +798,6 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     ffmpegCmd.add("-filter_complex");
     ffmpegCmd.add(ffmpegFilter);
     ffmpegCmd.addAll(Arrays.asList(FFMPEG_WF_ARGS));
-    //ffmpegCmd.add("-");
 
     logger.info("Final command:");
     logger.info(String.join(" ", ffmpegCmd));
@@ -809,98 +805,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     return ffmpegCmd;
   }
 
-  /** NOW UNUSED
-   * DUE TO PROBLEMS WITH THE FINAL FILE, WHICH COULD NOT BE FURTHER PROCESSED BY OTHER ENCODING OPERATIONS
-   * Runs multiple ffmpeg commands, and pipes their output over stdout into the same single file
-   * Then creates a track out of the final file
-   */
-  private Track runCommands(List<List<String>> commands, String outputFilePath, MediaPackageElementFlavor flavor) throws WorkflowOperationException, EncoderException {
-    String waveformFilePath = outputFilePath;
-
-    File outputFile = new File(waveformFilePath);
-
-    for (List<String> command : commands) {
-      command.add("-f");
-      command.add("mpgets");
-      command.add("-");
-      logger.info("Running command: {}", command);
-
-      // run ffmpeg
-      ProcessBuilder pb = new ProcessBuilder(command);
-      pb.redirectErrorStream(true);
-      pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outputFile));
-      Process ffmpegProcess = null;
-      int exitCode = 1;
-      BufferedReader errStream = null;
-      try {
-        ffmpegProcess = pb.start();
-
-
-        errStream = new BufferedReader(new InputStreamReader(ffmpegProcess.getInputStream()));
-        String line = errStream.readLine();
-        while (line != null) {
-          logger.info(line);
-          line = errStream.readLine();
-        }
-
-        exitCode = ffmpegProcess.waitFor();
-      } catch (IOException ex) {
-        throw new WorkflowOperationException("Start ffmpeg process failed", ex);
-      } catch (InterruptedException ex) {
-        throw new WorkflowOperationException("Waiting for encoder process exited was interrupted unexpectedly", ex);
-      } finally {
-        IoSupport.closeQuietly(ffmpegProcess);
-        IoSupport.closeQuietly(errStream);
-        if (exitCode != 0) {
-          try {
-            logger.warn("FFMPEG process exited with errorcode: " + exitCode);
-            FileUtils.forceDelete(new File(waveformFilePath));
-          } catch (IOException e) {
-            // it is ok, no output file was generated by ffmpeg
-          }
-        }
-      }
-
-      if (exitCode != 0)
-        throw new WorkflowOperationException(String.format("The encoder process exited abnormally with exit code %s "
-                + "using command\n%s", exitCode, String.join(" ", command)));
-    }
-
-
-    // put waveform image into workspace
-    FileInputStream waveformFileInputStream = null;
-    URI waveformFileUri;
-    try {
-      waveformFileInputStream = new FileInputStream(waveformFilePath);
-      waveformFileUri = workspace.putInCollection("multipleWebcams",
-              FilenameUtils.getName(waveformFilePath), waveformFileInputStream);
-      logger.info("Copied the created waveform to the workspace {}", waveformFileUri);
-    } catch (FileNotFoundException ex) {
-      throw new WorkflowOperationException(String.format("Waveform image file '%s' not found", waveformFilePath), ex);
-    } catch (IOException ex) {
-      throw new WorkflowOperationException(String.format(
-              "Can't write waveform image file '%s' to workspace", waveformFilePath), ex);
-    } catch (IllegalArgumentException ex) {
-      throw new WorkflowOperationException(ex);
-    } finally {
-      IoSupport.closeQuietly(waveformFileInputStream);
-//      logger.info("Deleted local waveform image file at {}", waveformFilePath);
-//      FileUtils.deleteQuietly(new File(waveformFilePath));
-    }
-
-    // create media package element
-    MediaPackageElementBuilder mpElementBuilder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
-    // it is up to the workflow operation handler to set the attachment flavor
-    Track waveformMpe = (Track) mpElementBuilder.elementFromURI(
-            waveformFileUri, MediaPackageElement.Type.Track, flavor);
-    waveformMpe.setIdentifier(IdBuilderFactory.newInstance().newIdBuilder().createNew().compact());
-
-    return waveformMpe;
-  }
-
   /**
    * Runs multiple ffmpeg commands. Saves each output in workspace with enumerated filenames
-   * TODO: FIGURE OUT WHY THE PARTIAL TRACKS LACK VITAL METADATA
    * TODO: CONCATENATE PARTIAL TRACKS RIGHT HERE INSTEAD OF IN LATER OPERATIONS
    * @param commands
    *          Fully qualified ffmpeg commands EXCEPT for the output file
@@ -912,7 +818,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
    * @throws WorkflowOperationException
    * @throws EncoderException
    */
-  private List<Track> createPartialTracks(List<List<String>> commands, String outputFilePath, MediaPackageElementFlavor flavor) throws WorkflowOperationException, EncoderException {
+  private List<Track> createPartialTracks(List<List<String>> commands, String outputFilePath,
+          MediaPackageElementFlavor flavor) throws WorkflowOperationException, EncoderException {
     String waveformFilePath = outputFilePath;
 
     List<String> outputPaths = new ArrayList<>();
@@ -1223,7 +1130,8 @@ public class MultipleWebcamWorkflowOperationHandler extends AbstractWorkflowOper
     nextEdl.timeStamp = event.timeStamp;
 
     for (Map.Entry<String, Long> filename : activeVideos.entrySet()) {
-      nextEdl.areas.add(new Area(filename.getKey(), event.timeStamp, event.videoInfo.aspectRatioHeight, event.videoInfo.aspectRatioWidth, event.videoInfo.codec, event.timeStamp - filename.getValue()));
+      nextEdl.areas.add(new Area(filename.getKey(), event.timeStamp, event.videoInfo.aspectRatioHeight,
+              event.videoInfo.aspectRatioWidth, event.videoInfo.codec, event.timeStamp - filename.getValue()));
     }
 
     return nextEdl;

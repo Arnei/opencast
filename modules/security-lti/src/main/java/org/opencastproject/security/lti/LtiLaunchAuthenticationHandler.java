@@ -52,8 +52,12 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Dictionary;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+import javax.persistence.RollbackException;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -134,6 +138,9 @@ public class LtiLaunchAuthenticationHandler implements OAuthAuthenticationHandle
 
   /** Set of usernames that should not authenticated as themselves even if the OAuth consumer keys is trusted */
   private Set<String> usernameBlacklist = new HashSet<>();
+
+  /** concurrent attemtps */
+  private Map<String, Boolean> activePersistenceTransactions = new ConcurrentHashMap<>(128);
 
   /** Determines whether a JpaUserReference should be created on lti login */
   private boolean createJpaUserReference = false;
@@ -295,7 +302,8 @@ public class LtiLaunchAuthenticationHandler implements OAuthAuthenticationHandle
       String context = request.getParameter(CONTEXT_ID);
       enrichRoleGrants(roles, context, userAuthorities);
     } catch (UsernameNotFoundException e) {
-      // This user is known to the tool consumer, but not to Opencast. Create a user "on the fly"
+      logger.trace("This user is known to the tool consumer only. Creating an Opencast user on the fly.", e);
+
       userAuthorities = new HashSet<>();
       // We should add the authorities passed in from the tool consumer?
       String roles = request.getParameter(ROLES);
@@ -315,29 +323,39 @@ public class LtiLaunchAuthenticationHandler implements OAuthAuthenticationHandle
 
     // Create/Update the user reference
     if (createJpaUserReference) {
-      JpaOrganization organization = fromOrganization(securityService.getOrganization());
+      if (activePersistenceTransactions.putIfAbsent(username, Boolean.TRUE) != null) {
+        logger.debug("Concurrent access of user {}. Ignoring.", username);
+      } else {
 
-      JpaUserReference jpaUserReference = userReferenceProvider.findUserReference(username, organization.getId());
+        try {
+          JpaOrganization organization = fromOrganization(securityService.getOrganization());
+          JpaUserReference jpaUserReference = userReferenceProvider.findUserReference(username, organization.getId());
+          Set<JpaRole> jpaRoles = new HashSet<>();
+          for (GrantedAuthority authority : userAuthorities) {
+            jpaRoles.add(new JpaRole(authority.getAuthority(), organization));
+          }
 
-      Set<JpaRole> jpaRoles = new HashSet<JpaRole>();
-      for (GrantedAuthority authority : userAuthorities) {
-        jpaRoles.add(new JpaRole(authority.getAuthority(), organization));
-      }
+          Date loginDate = new Date();
 
-      Date loginDate = new Date();
-
-      // Create new JpaUserReference if none exists or update existing
-      if (jpaUserReference == null) {
-        String jpaContext = request.getParameter(CONTEXT_ID);
-        jpaContext = StringUtils.isBlank(jpaContext) ? DEFAULT_CONTEXT : jpaContext;
-
-        JpaUserReference userReference = new JpaUserReference(username, username, null, jpaContext, loginDate, organization, jpaRoles);
-        userReferenceProvider.addUserReference(userReference, jpaContext);
-      }
-      else {
-        jpaUserReference.setLastLogin(loginDate);
-        jpaUserReference.setRoles(jpaRoles);
-        userReferenceProvider.updateUserReference(jpaUserReference);
+          // Create new JpaUserReference if none exists or update existing
+          if (jpaUserReference == null) {
+            final String jpaContext = Objects.toString(request.getParameter(CONTEXT_ID), DEFAULT_CONTEXT);
+            JpaUserReference userReference = new JpaUserReference(username, username, null, jpaContext, loginDate,
+                    organization, jpaRoles);
+            userReferenceProvider.addUserReference(userReference, jpaContext);
+          } else {
+            jpaUserReference.setLastLogin(loginDate);
+            jpaUserReference.setRoles(jpaRoles);
+            userReferenceProvider.updateUserReference(jpaUserReference);
+          }
+        } catch (RollbackException e) {
+          // In the unlikely case that concurrency happens at the same time on multiple servers, we catch the
+          // rollback, assuming that the user is already persisted and let the user pass. Worst case, this means that
+          // the user is only temporarily authenticated.
+          logger.warn("Could not store reference since database was changed during update by another process", e);
+        } finally {
+          activePersistenceTransactions.remove(username);
+        }
       }
     }
     //Create/Update UserReference End
@@ -415,4 +433,3 @@ public class LtiLaunchAuthenticationHandler implements OAuthAuthenticationHandle
 
 
 }
-

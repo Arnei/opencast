@@ -118,8 +118,10 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     this.smilService = smilService;
   }
 
+  /** JSON Parser */
   private static final Gson gson = new Gson();
 
+  /** Stores information read from JSON */
   class Times {
     private Long begin;
     private Long duration;
@@ -173,30 +175,43 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     final MediaPackage mediaPackage = (MediaPackage) src.clone();
 
     // Read config options
-    final MediaPackageElementFlavor smilFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(operation, SOURCE_SMIL_FLAVOR));
+    final MediaPackageElementFlavor smilFlavor = MediaPackageElementFlavor.parseFlavor(
+            getConfig(operation, SOURCE_SMIL_FLAVOR));
     final MediaPackageElementFlavor presenterFlavor = parseTargetFlavor(
             getConfig(operation, SOURCE_PRESENTER_FLAVOR), "presenter");
     final MediaPackageElementFlavor presentationFlavor = parseTargetFlavor(
             getConfig(operation, SOURCE_PRESENTATION_FLAVOR), "presentation");
-    final MediaPackageElementFlavor targetSmilFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(operation, TARGET_SMIL_FLAVOR));
+    final MediaPackageElementFlavor targetSmilFlavor = MediaPackageElementFlavor.parseFlavor(
+            getConfig(operation, TARGET_SMIL_FLAVOR));
+
+    // Is there a catalog?
+    Catalog[] catalogs = mediaPackage.getCatalogs(smilFlavor);
+    if (catalogs.length != 1) {
+      logger.warn("Number of catalogs in the source flavor does not equal one. Skipping...");
+      return skip(mediaPackage);
+    }
 
     // Parse JSON
-    Catalog jsonWithTimes = mediaPackage.getCatalogs(smilFlavor)[0];
-    BufferedReader bufferedReader = new BufferedReader(new FileReader(getMediaPackageElementPath(jsonWithTimes)));
-    Times[] cutmarks = gson.fromJson(bufferedReader, Times[].class);
-
-    // Check parsing results
-    for (Times entry : cutmarks) {
-      logger.info("Entry begin {}, Entry duration {}", entry.begin, entry.duration);
-      if (entry.begin < 0 || entry.duration < 0) {
-        throw new WorkflowOperationException("Times cannot be zero!");
-      }
+    Times[] cutmarks;
+    Catalog jsonWithTimes = catalogs[0];
+    try (BufferedReader bufferedReader = new BufferedReader(new FileReader(getMediaPackageElementPath(jsonWithTimes)))) {
+      cutmarks = gson.fromJson(bufferedReader, Times[].class);
+    } catch (Exception e) {
+      throw new WorkflowOperationException("Could not read JSON: " + e);
     }
 
     // If the catalog was empty, give up
     if (cutmarks.length < 1) {
       logger.warn("Source JSON did not contain any timestamps! Skipping...");
       return skip(mediaPackage);
+    }
+
+    // Check parsing results
+    for (Times entry : cutmarks) {
+      logger.info("Entry begin {}, Entry duration {}", entry.begin, entry.duration);
+      if (entry.begin < 0 || entry.duration < 0) {
+        throw new WorkflowOperationException("Times cannot be negative!");
+      }
     }
 
     /** Create the new SMIL document **/
@@ -206,7 +221,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     List<Track> videosPresentation = $(mediaPackage.getTracks()).filter(
             MediaPackageSupport.Filters.matchesFlavor(presentationFlavor).toFn()).toList();
 
-    // Check for number of videos to avoid an issues
+    // Check for number of videos to avoid any issues
     // Possible TODO: Handle more than exactly one track per flavor
     if (videosPresenter.size() != 1 || videosPresentation.size() != 1) {
       for (Track track : videosPresenter) {
@@ -232,7 +247,11 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
         SmilMediaContainer par = (SmilMediaContainer) smilResponse.getEntity();
         // add tracks (as array) to par
         smilResponse = smilService
-                .addClips(smilResponse.getSmil(), par.getId(), new Track[] { presenterTrack, presentationTrack }, mark.begin, mark.duration);
+                .addClips(smilResponse.getSmil(),
+                        par.getId(),
+                        new Track[] { presenterTrack, presentationTrack },
+                        mark.begin,
+                        mark.duration);
       }
 
       Smil smil = smilResponse.getSmil();
@@ -258,6 +277,12 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     return skip(mediaPackage);
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.workflow.api.AbstractWorkflowOperationHandler#skip(org.opencastproject.workflow.api.WorkflowInstance,
+   *      JobContext)
+   */
   private WorkflowOperationResult skip(MediaPackage mediaPackage) {
     final WorkflowOperationResult result = createResult(mediaPackage, WorkflowOperationResult.Action.CONTINUE);
     logger.debug("Partial import operation completed");

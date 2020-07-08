@@ -260,7 +260,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
       try {
         // Put new SMIL into workspace and add to mediapackage
         is = IOUtils.toInputStream(smil.toXML(), "UTF-8");
-        URI smilURI = workspace.put(mediaPackage.getIdentifier().compact(), smil.getId(), CUTTING_SMIL_NAME, is);
+        URI smilURI = workspace.put(mediaPackage.getIdentifier().toString(), smil.getId(), CUTTING_SMIL_NAME, is);
         MediaPackageElementBuilder mpeBuilder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
         Catalog catalog = (Catalog) mpeBuilder
                 .elementFromURI(smilURI, MediaPackageElement.Type.Catalog, targetSmilFlavor);
@@ -271,7 +271,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
       }
     } catch (Exception ex) {
       throw new WorkflowOperationException(
-              format("Failed to create SMIL catalog for mediapackage %s", mediaPackage.getIdentifier().compact()), ex);
+              format("Failed to create SMIL catalog for mediapackage %s", mediaPackage.getIdentifier().toString()), ex);
     }
 
     return skip(mediaPackage);

@@ -72,7 +72,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
   /** Workflow configuration keys */
   private static final String SOURCE_PRESENTER_FLAVOR = "source-presenter-flavor";
   private static final String SOURCE_PRESENTATION_FLAVOR = "source-presentation-flavor";
-  private static final String SOURCE_SMIL_FLAVOR = "source-smil-flavor";
+  private static final String SOURCE_JSON_FLAVOR = "source-json-flavor";
 
   private static final String TARGET_PRESENTER_FLAVOR = "target-presenter-flavor";
   private static final String TARGET_PRESENTATION_FLAVOR = "target-presentation-flavor";
@@ -175,8 +175,8 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     final MediaPackage mediaPackage = (MediaPackage) src.clone();
 
     // Read config options
-    final MediaPackageElementFlavor smilFlavor = MediaPackageElementFlavor.parseFlavor(
-            getConfig(operation, SOURCE_SMIL_FLAVOR));
+    final MediaPackageElementFlavor jsonFlavor = MediaPackageElementFlavor.parseFlavor(
+            getConfig(operation, SOURCE_JSON_FLAVOR));
     final MediaPackageElementFlavor presenterFlavor = parseTargetFlavor(
             getConfig(operation, SOURCE_PRESENTER_FLAVOR), "presenter");
     final MediaPackageElementFlavor presentationFlavor = parseTargetFlavor(
@@ -185,7 +185,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
             getConfig(operation, TARGET_SMIL_FLAVOR));
 
     // Is there a catalog?
-    Catalog[] catalogs = mediaPackage.getCatalogs(smilFlavor);
+    Catalog[] catalogs = mediaPackage.getCatalogs(jsonFlavor);
     if (catalogs.length != 1) {
       logger.warn("Number of catalogs in the source flavor does not equal one. Skipping...");
       return skip(mediaPackage);

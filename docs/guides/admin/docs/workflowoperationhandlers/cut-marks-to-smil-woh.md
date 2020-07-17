@@ -14,7 +14,7 @@ given presentation and presenter flavors.
 |------------------         |-----------            |---------------------------------------------------------------|
 |source-presenter-flavor    |`presenter/prepared`   |The flavor of the presenter video track. Must contain exactly one file.                   |
 |source-presentation-flavor |`presentation/prepared`|The flavor of the presentation video track. Must contain exactly one file.                  |
-|source-smil-flavor         |`smil/times`           |The flavor of the JSON. Must contain exactly one file.|
+|source-json-flavor         |`smil/times`           |The flavor of the JSON. Must contain exactly one file.|
 |target-smil-flavor         |`smil/cutmarks`        |The flavor of the resulting SMIL.|
 
 ## JSON Format
@@ -37,7 +37,7 @@ given presentation and presenter flavors.
           <configurations>
             <configuration key="source-presenter-flavor">presenter/prepared</configuration>
             <configuration key="source-presentation-flavor">presentation/prepared</configuration>
-            <configuration key="source-smil-flavor">smil/times</configuration>
+            <configuration key="source-json-flavor">smil/times</configuration>
             <configuration key="target-smil-flavor">smil/cutmarks</configuration>
           </configurations>
         </operation>

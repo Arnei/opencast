@@ -265,7 +265,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
                 .elementFromURI(smilURI, MediaPackageElement.Type.Catalog, targetSmilFlavor);
         catalog.setIdentifier(smil.getId());
         mediaPackage.add(catalog);
-      } 
+      }
     } catch (JAXBException | SAXException | SmilException e) {
       e.printStackTrace();
       throw new WorkflowOperationException("Failed to create SMIL Catalog.");

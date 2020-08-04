@@ -85,6 +85,10 @@
       <artifactId>slf4j-log4j12</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -113,6 +117,7 @@
               OSGI-INF/operations/compose.xml,
               OSGI-INF/operations/composite.xml,
               OSGI-INF/operations/concat.xml,
+              OSGI-INF/operations/cut-marks-to-smil.xml,
               OSGI-INF/operations/demux.xml,
               OSGI-INF/operations/encode.xml,
               OSGI-INF/operations/image-convert.xml,

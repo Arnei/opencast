@@ -20,10 +20,7 @@
  */
 package org.opencastproject.workflow.handler.composer;
 
-import static java.lang.String.format;
-
 import org.opencastproject.composer.api.ComposerService;
-import org.opencastproject.composer.api.EncoderException;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackage;
@@ -31,10 +28,8 @@ import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementBuilder;
 import org.opencastproject.mediapackage.MediaPackageElementBuilderFactory;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
-import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.mediapackage.selector.TrackSelector;
-import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.smil.api.SmilException;
 import org.opencastproject.smil.api.SmilResponse;
 import org.opencastproject.smil.api.SmilService;
@@ -143,7 +138,6 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     }
   }
 
-
   /**
    * {@inheritDoc}
    *
@@ -155,27 +149,8 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
           throws WorkflowOperationException {
     logger.info("Running cut marks to smil workflow operation on workflow {}", workflowInstance.getId());
 
-    List<MediaPackageElement> elementsToClean = new ArrayList<MediaPackageElement>();
-
-    try {
-      return cutMarksToSmil(workflowInstance.getMediaPackage(), workflowInstance.getCurrentOperation(), elementsToClean);
-    } catch (Exception e) {
-      throw new WorkflowOperationException(e);
-    } finally {
-      for (MediaPackageElement elem : elementsToClean) {
-        try {
-          workspace.delete(elem.getURI());
-        } catch (Exception e) {
-          logger.warn("Unable to delete element {}: {}", elem, e);
-        }
-      }
-    }
-  }
-
-  private WorkflowOperationResult cutMarksToSmil(MediaPackage src, WorkflowOperationInstance operation,
-          List<MediaPackageElement> elementsToClean) throws EncoderException, IOException, NotFoundException,
-          MediaPackageException, WorkflowOperationException, ServiceRegistryException {
-    final MediaPackage mediaPackage = (MediaPackage) src.clone();
+    WorkflowOperationInstance operation = workflowInstance.getCurrentOperation();
+    final MediaPackage mediaPackage = (MediaPackage) workflowInstance.getMediaPackage().clone();
 
     // Read config options
     final MediaPackageElementFlavor jsonFlavor = MediaPackageElementFlavor.parseFlavor(
@@ -242,7 +217,8 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
       return result;
     }
 
-    /** Create the new SMIL document **/
+    // Create the new SMIL document
+    Smil smil;
     try {
       SmilResponse smilResponse = smilService.createNewSmil(mediaPackage);
 
@@ -260,33 +236,35 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
                         mark.duration);
       }
 
-      Smil smil = smilResponse.getSmil();
+      smil = smilResponse.getSmil();
       logger.info("Done adding tracks");
-
-      // Put new SMIL into workspace and add to mediapackage
-      try (InputStream is = IOUtils.toInputStream(smil.toXML(), "UTF-8")) {
-        URI smilURI = workspace.put(mediaPackage.getIdentifier().toString(), smil.getId(), CUTTING_SMIL_NAME, is);
-        MediaPackageElementBuilder mpeBuilder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
-        Catalog catalog = (Catalog) mpeBuilder
-                .elementFromURI(smilURI, MediaPackageElement.Type.Catalog, targetSmilFlavor);
-        catalog.setIdentifier(smil.getId());
-        for (String tag : targetTags) {
-          catalog.addTag(tag);
-        }
-        mediaPackage.add(catalog);
-      }
-    } catch (JAXBException | SAXException | SmilException e) {
-      e.printStackTrace();
-      throw new WorkflowOperationException("Failed to create SMIL Catalog.");
+    } catch (SmilException e) {
+      throw new WorkflowOperationException("Failed to create SMIL Catalog", e);
     }
+
+    // Put new SMIL into workspace and add it to mediapackage
+    try (InputStream is = IOUtils.toInputStream(smil.toXML(), "UTF-8")) {
+      URI smilURI = workspace.put(mediaPackage.getIdentifier().toString(), smil.getId(), CUTTING_SMIL_NAME, is);
+      MediaPackageElementBuilder mpeBuilder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
+      Catalog catalog = (Catalog) mpeBuilder
+              .elementFromURI(smilURI, MediaPackageElement.Type.Catalog, targetSmilFlavor);
+      catalog.setIdentifier(smil.getId());
+      for (String tag : targetTags) {
+        catalog.addTag(tag);
+      }
+      mediaPackage.add(catalog);
+    } catch (JAXBException | SAXException | IOException e) {
+      throw new WorkflowOperationException("Failed to parse crated SMIL Catalog", e);
+    }
+
 
     final WorkflowOperationResult result = createResult(mediaPackage, WorkflowOperationResult.Action.CONTINUE);
     logger.debug("Cut marks to smil operation completed");
     return result;
   }
 
-  private Optional<Track> getTrackFromFlavor(MediaPackageElementFlavor flavor, MediaPackage mediaPackage) throws WorkflowOperationException {
-
+  private Optional<Track> getTrackFromFlavor(MediaPackageElementFlavor flavor, MediaPackage mediaPackage)
+          throws WorkflowOperationException {
     Optional<Track> result = Optional.empty();
 
     // Get tracks from flavor
@@ -320,24 +298,13 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
   }
 
   /**
-   * @param flavorType
-   *          either "presenter" or "presentation", just for error messages
+   * Returns the absolute path for a given MediaPackageElement
+   * @param mpe
+   *          The MediaPackageElement we want to know the absolute path for
+   * @return
+   *          The absolute path
+   * @throws WorkflowOperationException
    */
-  private MediaPackageElementFlavor parseTargetFlavor(String flavor, String flavorType)
-          throws WorkflowOperationException {
-    final MediaPackageElementFlavor targetFlavor;
-    try {
-      targetFlavor = MediaPackageElementFlavor.parseFlavor(flavor);
-      if ("*".equals(targetFlavor.getType()) || "*".equals(targetFlavor.getSubtype())) {
-        throw new WorkflowOperationException(format(
-                "Target %s flavor must have a type and a subtype, '*' are not allowed!", flavorType));
-      }
-    } catch (IllegalArgumentException e) {
-      throw new WorkflowOperationException(format("Target %s flavor '%s' is malformed", flavorType, flavor));
-    }
-    return targetFlavor;
-  }
-
   private String getMediaPackageElementPath(MediaPackageElement mpe) throws WorkflowOperationException {
     File mediaFile;
     try {

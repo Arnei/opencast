@@ -43,8 +43,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.InputStream;
@@ -73,8 +71,6 @@ public class CutMarksToSmilWorkflowOperationHandlerTest {
   private WorkflowOperationInstance instance;
 
   private URI mpSmilURI;
-
-  private static final Logger logger = LoggerFactory.getLogger(CutMarksToSmilWorkflowOperationHandlerTest.class);
 
   @Before
   public void setUp() throws Exception {
@@ -126,7 +122,6 @@ public class CutMarksToSmilWorkflowOperationHandlerTest {
     EasyMock.replay(workspace, workflow);
     handler.setWorkspace(workspace);
 
-    logger.warn(String.join(",", trackFlavors));
     EasyMock.expect(instance.getConfiguration(SOURCE_MEDIA_FLAVORS)).andReturn(String.join(",", trackFlavors)).anyTimes();
     EasyMock.expect(instance.getConfiguration(SOURCE_JSON_FLAVOR)).andReturn(SOURCE_JSON_FLAVOR_KEY).anyTimes();
     EasyMock.replay(instance);

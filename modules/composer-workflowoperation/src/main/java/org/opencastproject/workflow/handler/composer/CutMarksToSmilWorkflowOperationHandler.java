@@ -51,6 +51,7 @@ import org.opencastproject.workspace.api.Workspace;
 import com.google.gson.Gson;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
@@ -78,6 +79,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
   private static final String SOURCE_JSON_FLAVOR = "source-json-flavor";
 
   private static final String TARGET_SMIL_FLAVOR = "target-smil-flavor";
+  private static final String TARGET_TAGS = "target-tags";
 
   private static final String CUTTING_SMIL_NAME = "prepared_cutting_smil";
 
@@ -186,6 +188,10 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     for (String flavorName : asList(flavorNames))
       flavors.add(MediaPackageElementFlavor.parseFlavor(flavorName));
 
+    // Target tags
+    String targetTagsOption = StringUtils.trimToNull(operation.getConfiguration(TARGET_TAGS));
+    List<String> targetTags = asList(targetTagsOption);
+
     // Is there a catalog?
     Catalog[] catalogs = mediaPackage.getCatalogs(jsonFlavor);
     if (catalogs.length != 1) {
@@ -264,6 +270,9 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
         Catalog catalog = (Catalog) mpeBuilder
                 .elementFromURI(smilURI, MediaPackageElement.Type.Catalog, targetSmilFlavor);
         catalog.setIdentifier(smil.getId());
+        for (String tag : targetTags) {
+          catalog.addTag(tag);
+        }
         mediaPackage.add(catalog);
       }
     } catch (JAXBException | SAXException | SmilException e) {

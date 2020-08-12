@@ -15,6 +15,7 @@ given presentation and presenter flavors.
 |source-media-flavors       |`presenter/prepared`   |The flavors containing the video tracks. Each flavor must contain at most one file.                   
 |source-json-flavor         |`smil/times`           |The flavor of the JSON. Must contain exactly one file.|
 |target-smil-flavor         |`smil/cutmarks`        |The flavor of the resulting SMIL.|
+|target-tags                |`archive`              |(Optional) Tags to add to the resulting SMIL. Default is `null`|
 
 ## JSON Format
 The JSON structure specifies all segments which should be kept after cutting.

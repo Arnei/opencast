@@ -18,24 +18,31 @@
  * the License.
  *
  */
-'use strict';
 
-angular.module('adminNg.directives')
-.directive('oldAdminNgDropdown', function () {
-  return {
-    scope: {
-      fn: '='
-    },
-    link: function ($scope, element) {
-      element.on('click', function (event) {
-        angular.element('[old-admin-ng-dropdown]').not(this).removeClass('active');
-        event.stopPropagation();
-        angular.element(this).toggleClass('active');
-      });
+package org.opencastproject.videogrid.api;
 
-      $scope.$on('$destroy', function () {
-        element.off('click');
-      });
-    }
-  };
-});
+import org.opencastproject.job.api.Job;
+
+import java.util.List;
+
+/**
+ * Generate a single video out of many, arranged in a grid.
+ */
+public interface VideoGridService {
+
+  /**
+   * The namespace distinguishing videogrid jobs from other types
+   */
+  String JOB_TYPE = "org.opencastproject.videogrid";
+
+  /**
+   * Generate the final video in parts
+   *
+   * @param commands
+   *          A list of ffmpeg commands, one for each part
+   * @return VideoGrid service job.
+   * @throws VideoGridServiceException
+   *          If something went wrong during the processing
+   */
+  Job createPartialTracks(List<List<String>> commands) throws VideoGridServiceException;
+}

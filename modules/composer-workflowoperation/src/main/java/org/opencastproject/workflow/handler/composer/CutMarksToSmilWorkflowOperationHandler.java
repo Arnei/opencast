@@ -186,7 +186,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     try (BufferedReader bufferedReader = new BufferedReader(new FileReader(getMediaPackageElementPath(jsonWithTimes)))) {
       cutmarks = gson.fromJson(bufferedReader, Times[].class);
     } catch (Exception e) {
-      throw new WorkflowOperationException("Could not read JSON: " + e);
+      throw new WorkflowOperationException("Could not read JSON", e);
     }
     LinkedList<Times> cutmarksList = new LinkedList<Times>(Arrays.asList(cutmarks));
 
@@ -201,12 +201,12 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     for (Times entry : cutmarksList) {
       logger.info("Entry begin {}, Entry duration {}", entry.begin, entry.duration);
       if (entry.begin < 0 || entry.duration < 0) {
-        throw new WorkflowOperationException("Times cannot be negative!");
+        throw new WorkflowOperationException("Times may not be negative.");
       }
     }
 
     // Get video tracks
-    logger.info("Get Tracks from Mediapackage");
+    logger.info("Get tracks from media package");
     ArrayList<Track> tracksFromFlavors = new ArrayList<>();
     for (MediaPackageElementFlavor flavor : flavors) {
       logger.debug("Trying to get Track from Flavor {}", flavor);
@@ -253,7 +253,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     try {
       SmilResponse smilResponse = smilService.createNewSmil(mediaPackage);
 
-      logger.info("Start Adding tracks");
+      logger.info("Start adding tracks");
       for (Times mark : cutmarksList) {
         smilResponse = smilService.addParallel(smilResponse.getSmil());
         SmilMediaContainer par = (SmilMediaContainer) smilResponse.getEntity();
@@ -319,7 +319,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     }
     if (videos.size() > 1) {
       for (Track track : videos) {
-        logger.info("Track {} in flavor {}", track, flavor);
+        logger.info("Track {} with flavor {}", track, flavor);
       }
       throw new WorkflowOperationException("The number of videos in each flavor cannot be more than one.");
     }

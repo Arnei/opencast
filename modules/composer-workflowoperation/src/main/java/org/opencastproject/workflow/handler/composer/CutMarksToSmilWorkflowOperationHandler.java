@@ -172,10 +172,12 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
 
     // Is there a catalog?
     Catalog[] catalogs = mediaPackage.getCatalogs(jsonFlavor);
-    if (catalogs.length != 1) {
-      logger.warn("Number of catalogs in the source flavor does not equal one. Skipping...");
+    if (catalogs.length < 1) {
+      logger.warn("No catalogs in the source flavor. Skipping...");
       final WorkflowOperationResult result = createResult(mediaPackage, WorkflowOperationResult.Action.SKIP);
       return result;
+    } else if (catalogs.length > 1) {
+      throw new WorkflowOperationException("More than one catalog in the source flavor! Make sure there is only catalog.");
     }
 
     // Parse JSON

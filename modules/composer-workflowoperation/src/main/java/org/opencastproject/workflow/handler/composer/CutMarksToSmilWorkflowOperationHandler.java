@@ -224,6 +224,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     }
 
     // Check for cut marks that would lead to errors with the given tracks and remove them
+    // Possible TODO: Instead of removing, only apply cut marks to tracks with a long enough duration?
     // Get the shortest duration of all tracks
     long shortestDuration = Long.MAX_VALUE;
     for (Track track : tracksFromFlavors) {

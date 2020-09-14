@@ -8,6 +8,9 @@ This operation parses a JSON containing cut marks into a SMIL that can be used b
 [VideoEditorWorkflowOperation](editor-woh.md). It does this by attributing the given times to the tracks in the 
 given presentation and presenter flavors. 
 
+Tracks are assumed to start at 0. Likewise, cut marks are assumed to be specified relative to the beginning
+of the tracks.  
+
 ## Parameter Table
 
 |configuration keys         |example                |description                                                    |
@@ -33,7 +36,7 @@ The values are specified in milliseconds.
 ```xml
     <operation
         id="cut-marks-to-smil"
-        description="Process ingested cutmarks by applyin them to current tracks"
+        description="Process ingested cutmarks by applying them to current tracks"
         fail-on-error="true"
         exception-handler-workflow="partial-error">
       <configurations>

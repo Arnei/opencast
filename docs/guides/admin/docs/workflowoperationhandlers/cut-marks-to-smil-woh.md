@@ -22,12 +22,13 @@ The JSON structure specifies all segments which should be kept after cutting.
 The property `begin` marks the start of a segment while `duration` its duration.
 The values are specified in milliseconds.
 
-    [
-      {
-        "begin": 1672,
-        "duration": 7199
-      }
-    ]
+```json
+[
+  {
+    "begin": 1672,
+    "duration": 7199
+  }
+]
 
 ## Operation Example
 ```xml

@@ -184,7 +184,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     try (BufferedReader bufferedReader = new BufferedReader(new FileReader(getMediaPackageElementPath(jsonWithTimes)))) {
       cutmarks = gson.fromJson(bufferedReader, Times[].class);
     } catch (Exception e) {
-      throw new WorkflowOperationException("Could not read JSON: " + e);
+      throw new WorkflowOperationException("Could not read JSON", e);
     }
     LinkedList<Times> cutmarksList = new LinkedList<Times>(Arrays.asList(cutmarks));
 

@@ -250,7 +250,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     try {
       SmilResponse smilResponse = smilService.createNewSmil(mediaPackage);
 
-      logger.info("Start Adding tracks");
+      logger.info("Start adding tracks");
       for (Times mark : cutmarksList) {
         smilResponse = smilService.addParallel(smilResponse.getSmil());
         SmilMediaContainer par = (SmilMediaContainer) smilResponse.getEntity();

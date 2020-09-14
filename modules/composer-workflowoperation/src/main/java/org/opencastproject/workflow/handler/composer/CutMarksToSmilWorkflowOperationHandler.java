@@ -282,8 +282,10 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
 
     // Check for number of videos to avoid any issues
     // Possible TODO: Can we handle more than one track per flavor?
-    if (videos.isEmpty())
+    if (videos.isEmpty()) {
+      logger.debug("No videos in flavor {}", flavor);
       return result;
+    }
     if (videos.size() > 1) {
       for (Track track : videos) {
         logger.info("Track {} in flavor {}", track, flavor);

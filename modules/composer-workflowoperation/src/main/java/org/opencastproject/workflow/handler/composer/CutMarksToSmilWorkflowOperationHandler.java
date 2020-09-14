@@ -204,7 +204,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     }
 
     // Get video tracks
-    logger.info("Get Tracks from Mediapackage");
+    logger.info("Get tracks from media package");
     ArrayList<Track> tracksFromFlavors = new ArrayList<>();
     for (MediaPackageElementFlavor flavor : flavors) {
       logger.debug("Trying to get Track from Flavor {}", flavor);

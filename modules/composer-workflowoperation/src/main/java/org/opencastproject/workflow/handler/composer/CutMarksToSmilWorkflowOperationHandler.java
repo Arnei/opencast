@@ -199,7 +199,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     for (Times entry : cutmarksList) {
       logger.info("Entry begin {}, Entry duration {}", entry.begin, entry.duration);
       if (entry.begin < 0 || entry.duration < 0) {
-        throw new WorkflowOperationException("Times cannot be negative!");
+        throw new WorkflowOperationException("Times may not be negative.");
       }
     }
 

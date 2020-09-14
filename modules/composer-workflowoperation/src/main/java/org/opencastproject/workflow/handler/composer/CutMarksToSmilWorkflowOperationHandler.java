@@ -58,8 +58,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Optional;
 
 import javax.xml.bind.JAXBException;
@@ -183,16 +186,17 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     } catch (Exception e) {
       throw new WorkflowOperationException("Could not read JSON: " + e);
     }
+    LinkedList<Times> cutmarksList = new LinkedList<Times>(Arrays.asList(cutmarks));
 
     // If the catalog was empty, give up
-    if (cutmarks.length < 1) {
+    if (cutmarksList.size() < 1) {
       logger.warn("Source JSON did not contain any timestamps! Skipping...");
       final WorkflowOperationResult result = createResult(mediaPackage, WorkflowOperationResult.Action.SKIP);
       return result;
     }
 
     // Check parsing results
-    for (Times entry : cutmarks) {
+    for (Times entry : cutmarksList) {
       logger.info("Entry begin {}, Entry duration {}", entry.begin, entry.duration);
       if (entry.begin < 0 || entry.duration < 0) {
         throw new WorkflowOperationException("Times cannot be negative!");
@@ -217,13 +221,37 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
       return result;
     }
 
+    // Check for cut marks that would lead to errors with the given tracks and remove them
+    // Get the shortest duration of all tracks
+    long shortestDuration = Long.MAX_VALUE;
+    for (Track track : tracksFromFlavors) {
+      if (track.getDuration() < shortestDuration) {
+        shortestDuration = track.getDuration();
+      }
+    }
+    // Remove all timestamps that begin after the shortest duration
+    ListIterator<Times> iter = cutmarksList.listIterator();
+    while (iter.hasNext()) {
+      long begin = iter.next().begin;
+      if (begin > shortestDuration) {
+        logger.info("Skipped mark with begin: {}, ", begin);
+        iter.remove();
+      }
+    }
+    // If the timestamp list is now empty, give up
+    if (cutmarksList.size() < 1) {
+      logger.warn("No timestamps are valid for the given tracks! Skipping...");
+      final WorkflowOperationResult result = createResult(mediaPackage, WorkflowOperationResult.Action.SKIP);
+      return result;
+    }
+
     // Create the new SMIL document
     Smil smil;
     try {
       SmilResponse smilResponse = smilService.createNewSmil(mediaPackage);
 
       logger.info("Start Adding tracks");
-      for (Times mark : cutmarks) {
+      for (Times mark : cutmarksList) {
         smilResponse = smilService.addParallel(smilResponse.getSmil());
         SmilMediaContainer par = (SmilMediaContainer) smilResponse.getEntity();
         logger.debug("Segment begin: {}; Segment duration: {}", mark.begin, mark.duration);

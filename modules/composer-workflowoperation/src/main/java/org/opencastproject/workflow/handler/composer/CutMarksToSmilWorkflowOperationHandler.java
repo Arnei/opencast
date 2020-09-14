@@ -316,7 +316,7 @@ public class CutMarksToSmilWorkflowOperationHandler extends AbstractWorkflowOper
     }
     if (videos.size() > 1) {
       for (Track track : videos) {
-        logger.info("Track {} in flavor {}", track, flavor);
+        logger.info("Track {} with flavor {}", track, flavor);
       }
       throw new WorkflowOperationException("The number of videos in each flavor cannot be more than one.");
     }

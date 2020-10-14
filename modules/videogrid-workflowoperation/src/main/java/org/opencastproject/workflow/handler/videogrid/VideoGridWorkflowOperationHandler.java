@@ -201,7 +201,7 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
     private long nextTimeStamp = 0;
     private long startTime = 0;
     private long duration = 0;
-    private String filename = "filename.mp4";
+    private Track video;
 
     public int getAspectRatioWidth() {
       return aspectRatioWidth;
@@ -239,12 +239,13 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
     public void setDuration(long duration) {
       this.duration = duration;
     }
-    public String getFilename() {
-      return filename;
+    public Track getVideo() {
+      return video;
     }
-    public void setFilename(String filename) {
-      this.filename = filename;
+    public void setVideo(Track video) {
+      this.video = video;
     }
+
 
     VideoInfo() {
 
@@ -255,10 +256,10 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
       aspectRatioHeight = height;
     }
 
-    VideoInfo(String filename, long timeStamp, int aspectRatioHeight, int aspectRatioWidth, long startTime)
+    VideoInfo(Track video, long timeStamp, int aspectRatioHeight, int aspectRatioWidth, long startTime)
     {
       this(aspectRatioHeight, aspectRatioWidth);
-      this.filename = filename;
+      this.video = video;
       this.timeStamp = timeStamp;
       this.startTime = startTime;
     }
@@ -323,7 +324,7 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
   {
     private boolean start;
     private long timeStamp;
-    private String filename;
+    private Track video;
     private VideoInfo videoInfo;
 
     public boolean isStart() {
@@ -338,12 +339,6 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
     public void setTimeStamp(long timeStamp) {
       this.timeStamp = timeStamp;
     }
-    public String getFilename() {
-      return filename;
-    }
-    public void setFilename(String filename) {
-      this.filename = filename;
-    }
     public VideoInfo getVideoInfo() {
       return videoInfo;
     }
@@ -351,11 +346,11 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
       this.videoInfo = videoInfo;
     }
 
-    StartStopEvent(boolean start, String filename, long timeStamp, VideoInfo videoInfo)
+    StartStopEvent(boolean start, Track video, long timeStamp, VideoInfo videoInfo)
     {
       this.start = start;
       this.timeStamp = timeStamp;
-      this.filename = filename;
+      this.video = video;
       this.videoInfo = videoInfo;
     }
 
@@ -457,6 +452,7 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
     // Create a list of start and stop events, i.e. every time a new video begins or an old one ends
     // Create list from SMIL from partial ingests
     List<StartStopEvent> events = new ArrayList<>();
+    List<Track> videoSourceTracks = new ArrayList<>();
 
     for (int i = 0; i < sequences.getLength(); i++) {
       final SMILElement item = (SMILElement) sequences.item(i);
@@ -467,7 +463,7 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
         SMILMediaElement e = (SMILMediaElement) node;
 
         // Avoid any element that is not a video or of the source type
-        if (NODE_TYPE_VIDEO.equals(e.getNodeName())) {
+        if(NODE_TYPE_VIDEO.equals(e.getNodeName())) {
           Track track;
           try {
             track = getTrackByID(e.getId(), sourceTracks);
@@ -475,6 +471,8 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
             logger.info("No track corresponding to SMIL ID found, skipping SMIL ID {}", e.getId());
             continue;
           }
+          videoSourceTracks.add(track);
+
           double beginInSeconds = e.getBegin().item(0).getResolvedOffset();
           long beginInMs = Math.round(beginInSeconds * 1000d);
           double durationInSeconds = e.getDur();
@@ -498,8 +496,8 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
           logger.info("Video information: Width: {}, Height {}, StartTime: {}", videoInfo.aspectRatioWidth,
                   videoInfo.aspectRatioHeight, videoInfo.startTime);
 
-          events.add(new StartStopEvent(true, getTrackPath(track), beginInMs, videoInfo));
-          events.add(new StartStopEvent(false, getTrackPath(track), beginInMs + durationInMs, videoInfo));
+          events.add(new StartStopEvent(true, track, beginInMs, videoInfo));
+          events.add(new StartStopEvent(false, track, beginInMs + durationInMs, videoInfo));
 
         }
       }
@@ -516,7 +514,7 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
 
     // Create an edit decision list
     List<VideoEdlPart> videoEdl = new ArrayList<VideoEdlPart>();
-    HashMap<String, StartStopEvent> activeVideos = new HashMap<>();   // Currently running videos
+    HashMap<Track, StartStopEvent> activeVideos = new HashMap<>();   // Currently running videos
 
     // Define starting point
     VideoEdlPart start = new VideoEdlPart();
@@ -527,10 +525,10 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
     for (StartStopEvent event : events) {
       if (event.start) {
         logger.info("Add start event at {}", event.timeStamp);
-        activeVideos.put(event.filename, event);
+        activeVideos.put(event.video, event);
       } else {
         logger.info("Add stop event at {}", event);
-        activeVideos.remove(event.filename);
+        activeVideos.remove(event.video);
       }
       videoEdl.add(createVideoEdl(event, activeVideos));
     }
@@ -562,8 +560,8 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
     // Create video tracks for each section
     Job job;
     try {
-      job = videoGridService.createPartialTracks(commands);
-    } catch (VideoGridServiceException e) {
+      job = videoGridService.createPartialTracks(commands, videoSourceTracks.toArray(new Track[videoSourceTracks.size()]));
+    } catch (VideoGridServiceException | org.apache.commons.codec.EncoderException | MediaPackageException e) {
       throw new WorkflowOperationException(e);
     }
 
@@ -741,7 +739,9 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
         if (seek > 0) {
           seek = seek + seekOffset;
         }
-        ffmpegFilter += String.format("movie=%s:sp=%s", video.filename, msToS(seek));
+        // Instead of adding the filepath here, we put a placeholder.
+        // This is so that the videogrid service can later replace it, after it put the files in it's workspace
+        ffmpegFilter += String.format("movie=%s:sp=%s", "#{" + video.getVideo().getIdentifier() + "}", msToS(seek));
         // Subtract away the offset from the timestamps, so the trimming
         // in the fps filter is accurate
         ffmpegFilter += String.format(",setpts=PTS-%s/TB", msToS(seekOffset));
@@ -970,11 +970,11 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
    *          Currently active videos
    * @return
    */
-  private VideoEdlPart createVideoEdl(StartStopEvent event, HashMap<String, StartStopEvent> activeVideos) {
+  private VideoEdlPart createVideoEdl(StartStopEvent event, HashMap<Track, StartStopEvent> activeVideos) {
     VideoEdlPart nextEdl = new VideoEdlPart();
     nextEdl.timeStamp = event.timeStamp;
 
-    for (Map.Entry<String, StartStopEvent> activeVideo : activeVideos.entrySet()) {
+    for (Map.Entry<Track, StartStopEvent> activeVideo : activeVideos.entrySet()) {
       nextEdl.areas.add(new VideoInfo(activeVideo.getKey(), event.timeStamp, activeVideo.getValue().videoInfo.aspectRatioHeight,
               activeVideo.getValue().videoInfo.aspectRatioWidth, event.timeStamp - activeVideo.getValue().timeStamp));
     }

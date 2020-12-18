@@ -1,0 +1,22 @@
+{
+  "name": "angular-translate",
+  "description": "A translation module for AngularJS",
+  "version": "2.18.3",
+  "main": "./angular-translate.js",
+  "ignore": [],
+  "author": "Pascal Precht",
+  "license": "MIT",
+  "dependencies": {
+    "angular": ">=1.2.26 <1.9"
+  },
+  "homepage": "https://github.com/PascalPrecht/bower-angular-translate",
+  "_release": "2.18.3",
+  "_resolution": {
+    "type": "version",
+    "tag": "2.18.3",
+    "commit": "5038ebd6fa980612a8234e5ed27bdd864d632d1a"
+  },
+  "_source": "https://github.com/PascalPrecht/bower-angular-translate.git",
+  "_target": "2.18.3",
+  "_originalSource": "angular-translate"
+}

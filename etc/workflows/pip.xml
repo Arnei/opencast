@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definition xmlns="http://workflow.opencastproject.org">
+
+  <id>pip</id>
+  <title>Create a picture in picture version of the recording</title>
+  <tags>
+    <tag>archive</tag>
+  </tags>
+
+  <configuration_panel>
+    <![CDATA[
+      <div id="workflow-configuration">
+        <fieldset>
+          <legend>Choose which video to make big</legend>
+          <ul>
+            <li>
+              <input id="makePresenterOrPresentationBig_presenter" type="radio" name="makePresenterOrPresentationBig" class="configField" value="presenter" />
+              <label for="makePresenterOrPresentationBig_presenter">Presenter</label>
+            </li>
+            <li>
+              <input id="makePresenterOrPresentationBig_presentation" type="radio" name="makePresenterOrPresentationBig" class="configField" value="presentation" checked="checked" />
+              <label for="makePresenterOrPresentationBig_presentation">Presentation</label>
+            </li>
+          </ul>
+        </fieldset>
+        <fieldset>
+          <legend>Choose position of the smaller video</legend>
+          <ul>
+            <li>
+              <input id="smallVideoPosition_topRight" type="radio" name="smallVideoPosition" class="configField" value="topright" checked="checked" />
+              <label for="smallVideoPosition_topRight">Top Right</label>
+            </li>
+            <li>
+              <input id="smallVideoPosition_topLeft" type="radio" name="smallVideoPosition" class="configField" value="topleft" />
+              <label for="smallVideoPosition_topLeft">Top Left</label>
+            </li>
+          </ul>
+        </fieldset>
+      </div>
+
+
+
+    ]]>
+  </configuration_panel>
+
+  <operations>
+    <operation
+        id="defaults"
+        if="${makePresenterOrPresentationBig_presenter}"
+        description="Set presenter big">
+      <configurations>
+        <configuration key="lower">presenter</configuration>
+        <configuration key="upper">presentation</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="defaults"
+        if="${makePresenterOrPresentationBig_presentation}"
+        description="Set presentation big">
+      <configurations>
+        <configuration key="lower">presentation</configuration>
+        <configuration key="upper">presenter</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="defaults"
+        if="${smallVideoPosition_topRight}"
+        description="Set small video to top right">
+      <configurations>
+        <configuration key="smallVideoPosition">topright</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="defaults"
+        if="${smallVideoPosition_topLeft}"
+        description="Set small video to top left">
+      <configurations>
+        <configuration key="smallVideoPosition">topleft</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="tag"
+        description="Unarchive old picture-in-picture version">
+      <configurations>
+        <configuration
+            key="source-flavors">composite/delivery</configuration>
+        <configuration key="target-tags">ignore</configuration>
+        <configuration key="target-flavor">ignore/me</configuration>
+      </configurations>
+    </operation>
+
+    <!-- In case this wasn't started from the Admin UI, apply defaults -->
+    <operation
+        id="defaults"
+        description="Apply default values for partial-pip">
+      <configurations>
+        <configuration key="lower">presentation</configuration>
+        <configuration key="upper">presenter</configuration>
+        <configuration key="smallVideoPosition">topright</configuration>
+      </configurations>
+    </operation>
+
+
+    <!-- Analyze tracks to check if there are any tracks in the source flavor -->
+    <!-- If not, attempt to use the prepared flavor instead -->
+    <operation
+        id="analyze-tracks"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Analyze tracks in media package and set control variables">
+      <configurations>
+        <configuration key="source-flavor">*/source</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="composite"
+        if="${presenter_source_media} OR ${presentation_source_media}"
+        exception-handler-workflow="partial-error"
+        description="Encode Picture in Picture from Source">
+      <configurations>
+        <configuration key="source-flavor-lower">${lower}/source</configuration>
+        <configuration key="source-flavor-upper">${upper}/source</configuration>
+        <configuration key="encoding-profile">mp4-hd.dual.http</configuration>
+        <configuration key="target-flavor">composite/delivery</configuration>
+        <configuration key="target-tags">archive,engage-download,rss,atom</configuration>
+        <configuration key="output-resolution">lower</configuration>
+        <configuration key="output-background">0x000000FF</configuration>
+        <configuration key="layout">${smallVideoPosition}</configuration>
+        <configuration key="layout-topleft">
+          {"horizontalCoverage":1.0,"anchorOffset":{"referring":{"left":1.0,"top":1.0},"offset":{"y":-20,"x":-20},"reference":{"left":1.0,"top":1.0}}};
+          {"horizontalCoverage":0.2,"anchorOffset":{"referring":{"left":0.0,"top":0.0},"offset":{"y":-20,"x":-20},"reference":{"left":0.0,"top":0.0}}};
+          {"horizontalCoverage":1.0,"anchorOffset":{"referring":{"left":1.0,"top":0.0},"offset":{"y":20,"x":20},"reference":{"left":1.0,"top":0.0}}}
+        </configuration>
+        <configuration key="layout-topright">
+          {"horizontalCoverage":1.0,"anchorOffset":{"referring":{"left":1.0,"top":1.0},"offset":{"y":-20,"x":-20},"reference":{"left":1.0,"top":1.0}}};
+          {"horizontalCoverage":0.2,"anchorOffset":{"referring":{"left":1.0,"top":0.0},"offset":{"y":-20,"x":-20},"reference":{"left":1.0,"top":0.0}}};
+          {"horizontalCoverage":1.0,"anchorOffset":{"referring":{"left":0.0,"top":0.0},"offset":{"y":20,"x":20},"reference":{"left":0.0,"top":0.0}}}
+        </configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="composite"
+        if="NOT ${presenter_source_media} AND NOT ${presentation_source_media}"
+        exception-handler-workflow="partial-error"
+        description="Encode Picture in Picture from Prepared">
+      <configurations>
+        <configuration key="source-flavor-lower">presenter/prepared</configuration>
+        <configuration key="source-flavor-upper">presentation/prepared</configuration>
+        <configuration key="encoding-profile">mp4-hd.dual.http</configuration>
+        <configuration key="target-flavor">composite/delivery</configuration>
+        <configuration key="target-tags">archive,engage-download,rss,atom</configuration>
+        <configuration key="output-resolution">lower</configuration>
+        <configuration key="output-background">0x000000FF</configuration>
+        <configuration key="layout">topright</configuration>
+        <configuration key="layout-topleft">
+          {"horizontalCoverage":1.0,"anchorOffset":{"referring":{"left":1.0,"top":1.0},"offset":{"y":-20,"x":-20},"reference":{"left":1.0,"top":1.0}}};
+          {"horizontalCoverage":0.2,"anchorOffset":{"referring":{"left":0.0,"top":0.0},"offset":{"y":-20,"x":-20},"reference":{"left":0.0,"top":0.0}}};
+          {"horizontalCoverage":1.0,"anchorOffset":{"referring":{"left":1.0,"top":0.0},"offset":{"y":20,"x":20},"reference":{"left":1.0,"top":0.0}}}
+        </configuration>
+        <configuration key="layout-topright">
+          {"horizontalCoverage":1.0,"anchorOffset":{"referring":{"left":1.0,"top":1.0},"offset":{"y":-20,"x":-20},"reference":{"left":1.0,"top":1.0}}};
+          {"horizontalCoverage":0.2,"anchorOffset":{"referring":{"left":1.0,"top":0.0},"offset":{"y":-20,"x":-20},"reference":{"left":1.0,"top":0.0}}};
+          {"horizontalCoverage":1.0,"anchorOffset":{"referring":{"left":0.0,"top":0.0},"offset":{"y":20,"x":20},"reference":{"left":0.0,"top":0.0}}}
+        </configuration>
+      </configurations>
+    </operation>
+
+
+
+
+    <operation
+        id="snapshot"
+        description="Make picture in picture video available for download under assets">
+      <configurations>
+        <configuration key="source-tags">archive</configuration>
+      </configurations>
+    </operation>
+  </operations>
+</definition>

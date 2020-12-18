@@ -99,6 +99,10 @@
     <module>modules/distribution-service-streaming-remote</module>
     <module>modules/distribution-workflowoperation</module>
     <module>modules/dublincore</module>
+    <module>modules/editor-service</module>
+    <module>modules/editor-service-api</module>
+    <module>modules/editor-service-remote</module>
+    <module>modules/editor-service-endpoint</module>
     <module>modules/email-template-service-api</module>
     <module>modules/email-template-service-impl</module>
     <module>modules/event-comment</module>
@@ -266,6 +270,7 @@
     <module>modules/workspace-api</module>
     <module>modules/workspace-impl</module>
     <module>assemblies</module>
+
   </modules>
   <build>
     <defaultGoal>install</defaultGoal>

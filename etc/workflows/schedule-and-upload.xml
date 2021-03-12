@@ -42,6 +42,15 @@
           </ul>
         </fieldset>
         <fieldset>
+          <legend>Create composite video for H5P</legend>
+          <ul>
+            <li>
+              <input id="flagQuality1200x800p" name="flagQuality1200x800p" type="checkbox" class="configField" value="false" />
+              <label for="flagQuality1200x800p">1200x800p resolution</label>
+            </li>
+          </ul>
+        </fieldset>
+        <fieldset>
           <legend>Add a comment that the recording needs:</legend>
           <ul>
             <li>

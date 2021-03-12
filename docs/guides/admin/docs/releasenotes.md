@@ -60,7 +60,7 @@ Improvements
 - Reduced memory needed for Workflow Index rebuild
 - Ansible script documentation
 - Automatic publication of streaming URLs
-- S3 compatibility - Endpoint configuration for Amazon S3 alternatives added  
+- S3 compatibility - Endpoint configuration for Amazon S3 alternatives added
 - Theodul player ui config
 - Re-introduce ability to avoid data loss during ingest
 
@@ -75,6 +75,32 @@ API changes
 - Removed REST endpoints for modifying workflow definitions
     - DELETE /workflow/definition/{id}
     - PUT /workflow/definition
+
+Additional Notes about 8.10
+---------------------------
+
+This release contains an important bugfix where unprivileged users could not upload videos.
+
+
+Additional Notes about 8.9
+--------------------------
+
+Opencast 8.9 contains an important security fix regarding host verification. Upgrading is strongly recommended. If you
+use self-signed certificates, you now need to properly import them.
+Additionally, the UI of the docs were improved and and the Spring snapshot repository was removed to resolve build
+problems.
+5 other patches have been merged.
+
+Additional Notes About 8.8
+--------------------------
+
+This maintenance includes 12 patches.
+
+Additional Notes About 8.7
+--------------------------
+
+This maintenance release fixes severals bugs including problems with the scheduler in multitenant systems and adds
+missing ACLs after asset uploads.
 
 Additional Notes About 8.6
 --------------------------
@@ -210,12 +236,6 @@ with `<sec:remember-me services-ref="rememberMeServices" />`
   ](https://github.com/opencast/opencast/security/advisories/GHSA-h362-m8f2-5x7c)
 - CVE-2020-5228 – [Public Access Via OAI-PMH
   ](https://github.com/opencast/opencast/security/advisories/GHSA-6f54-3qr9-pjgj)
-
-Additional Notes About 7.7
--------------------------
-
-Opencast 7.7 brings better ACLs handling, remember-me authentication fix and other minor
-improvements.
 
 
 Release Schedule

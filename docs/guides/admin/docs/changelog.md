@@ -4,6 +4,89 @@ Changelog
 Opencast 8
 ----------
 
+### Opencast 8.10
+
+*Released on December 23rd, 2020*
+
+- [[#2160](https://github.com/opencast/opencast/pull/2160)] -
+  Fix Ingest by Non-privileged User
+- [[#2049](https://github.com/opencast/opencast/pull/2049)] -
+  Endtime of segments fixed in the editor
+
+
+### Opencast 8.9
+
+*Released on December 8th, 2020*
+
+- [[#2099](https://github.com/opencast/opencast/pull/2099)] -
+  Support faster playback rates in paella video player
+- [[#2087](https://github.com/opencast/opencast/pull/2087)] -
+  Move from Travis CI to GitHub Actions (8.x)
+- [[#2075](https://github.com/opencast/opencast/pull/2075)] -
+  Reduce IO Load When Starting a Workflow
+- [[#2068](https://github.com/opencast/opencast/pull/2068)] -
+  JDK Support proposal (2020-11-11) documentation for 8.x
+- [[#1988](https://github.com/opencast/opencast/pull/1988)] -
+  #1987 Admin UI event start filter datepicker timezone patch
+
+
+### Opencast 8.8
+
+*Released on November 19th, 2020*
+
+- [[#2075](https://github.com/opencast/opencast/pull/2075)] -
+  Reduce IO Load When Starting a Workflow
+- [[#2072](https://github.com/opencast/opencast/pull/2072)] -
+  Update player.matomo.tracking.md
+- [[#2067](https://github.com/opencast/opencast/pull/2067)] -
+  Solves #2034 (Execute-once subprocess issue)
+- [[#2051](https://github.com/opencast/opencast/pull/2051)] -
+  Limit OpenMP Threads to Prevent Tesseract Blocking the System
+- [[#2040](https://github.com/opencast/opencast/pull/2040)] -
+  Drop user login log level
+- [[#2020](https://github.com/opencast/opencast/pull/2020)] -
+  Set the RFC 822 "Date" header field when sending an email (r/8.x)
+- [[#2008](https://github.com/opencast/opencast/pull/2008)] -
+  Speed up preview encoding
+- [[#1988](https://github.com/opencast/opencast/pull/1988)] -
+  #1987 Admin UI event start filter datepicker timezone patch
+- [[#1954](https://github.com/opencast/opencast/pull/1954)] -
+  Fix Paella Player assuming track is audio-only when it's actually video and audio
+- [[#1894](https://github.com/opencast/opencast/pull/1894)] -
+  Remove references to removed modules
+- [[#1891](https://github.com/opencast/opencast/pull/1891)] -
+  Creating a new series doesn't send user collections anymore
+- [[#1887](https://github.com/opencast/opencast/pull/1887)] -
+  Remove Dead OpenID Module
+
+
+### Opencast 8.7
+
+*Released on September 27th, 2020*
+
+- [[#1851](https://github.com/opencast/opencast/pull/1851)] -
+  Fix conflict checking for scheduled events in multitenant systems
+- [[#1848](https://github.com/opencast/opencast/pull/1848)] -
+  Fix capture agent dropdown menus
+- [[#1837](https://github.com/opencast/opencast/pull/1837)] -
+  Adding bugfix from #1668 to 8.x
+- [[#1828](https://github.com/opencast/opencast/pull/1828)] -
+  Recommend https
+- [[#1827](https://github.com/opencast/opencast/pull/1827)] -
+  Clean up basic configuration
+- [[#1812](https://github.com/opencast/opencast/pull/1812)] -
+  Missing ACL after asset upload
+- [[#1786](https://github.com/opencast/opencast/pull/1786)] -
+  Removed servicewarnings endpoint
+- [[#1770](https://github.com/opencast/opencast/pull/1770)] -
+  Paella player should only list http(s) URLs in the download plugin
+- [[#1756](https://github.com/opencast/opencast/pull/1756)] -
+  Change markdown CI checks to bash
+- [[#1753](https://github.com/opencast/opencast/pull/1753)] -
+  Admin interface event API logs on user error
+- [[#1735](https://github.com/opencast/opencast/pull/1735)] -
+  Added reloading of filters in users page
+
 ### Opencast 8.6
 
 *Released on August 5th, 2020*
@@ -584,6 +667,37 @@ Opencast 8
 
 Opencast 7
 ----------
+
+### Opencast 7.9
+
+*Released on December 8, 2020*
+
+- [[GHSA-44cw-p2hm-gpf6](https://github.com/opencast/opencast/security/advisories/GHSA-44cw-p2hm-gpf6)]
+  Securoty: Disabled Hostname Verification
+- [[#1964](https://github.com/opencast/opencast/pull/1964)] -
+  Docs: When the sidebar is hidden, the navigation links are disabled now
+- [[#1922](https://github.com/opencast/opencast/pull/1922)] -
+  Remove Spring snapshot repository from main pom
+
+### Opencast 7.8
+
+*Released on August 17, 2020*
+
+- [[#1667](https://github.com/opencast/opencast/pull/1667)] -
+  Fix managed acl filter in api
+- [[#1659](https://github.com/opencast/opencast/pull/1659)] -
+  Updating Guava version
+- [[#1657](https://github.com/opencast/opencast/pull/1657)] -
+  Fixed the video outline in the theodul player
+- [[#1641](https://github.com/opencast/opencast/pull/1641)] -
+  Capture Agent Authentication Method
+- [[#1595](https://github.com/opencast/opencast/pull/1595)] -
+  Gracefully Handle Missing Timeline Preview
+- [[#1594](https://github.com/opencast/opencast/pull/1594)] -
+  Fix Calculation of Aspect Ratio
+- [[#1589](https://github.com/opencast/opencast/pull/1589)] -
+  Engage: Theodul: Audio: Refer to correct items
+
 ### Opencast 7.7
 
 *Released on April 27, 2020*

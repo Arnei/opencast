@@ -717,7 +717,7 @@ public class IngestRestService extends AbstractJobProducerEndpoint {
           if (item.isFormField()) {
             String fieldName = item.getFieldName();
             String value = Streams.asString(item.openStream(), "UTF-8");
-            logger.trace("form field {}: {}", fieldName, value);
+            logger.info("form field {}: {}", fieldName, value);
             /* Ignore empty fields */
             if ("".equals(value)) {
               continue;
@@ -760,6 +760,7 @@ public class IngestRestService extends AbstractJobProducerEndpoint {
               /* Episode metadata DC catalog (XML) as string */
             } else if ("episodeDCCatalog".equals(fieldName)) {
               InputStream is = new ByteArrayInputStream(value.getBytes("UTF-8"));
+              logger.info("EpisodeDCCatalaog: " + is);
               updateMediaPackageID(mp, is);
               is.reset();
               String fileName = "episode" + episodeDCCatalogNumber + ".xml";

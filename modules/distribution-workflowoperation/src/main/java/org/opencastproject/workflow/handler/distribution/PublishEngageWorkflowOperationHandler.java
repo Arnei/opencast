@@ -122,6 +122,7 @@ public class PublishEngageWorkflowOperationHandler extends AbstractWorkflowOpera
   private DistributionService streamingDistributionService = null;
 
   /** The download distribution service */
+  /** The download distribution service */
   private DownloadDistributionService downloadDistributionService = null;
 
   /** The search service */

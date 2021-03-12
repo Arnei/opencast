@@ -264,7 +264,7 @@ public final class DublinCores {
       try {
         return DublinCoreXmlFormat.read(ser);
       } catch (Exception e) {
-        throw new RuntimeException("Unable to read DublinCore catalog, XML parsing failed.", e);
+        throw new RuntimeException("Unable to read DublinCore catalog, XML parsing failed. DU NOOB " + ser, e);
       }
     }
   }

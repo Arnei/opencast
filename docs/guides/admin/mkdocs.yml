@@ -118,7 +118,8 @@ nav:
    - Search Index:
       - Overview: 'modules/searchindex/index.md'
       - Solr: 'modules/searchindex/solr.md'
-      - Elasticsearch: 'modules/searchindex/elasticsearch.md'
+      - Elasticsearch: 'configuration/elasticsearch.md'
+   - Stand-alone Video Editor: 'modules/editor.md'
    - Stream Security: 'modules/stream-security.md'
    - Studio: 'modules/studio.md'
    - Termination State:

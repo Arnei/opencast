@@ -88,7 +88,7 @@ public class EditorRestEndpoint {
           description = "Returns all the information required to get the editor tool started",
           returnDescription = "JSON object",
           pathParameters = { @RestParameter(name = "mediapackageid", description = "The id of the media package",
-                  isRequired = true, type = RestParameter.Type.STRING) }, responses = {
+                  isRequired = true, type = RestParameter.Type.STRING) }, reponses = {
           @RestResponse(description = "Media package found", responseCode = SC_OK),
           @RestResponse(description = "Media package not found", responseCode = SC_NOT_FOUND) })
   public Response getEditorData(@PathParam("mediapackageid") final String mediaPackageId) {
@@ -127,7 +127,7 @@ public class EditorRestEndpoint {
           pathParameters = {
           @RestParameter(name = "mediapackageid", description = "The id of the media package", isRequired = true,
                   type = RestParameter.Type.STRING) },
-          responses = {
+          reponses = {
           @RestResponse(description = "Editing information saved and processed", responseCode = SC_OK),
           @RestResponse(description = "Media package not found", responseCode = SC_NOT_FOUND),
           @RestResponse(description = "The editing information cannot be parsed",

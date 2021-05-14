@@ -44,13 +44,13 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
-    <dependency>
+    <!-- <dependency>
       <groupId>org.springframework</groupId>
-      <artifactId>org.springframework.beans</artifactId>
+      <artifactId>spring-beans</artifactId>
       <version>${spring.version}</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
+    </dependency> -->
+    <!-- <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>org.springframework.context</artifactId>
       <version>${spring.version}</version>
@@ -61,7 +61,7 @@
       <artifactId>org.springframework.expression</artifactId>
       <version>${spring.version}</version>
       <scope>test</scope>
-    </dependency>
+    </dependency> -->
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-test</artifactId>
@@ -80,10 +80,10 @@
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.compendium</artifactId>
     </dependency>
-    <dependency>
+    <!-- <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-core</artifactId>
-    </dependency>
+    </dependency> -->
   </dependencies>
   <build>
     <plugins>
@@ -105,11 +105,7 @@
                 <ignoredUsedUndeclaredDependency>org.springframework:spring-core</ignoredUsedUndeclaredDependency>
                 <ignoredUsedUndeclaredDependency>org.springframework.security:spring-security-core</ignoredUsedUndeclaredDependency>
                 <ignoredUsedUndeclaredDependency>org.springframework:spring-beans</ignoredUsedUndeclaredDependency>
-                <ignoredUsedUndeclaredDependency>org.hamcrest:hamcrest</ignoredUsedUndeclaredDependency>
               </ignoredUsedUndeclaredDependencies>
-              <ignoredUnusedDeclaredDependencies>
-                <ignoredUnusedDeclaredDependency>org.springframework:org.springframework.context</ignoredUnusedDeclaredDependency>
-              </ignoredUnusedDeclaredDependencies>
             </configuration>
           </execution>
         </executions>

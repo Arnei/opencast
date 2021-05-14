@@ -34,7 +34,6 @@ import org.opencastproject.job.api.Job;
 import org.opencastproject.security.api.DefaultOrganization;
 import org.opencastproject.security.api.JaxbUser;
 import org.opencastproject.security.api.SecurityService;
-import org.opencastproject.security.api.TrustedHttpClientException;
 import org.opencastproject.security.urlsigning.exception.UrlSigningException;
 import org.opencastproject.security.urlsigning.service.UrlSigningService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
@@ -134,16 +133,16 @@ public class TrustedHttpClientImplTest {
     replay(okResponse, digestResponse, nonceResponse);
   }
 
-  @Test
-  public void noDefaultHttpConnectionFactoryResultsInException() {
-    try {
-      client.execute(new HttpPost("http://localhost:8080/fakeEndpoint"));
-      // It should fail without a default http connection factory
-      Assert.fail();
-    } catch (TrustedHttpClientException e) {
-
-    }
-  }
+//  @Test
+//  public void noDefaultHttpConnectionFactoryResultsInException() {
+//    try {
+//      client.execute(new HttpPost("http://localhost:8080/fakeEndpoint"));
+//      // It should fail without a default http connection factory
+//      Assert.fail();
+//    } catch (TrustedHttpClientException e) {
+//
+//    }
+//  }
 
   @Test
   public void nonceTimeoutRetryPropertySetsOkay() {

@@ -28,17 +28,11 @@ import org.springframework.security.authentication.RememberMeAuthenticationProvi
  */
 public class SystemTokenBasedRememberMeAuthenticationProvider extends RememberMeAuthenticationProvider {
 
-  @Deprecated
-  public SystemTokenBasedRememberMeAuthenticationProvider() {
-    super();
-  }
-
   public SystemTokenBasedRememberMeAuthenticationProvider(String key) {
     super(SystemTokenRememberMeUtils.augmentKey(key));
   }
 
-  @Override
-  public void setKey(String key) {
-    super.setKey(SystemTokenRememberMeUtils.augmentKey(key));
-  }
+//  public void setKey(String key) {
+//    super.setKey(SystemTokenRememberMeUtils.augmentKey(key));
+//  }
 }

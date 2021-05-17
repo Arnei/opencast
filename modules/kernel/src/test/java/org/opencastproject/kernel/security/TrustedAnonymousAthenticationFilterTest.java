@@ -64,7 +64,7 @@ public class TrustedAnonymousAthenticationFilterTest {
     EasyMock.expect(request.getHeader(DelegatingAuthenticationEntryPoint.REQUESTED_AUTH_HEADER)).andReturn(null);
     EasyMock.replay(request);
 
-    TrustedAnonymousAuthenticationFilter filter = new TrustedAnonymousAuthenticationFilter();
+    TrustedAnonymousAuthenticationFilter filter = new TrustedAnonymousAuthenticationFilter("key");
     boolean isAnonymousRequest = filter.applyAnonymousForThisRequest(request);
     Assert.assertFalse(isAnonymousRequest);
 

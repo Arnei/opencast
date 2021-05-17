@@ -35,11 +35,14 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class TrustedAnonymousAuthenticationFilter extends AnonymousAuthenticationFilter {
 
+  public TrustedAnonymousAuthenticationFilter(String key) {
+    super(key);
+  }
+
   /**
    * @see org.springframework.security.web.authentication.AnonymousAuthenticationFilter#applyAnonymousForThisRequest(javax
    *      .servlet.http.HttpServletRequest)
    */
-  @Override
   @Deprecated
   protected boolean applyAnonymousForThisRequest(HttpServletRequest request) {
     return StringUtils.isBlank(request.getHeader(DelegatingAuthenticationEntryPoint.REQUESTED_AUTH_HEADER));

@@ -47,8 +47,8 @@
     <osgi.core.version>5.0.0</osgi.core.version>
     <querydsl.version>3.7.4</querydsl.version>
     <rest-assured.version>4.3.3</rest-assured.version>
-    <spring.version>3.2.9.RELEASE</spring.version>
-    <spring-security.version>3.2.9.RELEASE</spring-security.version>
+    <spring.version>5.2.15.RELEASE</spring.version>
+    <spring-security.version>5.2.10.RELEASE</spring-security.version>
   </properties>
   <modules>
     <module>modules/admin-ui</module>

@@ -38,11 +38,6 @@ import java.security.NoSuchAlgorithmException;
 public class SystemTokenBasedRememberMeService extends TokenBasedRememberMeServices {
   private Logger logger = LoggerFactory.getLogger(SystemTokenBasedRememberMeService.class);
 
-  @Deprecated
-  public SystemTokenBasedRememberMeService() {
-    super();
-  }
-
   public SystemTokenBasedRememberMeService(String key, UserDetailsService userDetailsService) {
     super(SystemTokenRememberMeUtils.augmentKey(key), userDetailsService);
   }
@@ -54,10 +49,10 @@ public class SystemTokenBasedRememberMeService extends TokenBasedRememberMeServi
    * properties like hostname, IP address, file system information and Linux kernel. Hence, even setting no custom
    * key should be save.
    */
-  @Override
-  public void setKey(String key) {
-    super.setKey(SystemTokenRememberMeUtils.augmentKey(key));
-  }
+//  @Override
+//  public void setKey(String key) {
+//    super.setKey(SystemTokenRememberMeUtils.augmentKey(key));
+//  }
 
   /**
    * Calculates the digital signature to be put in the cookie. Default value is

@@ -325,7 +325,7 @@ public class JpaUserAndRoleProvider implements UserProvider, RoleProvider {
       throw new UnauthorizedException("The user is not allowed to set the admin role on other users");
 
     // Create a JPA user with an encoded password.
-    String encodedPassword = passwordEncoded ? user.getPassword() : passwordEncoder.encodePassword(user.getPassword());
+    String encodedPassword = passwordEncoded ? user.getPassword() : passwordEncoder.encode(user.getPassword());
 
     // Only save internal roles
     Set<JpaRole> roles = UserDirectoryPersistenceUtil.saveRoles(filterRoles(user.getRoles()), emf);
@@ -404,7 +404,7 @@ public class JpaUserAndRoleProvider implements UserProvider, RoleProvider {
       if (passwordEncoded) {
         encodedPassword = user.getPassword();
       } else {
-        encodedPassword = passwordEncoder.encodePassword(user.getPassword());
+        encodedPassword = passwordEncoder.encode(user.getPassword());
       }
     }
 

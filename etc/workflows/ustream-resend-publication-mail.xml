@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<definition xmlns="http://workflow.opencastproject.org">
+
+  <id>email-publish</id>
+  <title>u:stream - Send Publication E-Mail</title>
+  <tags>
+    <tag>archive</tag>
+  </tags>
+  <description>
+  Send publication mails to contributors an organizers of this series.
+  </description>
+  <operations>
+
+    <!-- Notify CaptureUI-Backend  -->
+    <operation
+      id="http-notify"
+      fail-on-error="false"
+      exception-handler-workflow="error"
+      description="Notify ustream backend">
+     <configurations>
+       <configuration key="url">http://ustream-service.univie.ac.at:9090/notify/published</configuration>
+       <configuration key="subject">published</configuration>
+       <configuration key="message">aedc5b582978f6344f9b781f0e4f092f77f409dd34fe9a13f68efc15191c526d</configuration>
+       <configuration key="method">put</configuration>
+       <configuration key="max-retry">3</configuration>
+       <configuration key="timeout">5</configuration>
+     </configurations>
+    </operation>
+
+  </operations>
+
+</definition>

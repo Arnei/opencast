@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <definition xmlns="http://workflow.opencastproject.org">
 
-  <id>fasthls</id>
-  <title>Fast HLS Testing Workflow</title>
+  <id>fastnormalhls</id>
+  <title>Fast Normal and HLS Testing Workflow</title>
   <tags>
     <tag>upload</tag>
     <tag>schedule</tag>
@@ -66,6 +66,19 @@
       <configurations>
         <configuration key="overwrite">false</configuration>
         <configuration key="accept-no-media">false</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+        id="encode"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Encoding video">
+      <configurations>
+        <configuration key="source-flavor">*/source</configuration>
+        <configuration key="target-flavor">*/delivery</configuration>
+        <configuration key="target-tags">engage-download,engage-streaming,rss,atom</configuration>
+        <configuration key="encoding-profile">fast.http</configuration>
       </configurations>
     </operation>
 

@@ -2335,6 +2335,9 @@ public abstract class AbstractEventEndpoint {
             return Response.status(SC_BAD_REQUEST).build();
         }
       }
+      if (EventListQuery.FILTER_COMMENTS_REASONS_NAME.equals(name)) {
+        query.withComments(true);
+      }
       if (EventListQuery.FILTER_STARTDATE_NAME.equals(name)) {
         try {
           Tuple<Date, Date> fromAndToCreationRange = RestUtils.getFromAndToDateRange(filters.get(name));

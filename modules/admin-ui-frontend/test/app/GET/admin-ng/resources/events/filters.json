@@ -32,6 +32,15 @@
     "label":"FILTERS.EVENTS.COMMENTS.LABEL",
     "type":"select"
   },
+  "comments_reasons":{
+    "translatable":false,
+    "options":{
+      "EINS":"JEIN",
+      "ZWEI":"NJA"
+    },
+    "label":"FILTERS.EVENTS.COMMENTS.LABEL",
+    "type":"select"
+  },
   "series":{
     "translatable":false,
     "options":{

@@ -47,6 +47,7 @@ public class EventsListProvider implements ResourceListProvider {
   public static final String STATUS = PROVIDER_PREFIX + ".STATUS";
   public static final String COMMENTS = PROVIDER_PREFIX + ".COMMENTS";
   public static final String PUBLISHER = PROVIDER_PREFIX + ".PUBLISHER";
+  public static final String COMMENTS_REASONS = PROVIDER_PREFIX + ".COMMENTS_REASONS";
 
   public enum Comments {
     NONE, OPEN, RESOLVED;
@@ -108,6 +109,10 @@ public class EventsListProvider implements ResourceListProvider {
     } else if (COMMENTS.equals(listName)) {
       for (Comments comments : Comments.values())
         list.put(comments.toString(), "FILTERS.EVENTS.COMMENTS." + comments.toString());
+    } else if (COMMENTS_REASONS.equals(listName)) {
+      list.put("EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.WRONG_WORKFLOW", "EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.WRONG_WORKFLOW");
+      list.put("EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.PROCESSING_FAILURE", "EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.PROCESSING_FAILURE");
+        //EVENTS.EVENTS.DETAILS.COMMENTS.REASON
     } else if (PUBLISHER.equals(listName)) {
       for (String publisher : index.getEventPublishers())
         list.put(publisher, publisher);

@@ -85,10 +85,14 @@ public class EventListQuery extends ResourceListQueryImpl {
   public static final String FILTER_PUBLISHER_NAME = "publisher";
   private static final String FILTER_PUBLISHER_LABEL = "FILTERS.EVENTS.PUBLISHER.LABEL";
 
+  public static final String FILTER_COMMENTS_REASONS_NAME = "comments_reasons";
+  private static final String FILTER_COMMENTS_REASONS_LABEL = "FILTERS.EVENTS.COMMENTS_REASONS.LABEL";
+
   public static final String FILTER_TEXT_NAME = "textFilter";
 
   public EventListQuery() {
     super();
+    this.availableFilters.add(createCommentsReasonsFilter(Option.none()));
     this.availableFilters.add(createSeriesFilter(Option.<String> none()));
     this.availableFilters.add(createPresentersFilter(Option.<String> none()));
     this.availableFilters.add(createTechnicalPresentersFilter(Option.<String> none()));
@@ -280,6 +284,7 @@ public class EventListQuery extends ResourceListQueryImpl {
    */
   public void withComments(String comments) {
     this.addFilter(createCommentsFilter(Option.option(comments)));
+    this.addFilter(createCommentsReasonsFilter(Option.option(comments)));
   }
 
   /**
@@ -289,6 +294,9 @@ public class EventListQuery extends ResourceListQueryImpl {
    */
   public Option<String> getComments() {
     return this.getFilterValue(FILTER_COMMENTS_NAME);
+  }
+  public Option<String> getCommentsReasons() {
+    return this.getFilterValue(FILTER_COMMENTS_REASONS_NAME);
   }
 
   /**
@@ -440,5 +448,10 @@ public class EventListQuery extends ResourceListQueryImpl {
   public static ResourceListFilter<String> createPublisherFilter(Option<String> publisher) {
     return FiltersUtils.generateFilter(publisher, FILTER_PUBLISHER_NAME, FILTER_PUBLISHER_LABEL, SourceType.SELECT,
             Option.some(EventsListProvider.PUBLISHER));
+  }
+
+  public static ResourceListFilter<String> createCommentsReasonsFilter(Option<String> comments) {
+    return FiltersUtils.generateFilter(comments, FILTER_COMMENTS_REASONS_NAME, FILTER_COMMENTS_REASONS_LABEL, SourceType.SELECT,
+            Option.some(EventsListProvider.COMMENTS_REASONS));
   }
 }

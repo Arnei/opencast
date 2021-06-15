@@ -20,8 +20,17 @@
           <input id="straightToPublishing" name="straightToPublishing" type="checkbox" class="configField" value="true" />
           <label for="straightToPublishing">Straight to publishing</label>
         </fieldset>
+                <fieldset>
+          <legend>Additional Video Qualities</legend>
+          <ul>
+            <li>
+              <input id="flagQuality360p" name="flagQuality360p" type="checkbox" class="configField" value="false" />
+              <label for="flagQuality360p">360p resolution</label>
+            </li>
+          </ul>
+        </fieldset>
         <fieldset>
-          <legend>Audio Qualities</legend>
+          <legend>Additional Audio Tracks for Download</legend>
           <ul>
             <li>
               <input id="flagQualityAudio_mp3" name="flagQualityAudio_mp3" type="checkbox" class="configField" value="true" checked="checked"/>
@@ -55,10 +64,11 @@
     <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 
     <operation
-      id="defaults"
-      description="Applying default configuration values">
+        id="defaults"
+        description="Applying default configuration values">
       <configurations>
         <configuration key="straightToPublishing">true</configuration>
+        <configuration key="flagQuality360p">false</configuration>
         <configuration key="flagForMail">false</configuration>
         <configuration key="flagQualityAudio_mp3">true</configuration>
         <configuration key="flagQualityAudio_mp4">false</configuration>
@@ -77,8 +87,8 @@
     <!-- inside of Opencast                                                -->
 
     <operation
-      id="include"
-      description="Finalize upload and ingest">
+        id="include"
+        description="Finalize upload and ingest">
       <configurations>
         <configuration key="workflow-id">partial-ingest</configuration>
       </configurations>
@@ -87,8 +97,8 @@
     <!-- Archive the source material -->
 
     <operation
-      id="snapshot"
-      description="Archive raw recording after ingest">
+        id="snapshot"
+        description="Archive raw recording after ingest">
       <configurations>
         <configuration key="source-tags">archive</configuration>
       </configurations>
@@ -97,8 +107,8 @@
     <!-- Create preview artifacts -->
 
     <operation
-      id="include"
-      description="Prepare preview versions of the recording">
+        id="include"
+        description="Prepare preview versions of the recording">
       <configurations>
         <configuration key="workflow-id">partial-preview</configuration>
       </configurations>
@@ -107,8 +117,8 @@
     <!-- Archive generated preview assets -->
 
     <operation
-      id="snapshot"
-      description="Archive preview information">
+        id="snapshot"
+        description="Archive preview information">
       <configurations>
         <configuration key="source-tags">archive</configuration>
       </configurations>
@@ -124,9 +134,9 @@
     <!-- Mark the recording for cutting -->
 
     <operation
-      id="comment"
-      if="NOT ${straightToPublishing}"
-      description="Mark the recording for cutting">
+        id="comment"
+        if="NOT ${straightToPublishing}"
+        description="Mark the recording for cutting">
       <configurations>
         <configuration key="description">Recording has not been cut yet.</configuration>
         <configuration key="reason">EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.CUTTING</configuration>
@@ -142,9 +152,9 @@
     <!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
 
     <operation
-      id="include"
-      if="${straightToPublishing}"
-      description="Publish the recording">
+        id="include"
+        if="${straightToPublishing}"
+        description="Publish the recording">
       <configurations>
         <configuration key="workflow-id">partial-publish</configuration>
       </configurations>
@@ -153,9 +163,9 @@
     <!-- Archive the recording -->
 
     <operation
-      id="snapshot"
-      if="${straightToPublishing}"
-      description="Archive publishing information">
+        id="snapshot"
+        if="${straightToPublishing}"
+        description="Archive publishing information">
       <configurations>
         <configuration key="source-tags">archive</configuration>
       </configurations>
@@ -163,12 +173,12 @@
 
     <!-- Notify CaptureUI-Backend  -->
 
-     <operation
-       id="http-notify"
-       if="${flagForMail}"
-       fail-on-error="false"
-       exception-handler-workflow="error"
-       description="Notify ustream backend">
+    <operation
+        id="http-notify"
+        if="${flagForMail}"
+        fail-on-error="false"
+        exception-handler-workflow="error"
+        description="Notify ustream backend">
       <configurations>
         <configuration key="url">http://ustream-service.univie.ac.at:9090/notify/published</configuration>
         <configuration key="subject">published</configuration>
@@ -177,15 +187,15 @@
         <configuration key="max-retry">3</configuration>
         <configuration key="timeout">5</configuration>
       </configurations>
-     </operation>
+    </operation>
 
 
     <!-- Clean up work artifacts -->
 
     <operation
-      id="cleanup"
-      fail-on-error="false"
-      description="Remove temporary processing artifacts">
+        id="cleanup"
+        fail-on-error="false"
+        description="Remove temporary processing artifacts">
       <configurations>
         <!-- On systems with shared workspace or working file repository -->
         <!-- you want to set this option to false. -->

@@ -14,32 +14,32 @@
   <operations>
 
     <operation
-      id="include"
-      description="Retract the recording">
+        id="include"
+        description="Retract the recording">
       <configurations>
         <configuration key="workflow-id">retract</configuration>
       </configurations>
     </operation>
 
     <operation
-      id="retract-configure"
-      exception-handler-workflow="partial-error"
-      description="Retract from internal publication channel">
+        id="retract-configure"
+        exception-handler-workflow="partial-error"
+        description="Retract from internal publication channel">
       <configurations>
         <configuration key="channel-id">internal</configuration>
       </configurations>
     </operation>
 
     <operation
-      id="snapshot"
-      exception-handler-workflow="partial-error"
-      description="Archiving state of retracted recording">
+        id="snapshot"
+        exception-handler-workflow="partial-error"
+        description="Archiving state of retracted recording">
     </operation>
 
     <operation
-      id="cleanup"
-      fail-on-error="false"
-      description="Remove temporary processing artifacts">
+        id="cleanup"
+        fail-on-error="false"
+        description="Remove temporary processing artifacts">
       <configurations>
         <!-- On systems with shared workspace or working file repository -->
         <!-- you want to set this option to false. -->

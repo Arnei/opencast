@@ -11,10 +11,10 @@
     <!-- Create a title slide video if theme has active title slide -->
 
     <operation
-      id="image"
-      if="NOT ${theme_title_slide_uploaded} AND ${presentation_trimmed_video}"
-      exception-handler-workflow="partial-error"
-      description="Extracting title slide image from presentation track">
+        id="image"
+        if="NOT ${theme_title_slide_uploaded} AND ${presentation_trimmed_video}"
+        exception-handler-workflow="partial-error"
+        description="Extracting title slide image from presentation track">
       <configurations>
         <configuration key="source-flavor">presentation/trimmed</configuration>
         <configuration key="target-flavor">branding/titleslide</configuration>
@@ -24,10 +24,10 @@
     </operation>
 
     <operation
-      id="image"
-      if="NOT ${theme_title_slide_uploaded} AND NOT ${presentation_trimmed_video} AND ${presenter_trimmed_video}"
-      exception-handler-workflow="partial-error"
-      description="Extracting title slide image from presenter track">
+        id="image"
+        if="NOT ${theme_title_slide_uploaded} AND NOT ${presentation_trimmed_video} AND ${presenter_trimmed_video}"
+        exception-handler-workflow="partial-error"
+        description="Extracting title slide image from presenter track">
       <configurations>
         <configuration key="source-flavor">presenter/trimmed</configuration>
         <configuration key="target-flavor">branding/titleslide</configuration>
@@ -37,24 +37,24 @@
     </operation>
 
     <operation
-      id="cover-image"
-      if="${presentation_trimmed_video} OR ${presenter_trimmed_video}"
-      exception-handler-workflow="partial-error"
-      description="Create title slide with metadata">
+        id="cover-image"
+        if="${presentation_trimmed_video} OR ${presenter_trimmed_video}"
+        exception-handler-workflow="partial-error"
+        description="Create title slide with metadata">
       <configurations>
         <configuration key="stylesheet">file://${karaf.etc}/branding/coverimage.xsl</configuration>
         <configuration key="width">1920</configuration>
         <configuration key="height">1080</configuration>
         <configuration key="posterimage-flavor">branding/titleslide</configuration>
         <configuration key="target-flavor">branding/titleslide+metadata</configuration>
-     </configurations>
+      </configurations>
     </operation>
 
     <operation
-      id="image-to-video"
-      if="${presentation_trimmed_video} OR ${presenter_trimmed_video}"
-      exception-handler-workflow="partial-error"
-      description="Create video with title slide">
+        id="image-to-video"
+        if="${presentation_trimmed_video} OR ${presenter_trimmed_video}"
+        exception-handler-workflow="partial-error"
+        description="Create video with title slide">
       <configurations>
         <configuration key="source-flavor">branding/titleslide+metadata</configuration>
         <configuration key="target-flavor">branding/titleslide+video</configuration>

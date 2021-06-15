@@ -11,9 +11,9 @@
     <!-- Apply the theme to the mediapackage -->
 
     <operation
-      id="theme"
-      exception-handler-workflow="partial-error"
-      description="Apply the theme">
+        id="theme"
+        exception-handler-workflow="partial-error"
+        description="Apply the theme">
       <configurations>
         <configuration key="bumper-flavor">branding/bumper</configuration>
         <configuration key="bumper-tags">archive</configuration>
@@ -31,9 +31,9 @@
     <!-- Inspect the media from the theme -->
 
     <operation
-      id="inspect"
-      exception-handler-workflow="partial-error"
-      description="Inspecting audio and video streams">
+        id="inspect"
+        exception-handler-workflow="partial-error"
+        description="Inspecting audio and video streams">
       <configurations>
         <configuration key="overwrite">false</configuration>
         <configuration key="accept-no-media">false</configuration>
@@ -41,9 +41,9 @@
     </operation>
 
     <operation
-      id="tag"
-      if="NOT(${theme_active})"
-      description="Tag presenter video as themed">
+        id="tag"
+        if="NOT(${theme_active})"
+        description="Tag presenter video as themed">
       <configurations>
         <configuration key="source-flavors">presenter/trimmed</configuration>
         <configuration key="target-flavor">presenter/themed</configuration>
@@ -52,9 +52,9 @@
     </operation>
 
     <operation
-      id="tag"
-      if="NOT(${theme_active})"
-      description="Tag presentation video as themed">
+        id="tag"
+        if="NOT(${theme_active})"
+        description="Tag presentation video as themed">
       <configurations>
         <configuration key="source-flavors">presentation/trimmed</configuration>
         <configuration key="target-flavor">presentation/themed</configuration>
@@ -63,37 +63,37 @@
     </operation>
 
     <operation
-      id="analyze-tracks"
-      if="${theme_active}"
-      exception-handler-workflow="partial-error"
-      description="Analyze trimmed tracks">
+        id="analyze-tracks"
+        if="${theme_active}"
+        exception-handler-workflow="partial-error"
+        description="Analyze trimmed tracks">
       <configurations>
         <configuration key="source-flavor">*/trimmed</configuration>
       </configurations>
     </operation>
 
     <operation
-      id="include"
-      if="${theme_title_slide_active}"
-      description="Including title slide operations">
+        id="include"
+        if="${theme_title_slide_active}"
+        description="Including title slide operations">
       <configurations>
         <configuration key="workflow-id">partial-theming-title-slide</configuration>
       </configurations>
     </operation>
 
     <operation
-      id="include"
-      if="${theme_watermark_active}"
-      description="Including watermark rendering operations">
+        id="include"
+        if="${theme_watermark_active}"
+        description="Including watermark rendering operations">
       <configurations>
         <configuration key="workflow-id">partial-theming-watermark</configuration>
       </configurations>
     </operation>
 
     <operation
-      id="tag"
-      if="NOT ${theme_watermark_active}"
-      description="Tagging presenter track as input for next operation">
+        id="tag"
+        if="NOT ${theme_watermark_active}"
+        description="Tagging presenter track as input for next operation">
       <configurations>
         <configuration key="source-flavors">presenter/trimmed</configuration>
         <configuration key="target-flavor">presenter/branded</configuration>
@@ -101,9 +101,9 @@
     </operation>
 
     <operation
-      id="tag"
-      if="NOT ${theme_watermark_active}"
-      description="Tagging presentation track as input for next operation">
+        id="tag"
+        if="NOT ${theme_watermark_active}"
+        description="Tagging presentation track as input for next operation">
       <configurations>
         <configuration key="source-flavors">presentation/trimmed</configuration>
         <configuration key="target-flavor">presentation/branded</configuration>
@@ -113,9 +113,9 @@
     <!-- Add bumper and trailer part to the presenter track -->
 
     <operation
-      id="concat"
-      exception-handler-workflow="partial-error"
-      description="Concatenate presenter track with intro, title slide and outro videos">
+        id="concat"
+        exception-handler-workflow="partial-error"
+        description="Concatenate presenter track with intro, title slide and outro videos">
       <configurations>
         <configuration key="source-flavor-part-0">branding/bumper</configuration>
         <configuration key="source-flavor-part-0-mandatory">${theme_bumper_active}</configuration>
@@ -135,9 +135,9 @@
     <!-- Add bumper and trailer part to the presentation track -->
 
     <operation
-      id="concat"
-      exception-handler-workflow="partial-error"
-      description="Concatenate presentation track with intro, title slide and outro videos">
+        id="concat"
+        exception-handler-workflow="partial-error"
+        description="Concatenate presentation track with intro, title slide and outro videos">
       <configurations>
         <configuration key="source-flavor-part-0">branding/bumper</configuration>
         <configuration key="source-flavor-part-0-mandatory">${theme_bumper_active}</configuration>

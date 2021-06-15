@@ -24,9 +24,9 @@
     <!-- Publish to engage player -->
 
     <operation
-      id="publish-engage"
-      exception-handler-workflow="partial-error"
-      description="Update recording in Opencast Media Module">
+        id="publish-engage"
+        exception-handler-workflow="partial-error"
+        description="Update recording in Opencast Media Module">
       <configurations>
         <configuration key="download-source-flavors">dublincore/*,security/*</configuration>
         <configuration key="strategy">merge</configuration>
@@ -34,26 +34,12 @@
       </configurations>
     </operation>
 
-    <operation
-      id="publish-configure"
-      exception-handler-workflow="partial-error"
-      description="Publish to external api publication channel">
-      <configurations>
-        <configuration key="channel-id">api</configuration>
-        <configuration key="mimetype">application/json</configuration>
-        <configuration key="source-tags">engage-download,engage-streaming</configuration>
-        <configuration key="url-pattern">https://oc-admin.univie.ac.at/api/events/${event_id}</configuration>
-        <configuration key="with-published-elements">false</configuration>
-        <configuration key="check-availability">false</configuration>
-      </configurations>
-    </operation>
-
     <!-- Here you can place operations to republish metadata to your publication channels -->
 
     <operation
-      id="cleanup"
-      fail-on-error="false"
-      description="Remove temporary processing artifacts">
+        id="cleanup"
+        fail-on-error="false"
+        description="Remove temporary processing artifacts">
       <configurations>
         <!-- On systems with shared workspace or working file repository -->
         <!-- you want to set this option to false. -->

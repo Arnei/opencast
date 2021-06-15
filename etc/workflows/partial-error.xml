@@ -8,9 +8,9 @@
     <!-- Archive the current state of the media package -->
 
     <operation
-      id="snapshot"
-      fail-on-error="false"
-      description="Preserve the current recording state">
+        id="snapshot"
+        fail-on-error="false"
+        description="Preserve the current recording state">
       <configurations>
         <configuration key="source-flavors">*/source,dublincore/*,security/*</configuration>
         <configuration key="source-tags">archive</configuration>
@@ -20,9 +20,9 @@
     <!-- Clean up the temporary files from the working file repository -->
 
     <operation
-      id="cleanup"
-      fail-on-error="false"
-      description="Cleaning up">
+        id="cleanup"
+        fail-on-error="false"
+        description="Cleaning up">
       <configurations>
         <!-- On systems with shared workspace or working file repository -->
         <!-- you want to set this option to false. -->

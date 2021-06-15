@@ -17,8 +17,8 @@
   <operations>
 
     <operation
-      id="comment"
-      description="Resolving the cutting marker">
+        id="comment"
+        description="Resolving the cutting marker">
       <configurations>
         <configuration key="description">Recording has not been cut yet.</configuration>
         <configuration key="reason">EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.CUTTING</configuration>
@@ -36,8 +36,8 @@
     <!-- Encode and publish -->
 
     <operation
-      id="include"
-      description="Publish the recording">
+        id="include"
+        description="Publish the recording">
       <configurations>
         <configuration key="workflow-id">partial-publish</configuration>
       </configurations>
@@ -53,8 +53,8 @@
     <!-- Archive the recording -->
 
     <operation
-      id="snapshot"
-      description="Archive publishing information">
+        id="snapshot"
+        description="Archive publishing information">
       <configurations>
         <configuration key="source-tags">archive</configuration>
       </configurations>
@@ -63,9 +63,9 @@
     <!-- Clean up work artifacts -->
 
     <operation
-      id="cleanup"
-      fail-on-error="false"
-      description="Remove temporary processing artifacts">
+        id="cleanup"
+        fail-on-error="false"
+        description="Remove temporary processing artifacts">
       <configurations>
         <!-- On systems with shared workspace or working file repository -->
         <!-- you want to set this option to false. -->

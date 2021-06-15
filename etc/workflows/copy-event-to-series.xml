@@ -11,10 +11,10 @@
   <operations>
 
     <operation
-      id="duplicate-event"
-      fail-on-error="true"
-      exception-handler-workflow="partial-error"
-      description="Duplicate Event">
+        id="duplicate-event"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Duplicate Event">
       <configurations>
         <configuration key="source-flavors">*/*</configuration>
         <configuration key="number-of-events">${numberOfEvents}</configuration>

@@ -47,9 +47,9 @@
     <!-- Create the new events -->
 
     <operation
-      id="duplicate-event"
-      exception-handler-workflow="partial-error"
-      description="Duplicate Event">
+        id="duplicate-event"
+        exception-handler-workflow="partial-error"
+        description="Duplicate Event">
       <configurations>
         <configuration key="source-flavors">*/*</configuration>
         <configuration key="number-of-events">${numberOfEvents}</configuration>
@@ -62,9 +62,9 @@
     <!-- Clean up work artifacts -->
 
     <operation
-      id="cleanup"
-      fail-on-error="false"
-      description="Remove temporary processing artifacts">
+        id="cleanup"
+        fail-on-error="false"
+        description="Remove temporary processing artifacts">
       <configurations>
         <!-- On systems with shared workspace or working file repository -->
         <!-- you want to set this option to false. -->

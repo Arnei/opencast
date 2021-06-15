@@ -9,48 +9,41 @@
   </tags>
   <displayOrder>100</displayOrder>
   <description>
-    A minimal workflow that transcodes the media into distribution formats, then
+    A minimal testing workflow that transcodes the media into distribution formats, then
     sends the resulting distribution files, along with their associated metadata,
     to the distribution channels.
-  </description>
 
+    If straight to publishing is checked, then the uploaded media will be published to engage without cutting.
+  </description>
   <configuration_panel>
     <![CDATA[
       <div id="workflow-configuration">
-        <input id="publish" name="publish" type="checkbox" class="configField" value="true" checked=checked />
-        <label for="publish">Publish media directly</label>
+        <input id="straightToPublishing" name="straightToPublishing" type="checkbox" class="configField" value="true" checked=checked />
+        <label for="straightToPublishing">Straight to publishing</label>
       </div>
     ]]>
   </configuration_panel>
-
+  <state-mappings>
+    <state-mapping state="running">EVENTS.EVENTS.STATE_MAPPING.PUBLISHING</state-mapping>
+    <state-mapping state="failing">EVENTS.EVENTS.STATE_MAPPING.PUBLISHING</state-mapping>
+  </state-mappings>
   <operations>
 
     <operation
-      id="defaults"
-      description="Applying default configuration values">
+        id="defaults"
+        description="Applying default configuration values">
       <configurations>
-        <configuration key="publish">true</configuration>
-      </configurations>
-    </operation>
-
-    <!-- Set publication variables for compatibility with the publish workflow -->
-
-    <operation
-      id="defaults"
-      if="${publish}"
-      description="Applying configuration values for publish workflow">
-      <configurations>
-        <configuration key="publishToMediaModule">true</configuration>
+        <configuration key="straightToPublishing">true</configuration>
       </configurations>
     </operation>
 
     <!-- Apply ACL from series to the mediapackage -->
 
     <operation
-      id="series"
-      fail-on-error="true"
-      exception-handler-workflow="partial-error"
-      description="Applying access control entries from series">
+        id="series"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Applying access control entries from series">
       <configurations>
         <configuration key="apply-acl">true</configuration>
       </configurations>
@@ -59,10 +52,10 @@
     <!-- Inspect the media -->
 
     <operation
-      id="inspect"
-      fail-on-error="true"
-      exception-handler-workflow="partial-error"
-      description="Inspecting audio and video streams">
+        id="inspect"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Inspecting audio and video streams">
       <configurations>
         <configuration key="overwrite">false</configuration>
         <configuration key="accept-no-media">false</configuration>
@@ -72,10 +65,10 @@
     <!-- encode video -->
 
     <operation
-      id="encode"
-      fail-on-error="true"
-      exception-handler-workflow="partial-error"
-      description="Encoding video">
+        id="encode"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Encoding video">
       <configurations>
         <configuration key="source-flavor">*/source</configuration>
         <configuration key="target-flavor">*/preview</configuration>
@@ -87,11 +80,11 @@
     <!-- encode to engage search result thumbnails -->
     <!-- skip this when manually uploaded */search+preview -->
     <operation
-      id="image"
-      if="${publish}"
-      fail-on-error="true"
-      exception-handler-workflow="partial-error"
-      description="Creating Engage search result thumbnails">
+        id="image"
+        if="${straightToPublishing}"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Creating Engage search result thumbnails">
       <configurations>
         <configuration key="source-flavor">*/preview</configuration>
         <configuration key="target-flavor">*/search+preview</configuration>
@@ -104,11 +97,11 @@
     <!-- encode to engage player preview images -->
 
     <operation
-      id="image"
-      if="${publish}"
-      fail-on-error="true"
-      exception-handler-workflow="partial-error"
-      description="Creating Engage player preview image">
+        id="image"
+        if="${straightToPublishing}"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Creating Engage player preview image">
       <configurations>
         <configuration key="source-flavor">*/preview</configuration>
         <configuration key="target-flavor">*/player+preview</configuration>
@@ -121,11 +114,11 @@
     <!-- run the video segmentation -->
 
     <operation
-      id="segment-video"
-      if="${publish}"
-      fail-on-error="false"
-      exception-handler-workflow="partial-error"
-      description="Detecting slide transitions in presentation track">
+        id="segment-video"
+        if="${straightToPublishing}"
+        fail-on-error="false"
+        exception-handler-workflow="partial-error"
+        description="Detecting slide transitions in presentation track">
       <configurations>
         <configuration key="source-flavor">presentation/preview</configuration>
         <configuration key="target-tags">engage-download</configuration>
@@ -135,11 +128,11 @@
     <!-- Generate segment preview images -->
 
     <operation
-      id="segmentpreviews"
-      if="${publish}"
-      fail-on-error="false"
-      exception-handler-workflow="partial-error"
-      description="Creating presentation segments preview image">
+        id="segmentpreviews"
+        if="${straightToPublishing}"
+        fail-on-error="false"
+        exception-handler-workflow="partial-error"
+        description="Creating presentation segments preview image">
       <configurations>
         <configuration key="source-flavor">presentation/preview</configuration>
         <configuration key="target-flavor">presentation/segment+preview</configuration>
@@ -153,11 +146,11 @@
     <!-- Generate timeline preview images -->
 
     <operation
-      id="timelinepreviews"
-      if="${publish}"
-      fail-on-error="false"
-      exception-handler-workflow="partial-error"
-      description="Creating timeline preview images">
+        id="timelinepreviews"
+        if="${straightToPublishing}"
+        fail-on-error="false"
+        exception-handler-workflow="partial-error"
+        description="Creating timeline preview images">
       <configurations>
         <configuration key="source-flavor">*/preview</configuration>
         <configuration key="target-flavor">*/timeline+preview</configuration>
@@ -169,11 +162,11 @@
     <!-- Extract text form slide preview images -->
 
     <operation
-      id="extract-text"
-      if="${publish}"
-      fail-on-error="false"
-      exception-handler-workflow="partial-error"
-      description="Extracting text from presentation segments">
+        id="extract-text"
+        if="${straightToPublishing}"
+        fail-on-error="false"
+        exception-handler-workflow="partial-error"
+        description="Extracting text from presentation segments">
       <configurations>
         <configuration key="source-flavor">presentation/preview</configuration>
         <configuration key="target-tags">engage-download</configuration>
@@ -183,41 +176,43 @@
     <!-- Publish preview internal -->
 
     <operation
-      id="publish-configure"
-      exception-handler-workflow="partial-error"
-      description="Publish to preview publication channel">
+        id="publish-configure"
+        exception-handler-workflow="partial-error"
+        description="Publish to preview publication channel">
       <configurations>
         <configuration key="download-source-flavors">*/preview</configuration>
         <configuration key="channel-id">internal</configuration>
-        <configuration key="url-pattern">http://localhost:8080/admin-ng/index.html#/events/events/${event_id}/tools/playback</configuration>
-        <configuration key="check-availability">true</configuration>
+        <configuration key="url-pattern">
+          ${org_org_opencastproject_admin_ui_url!'http://localhost:8080'}/admin-ng/index.html#/events/events/${event_id}/tools/editor
+        </configuration>
+        <configuration key="check-availability">false</configuration>
       </configurations>
     </operation>
 
     <!-- Publish to engage player -->
 
     <operation
-      id="publish-engage"
-      if="${publish}"
-      max-attempts="2"
-      fail-on-error="true"
-      exception-handler-workflow="partial-error"
-      description="Publishing to Engage">
+        id="publish-engage"
+        if="${straightToPublishing}"
+        max-attempts="2"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Publishing to Engage">
       <configurations>
         <configuration key="download-source-flavors">dublincore/*,security/*</configuration>
         <configuration key="download-source-tags">engage-download</configuration>
         <configuration key="streaming-source-tags">engage-streaming</configuration>
-        <configuration key="check-availability">true</configuration>
+        <configuration key="check-availability">false</configuration>
       </configurations>
     </operation>
 
     <!-- Archive the current state of the media package -->
 
     <operation
-      id="snapshot"
-      fail-on-error="true"
-      exception-handler-workflow="partial-error"
-      description="Archiving">
+        id="snapshot"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Archiving">
       <configurations>
         <configuration key="source-flavors">*/source,dublincore/*,security/*</configuration>
       </configurations>
@@ -226,17 +221,17 @@
     <!-- Clean up the working file repository -->
 
     <operation
-      id="cleanup"
-      fail-on-error="false"
-      description="Cleaning up">
+        id="cleanup"
+        fail-on-error="false"
+        description="Cleaning up">
       <configurations>
+        <!-- On systems with shared workspace or working file repository -->
+        <!-- you want to set this option to false. -->
         <configuration key="delete-external">true</configuration>
-        <!-- FixMe Don't clean up ACLs until workflow service no longer looks for them in the WFR. -->
+        <!-- ACLs are required again when working through ActiveMQ messages -->
         <configuration key="preserve-flavors">security/*</configuration>
       </configurations>
     </operation>
 
   </operations>
-
 </definition>
-

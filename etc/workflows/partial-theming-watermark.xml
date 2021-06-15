@@ -11,10 +11,10 @@
     <!-- Render watermark into presenter and presentation tracks -->
 
     <operation
-      id="composite"
-      if="${presenter_trimmed_video}"
-      exception-handler-workflow="partial-error"
-      description="Render watermark into presenter track">
+        id="composite"
+        if="${presenter_trimmed_video}"
+        exception-handler-workflow="partial-error"
+        description="Render watermark into presenter track">
       <configurations>
         <configuration key="source-flavor-lower">presenter/trimmed</configuration>
         <configuration key="source-flavor-upper">not/available</configuration>
@@ -31,10 +31,10 @@
     </operation>
 
     <operation
-      id="composite"
-      if="${presentation_trimmed_video}"
-      exception-handler-workflow="partial-error"
-      description="Render watermark into presentation track">
+        id="composite"
+        if="${presentation_trimmed_video}"
+        exception-handler-workflow="partial-error"
+        description="Render watermark into presentation track">
       <configurations>
         <configuration key="source-flavor-lower">presentation/trimmed</configuration>
         <configuration key="source-flavor-upper">not/available</configuration>

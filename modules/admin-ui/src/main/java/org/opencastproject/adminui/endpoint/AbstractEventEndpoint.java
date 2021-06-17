@@ -2336,7 +2336,7 @@ public abstract class AbstractEventEndpoint {
         }
       }
       if (EventListQuery.FILTER_COMMENTS_REASONS_NAME.equals(name)) {
-        query.withComments(true);
+        query.withCommentsReasons(filters.get(name));
       }
       if (EventListQuery.FILTER_STARTDATE_NAME.equals(name)) {
         try {
@@ -2473,6 +2473,7 @@ public abstract class AbstractEventEndpoint {
     fields.add(f("technical_end", v(event.getTechnicalEndTime(), BLANK)));
     fields.add(f("technical_presenters", arr($(event.getTechnicalPresenters()).map(Functions.stringToJValue))));
     fields.add(f("publications", arr(eventPublicationsToJson(event))));
+//    fields.add(f("commentsReasons", arr($(event.getCommentsReasons()).map(Functions.stringToJValue))));
     return obj(fields);
   }
 

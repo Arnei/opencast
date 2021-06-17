@@ -24,8 +24,9 @@
 angular.module('adminNg.controllers')
 .controller('EventsCtrl', ['$scope', 'Stats', 'Table', 'EventsResource', 'ResourcesFilterResource',
   'ResourcesListResource', 'Notifications', 'ConfirmationModal', 'RelativeDatesService', 'AuthService',
+  'CommentResource',
   function ($scope, Stats, Table, EventsResource, ResourcesFilterResource, ResourcesListResource, Notifications,
-    ConfirmationModal, RelativeDatesService, AuthService) {
+    ConfirmationModal, RelativeDatesService, AuthService, CommentResource) {
 
     $scope.stats = Stats;
 
@@ -124,6 +125,8 @@ angular.module('adminNg.controllers')
           ConfirmationModal.show('embedding-code',Table.fullScreenUrl,row);
         };
         row.editorUrl = $scope.editorUrl.replace('$id', row.id);
+
+        row.comments = CommentResource.query({ resource: 'event', resourceId: row.id, type: 'comments' });
       }
     });
 

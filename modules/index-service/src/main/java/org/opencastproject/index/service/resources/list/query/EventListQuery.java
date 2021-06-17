@@ -92,7 +92,6 @@ public class EventListQuery extends ResourceListQueryImpl {
 
   public EventListQuery() {
     super();
-    this.availableFilters.add(createCommentsReasonsFilter(Option.none()));
     this.availableFilters.add(createSeriesFilter(Option.<String> none()));
     this.availableFilters.add(createPresentersFilter(Option.<String> none()));
     this.availableFilters.add(createTechnicalPresentersFilter(Option.<String> none()));
@@ -103,6 +102,7 @@ public class EventListQuery extends ResourceListQueryImpl {
     this.availableFilters.add(createStatusFilter(Option.<String> none()));
     this.availableFilters.add(createCommentsFilter(Option.<String> none()));
     this.availableFilters.add(createPublisherFilter(Option.<String> none()));
+    this.availableFilters.add(createCommentsReasonsFilter(Option.none()));
   }
 
   /**
@@ -452,6 +452,6 @@ public class EventListQuery extends ResourceListQueryImpl {
 
   public static ResourceListFilter<String> createCommentsReasonsFilter(Option<String> comments) {
     return FiltersUtils.generateFilter(comments, FILTER_COMMENTS_REASONS_NAME, FILTER_COMMENTS_REASONS_LABEL, SourceType.SELECT,
-            Option.some(EventsListProvider.COMMENTS_REASONS));
+            Option.some("eventCommentReasons"));
   }
 }

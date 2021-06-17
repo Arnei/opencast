@@ -222,6 +222,10 @@ public class Event implements IndexObject {
   @XmlElement(name = "has_open_comments")
   private Boolean hasOpenComments = false;
 
+//  /**  */
+//  @XmlElement(name = "comments_reasons")
+//  private List<String> commentsReasons = new ArrayList<>();
+
   /** Whether the event has preview files */
   @XmlElement(name = "has_preview")
   private Boolean hasPreview = false;
@@ -780,6 +784,14 @@ public class Event implements IndexObject {
   public boolean hasOpenComments() {
     return hasOpenComments;
   }
+
+
+//  public void setCommentsReasons(String reason) {
+//    this.commentsReasons.add(reason);
+//  }
+//  public List<String> getCommentsReasons() {
+//    return commentsReasons;
+//  }
 
   /**
    * Sets the has preview status from this event

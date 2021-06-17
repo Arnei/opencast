@@ -110,8 +110,8 @@ public class EventsListProvider implements ResourceListProvider {
       for (Comments comments : Comments.values())
         list.put(comments.toString(), "FILTERS.EVENTS.COMMENTS." + comments.toString());
     } else if (COMMENTS_REASONS.equals(listName)) {
-      list.put("EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.WRONG_WORKFLOW", "EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.WRONG_WORKFLOW");
-      list.put("EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.PROCESSING_FAILURE", "EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.PROCESSING_FAILURE");
+      list.put("EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.ASYNC", "EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.ASYNC");
+      list.put("EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.NO", "EVENTS.EVENTS.DETAILS.COMMENTS.REASONS.NO");
         //EVENTS.EVENTS.DETAILS.COMMENTS.REASON
     } else if (PUBLISHER.equals(listName)) {
       for (String publisher : index.getEventPublishers())

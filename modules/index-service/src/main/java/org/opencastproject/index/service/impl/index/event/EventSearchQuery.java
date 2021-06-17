@@ -79,6 +79,7 @@ public class EventSearchQuery extends AbstractSearchQuery {
   private Date technicalStartTime = null;
   private Date technicalEndTime = null;
   private List<String> technicalPresenters = new ArrayList<String>();
+  private List<String> commentsReasons = new ArrayList();
 
   @SuppressWarnings("unused")
   private EventSearchQuery() {
@@ -750,6 +751,11 @@ public class EventSearchQuery extends AbstractSearchQuery {
    */
   public EventSearchQuery withComments(boolean hasComments) {
     this.hasComments = hasComments;
+    return this;
+  }
+
+  public EventSearchQuery withCommentsReasons(String reason) {
+    this.commentsReasons.add(reason);
     return this;
   }
 

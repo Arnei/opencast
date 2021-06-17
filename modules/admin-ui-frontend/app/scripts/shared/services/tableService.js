@@ -345,6 +345,21 @@ angular.module('adminNg.services')
                 me.postProcessRow(row);
               });
             }
+            angular.forEach(filters, function(filter) {
+              if (filter.includes("comments_reasons")) {
+                angular.forEach(data.rows, function (row) {
+                  console.log(row.comments);
+                  row.comments.$promise.then(function (comments) {
+                    console.log("HAPPY");
+                    console.log(row.comments);
+                    console.log(data.rows);
+                    if (row.comments.length <= 0) {
+                      row.deleteMe = true;
+                    }
+                  }).catch(angular.noop);
+                });
+              }
+            });
             me.rows = data.rows;
             me.loading = false;
             me.pagination.totalItems = data.total;

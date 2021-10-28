@@ -14,4 +14,9 @@
              cardinality="1..1" policy="static" bind="setService"/>
   <reference name="dc" interface="org.opencastproject.metadata.dublincore.DublinCoreCatalogService"
              cardinality="1..1" policy="static" bind="setDublinCoreService"/>
+  <reference name="security-service" interface="org.opencastproject.security.api.SecurityService"
+             cardinality="1..1" policy="static" bind="setSecurityService"/>
+<!--  <reference name="IndexService"-->
+<!--             interface="org.opencastproject.index.service.api.IndexService"-->
+<!--             bind="setIndexService"/>-->
 </scr:component>

@@ -79,6 +79,7 @@ import org.opencastproject.authorization.xacml.XACMLUtils;
 import org.opencastproject.elasticsearch.api.SearchResult;
 import org.opencastproject.elasticsearch.index.AbstractSearchIndex;
 import org.opencastproject.elasticsearch.index.event.EventSearchQuery;
+import org.opencastproject.elasticsearch.index.series.SeriesSearchQuery;
 import org.opencastproject.mediapackage.Attachment;
 import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.EName;
@@ -121,7 +122,6 @@ import org.opencastproject.security.api.OrganizationDirectoryService;
 import org.opencastproject.security.api.Role;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.User;
-import org.opencastproject.series.api.SeriesQuery;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.util.FileSupport;
 import org.opencastproject.util.IoSupport;
@@ -305,7 +305,7 @@ public class SchedulerServiceImplTest {
 
     seriesService = EasyMock.createMock(SeriesService.class);
     EasyMock.expect(seriesService.getSeries(EasyMock.anyString())).andReturn(seriesCatalog).anyTimes();
-    EasyMock.expect(seriesService.getSeries(EasyMock.anyObject(SeriesQuery.class)))
+    EasyMock.expect(seriesService.getSeries(EasyMock.anyObject(SeriesSearchQuery.class)))
             .andReturn(new DublinCoreCatalogList(seriesCatalogs, 1)).anyTimes();
     EasyMock.replay(seriesService);
     schedSvc.setSeriesService(seriesService);

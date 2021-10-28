@@ -28,7 +28,12 @@ import static org.junit.Assert.assertTrue;
 import static org.opencastproject.util.data.Collections.list;
 import static org.opencastproject.util.persistence.PersistenceUtil.newTestEntityManagerFactory;
 
+import org.opencastproject.elasticsearch.api.SearchIndexException;
+import org.opencastproject.elasticsearch.api.SearchResult;
+import org.opencastproject.elasticsearch.api.SearchResultItem;
 import org.opencastproject.elasticsearch.index.AbstractSearchIndex;
+import org.opencastproject.elasticsearch.index.series.Series;
+import org.opencastproject.elasticsearch.index.series.SeriesSearchQuery;
 import org.opencastproject.message.broker.api.MessageSender;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
@@ -39,25 +44,29 @@ import org.opencastproject.metadata.dublincore.DublinCoreValue;
 import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.security.api.AccessControlEntry;
 import org.opencastproject.security.api.AccessControlList;
+import org.opencastproject.security.api.AccessControlParser;
 import org.opencastproject.security.api.AccessControlUtil;
 import org.opencastproject.security.api.DefaultOrganization;
+import org.opencastproject.security.api.JaxbOrganization;
 import org.opencastproject.security.api.JaxbRole;
 import org.opencastproject.security.api.JaxbUser;
 import org.opencastproject.security.api.Permissions;
 import org.opencastproject.security.api.SecurityConstants;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.User;
-import org.opencastproject.series.api.SeriesQuery;
 import org.opencastproject.series.impl.persistence.SeriesServiceDatabaseImpl;
-import org.opencastproject.series.impl.solr.SeriesServiceSolrIndex;
+import org.opencastproject.util.DateTimeSupport;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.PathSupport;
+import org.opencastproject.util.requests.SortCriterion;
 
 import com.entwinemedia.fn.data.Opt;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.easymock.IAnswer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -67,6 +76,9 @@ import org.osgi.service.component.ComponentContext;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -78,7 +90,8 @@ import java.util.function.Function;
 public class SeriesServiceImplTest {
 
   private SeriesServiceDatabaseImpl seriesDatabase;
-  private SeriesServiceSolrIndex index;
+//  private SeriesServiceIndex index;
+  private AbstractSearchIndex esIndex;
   private DublinCoreCatalogService dcService;
   private String root;
 
@@ -86,10 +99,30 @@ public class SeriesServiceImplTest {
 
   private DublinCoreCatalog testCatalog;
   private DublinCoreCatalog testCatalog2;
+  private DublinCoreCatalog testCatalogNew;
+  private DublinCoreCatalog testCatalogNew2;
+  private DublinCoreCatalog testCatalogNew3;
+
+  private AccessControlList accessControlList1;
+  private AccessControlList accessControlList2;
+
+  private Series series1;
+  private Series series2;
+  private Series series3;
+  private Series aclSeries1;
+  private Series aclSeries2;
 
   private static final String ELEMENT_TYPE = "testelement";
   private static final byte[] ELEMENT_DATA_1 = "abcdefghijklmnopqrstuvwxyz".getBytes();
   private static final byte[] ELEMENT_DATA_2 = "0123456789".getBytes();
+
+  private final JaxbOrganization defaultOrganization = new DefaultOrganization();
+  private final User defaultUser = new JaxbUser("sample", null, "WithPermissions",
+          "with@permissions.com", "test", defaultOrganization,
+          new HashSet<>(Arrays.asList(new JaxbRole("ROLE_STUDENT", defaultOrganization, "test"),
+                  new JaxbRole("ROLE_OTHERSTUDENT", defaultOrganization, "test"),
+                  new JaxbRole(defaultOrganization.getAnonymousRole(), defaultOrganization, "test"))));
+
 
   /**
    * @throws java.lang.Exception
@@ -114,22 +147,45 @@ public class SeriesServiceImplTest {
     seriesDatabase.setSecurityService(securityService);
 
     root = PathSupport.concat("target", Long.toString(currentTime));
-    index = new SeriesServiceSolrIndex(root);
-    index.setDublinCoreService(dcService);
-    index.setSecurityService(securityService);
-    index.activate(null);
+//    index = EasyMock.createNiceMock(SeriesServiceIndex.class);
+//    index.setDublinCoreService(dcService);
+//    index.setSecurityService(securityService);
+//    index.activate();
 
     MessageSender messageSender = EasyMock.createNiceMock(MessageSender.class);
     EasyMock.replay(messageSender);
 
-    AbstractSearchIndex esIndex = EasyMock.createNiceMock(AbstractSearchIndex.class);
+    esIndex = EasyMock.createNiceMock(AbstractSearchIndex.class);
     EasyMock.expect(esIndex.addOrUpdateSeries(EasyMock.anyString(), EasyMock.anyObject(Function.class),
             EasyMock.anyString(), EasyMock.anyObject(User.class))).andReturn(Optional.empty()).atLeastOnce();
+
+    accessControlList1 = new AccessControlList();
+    List<AccessControlEntry> acl1 = accessControlList1.getEntries();
+    acl1.add(new AccessControlEntry("admin", "delete", true));
+    accessControlList2 = new AccessControlList();
+    List<AccessControlEntry> acl2 = accessControlList2.getEntries();
+    acl2.add(new AccessControlEntry("student", Permissions.Action.READ.toString(), true));
+
+    long time = DateTimeSupport.fromUTC("2014-04-27T14:35:50Z");
+    series1 = createSeries("1", "title 1", "contributor 1", "organizer 1", time, 1L);
+    time = DateTimeSupport.fromUTC("2014-04-28T14:35:50Z");
+    series2 = createSeries("2", "title 2", "contributor 2", "organizer 2", time, null);
+    time = DateTimeSupport.fromUTC("2014-04-29T14:35:50Z");
+    series3 = createSeries("3", "title 3", "contributor 3", "organizer 3", time, null);
+
+    aclSeries1 = new Series("acl1", new DefaultOrganization().getId());
+    aclSeries1.setAccessPolicy(AccessControlParser.toJsonSilent(accessControlList1));
+    aclSeries2 = new Series("acl2", new DefaultOrganization().getId());
+    aclSeries2.setAccessPolicy(AccessControlParser.toJsonSilent(accessControlList2));
+
+    setUpEsIndexMockUp();
+
     EasyMock.replay(esIndex);
+
 
     seriesService = new SeriesServiceImpl();
     seriesService.setPersistence(seriesDatabase);
-    seriesService.setIndex(index);
+//    seriesService.setIndex(index);
     seriesService.setSecurityService(securityService);
     seriesService.setMessageSender(messageSender);
     seriesService.setAdminUiIndex(esIndex);
@@ -158,6 +214,131 @@ public class SeriesServiceImplTest {
     } finally {
       IOUtils.closeQuietly(in);
     }
+    try {
+      in = getClass().getResourceAsStream("/dublincore_new.xml");
+      testCatalogNew = dcService.load(in);
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+    try {
+      in = getClass().getResourceAsStream("/dublincore_new2.xml");
+      testCatalogNew2 = dcService.load(in);
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+    try {
+      in = getClass().getResourceAsStream("/dublincore_new3.xml");
+      testCatalogNew3 = dcService.load(in);
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+  }
+
+  private void setUpEsIndexMockUp() throws SearchIndexException {
+    SearchResultItem<Series> item1 = EasyMock.createMock(SearchResultItem.class);
+    EasyMock.expect(item1.getSource()).andReturn(series1).anyTimes();
+    SearchResultItem<Series> item2 = EasyMock.createMock(SearchResultItem.class);
+    EasyMock.expect(item2.getSource()).andReturn(series2).anyTimes();
+    SearchResultItem<Series> item3 = EasyMock.createMock(SearchResultItem.class);
+    EasyMock.expect(item3.getSource()).andReturn(series3).anyTimes();
+
+    SearchResultItem<Series>[] ascSeriesItems = new SearchResultItem[3];
+    ascSeriesItems[0] = item1;
+    ascSeriesItems[1] = item2;
+    ascSeriesItems[2] = item3;
+
+    SearchResultItem<Series>[] descSeriesItems = new SearchResultItem[3];
+    descSeriesItems[0] = item3;
+    descSeriesItems[1] = item2;
+    descSeriesItems[2] = item1;
+
+    SearchResultItem<Series>[] singleSeriesItems = new SearchResultItem[1];
+    singleSeriesItems[0] = item1;
+
+    SearchResultItem<Series> aclItem1 = EasyMock.createMock(SearchResultItem.class);
+    EasyMock.expect(aclItem1.getSource()).andReturn(aclSeries1).anyTimes();
+    SearchResultItem<Series> aclItem2 = EasyMock.createMock(SearchResultItem.class);
+    EasyMock.expect(aclItem2.getSource()).andReturn(aclSeries2).anyTimes();
+
+    SearchResultItem<Series>[] aclSeriesItems1 = new SearchResultItem[1];
+    aclSeriesItems1[0] = aclItem1;
+    SearchResultItem<Series>[] aclSeriesItems2 = new SearchResultItem[1];
+    aclSeriesItems2[0] = aclItem2;
+
+    // Setup series search results
+    final SearchResult<Series> ascSeriesSearchResult = EasyMock.createMock(SearchResult.class);
+    EasyMock.expect(ascSeriesSearchResult.getItems()).andReturn(ascSeriesItems).anyTimes();
+    EasyMock.expect(ascSeriesSearchResult.getHitCount()).andReturn((long) ascSeriesItems.length);
+    EasyMock.expect(ascSeriesSearchResult.getDocumentCount()).andReturn((long) ascSeriesItems.length);
+    EasyMock.expect(ascSeriesSearchResult.getSearchTime()).andReturn(0L);
+    final SearchResult<Series> descSeriesSearchResult = EasyMock.createMock(SearchResult.class);
+    EasyMock.expect(descSeriesSearchResult.getItems()).andReturn(descSeriesItems).anyTimes();
+    EasyMock.expect(descSeriesSearchResult.getHitCount()).andReturn((long) descSeriesItems.length);
+    EasyMock.expect(descSeriesSearchResult.getDocumentCount()).andReturn((long) descSeriesItems.length);
+    EasyMock.expect(descSeriesSearchResult.getSearchTime()).andReturn(0L);
+    final SearchResult<Series> singleSeriesSearchResult = EasyMock.createMock(SearchResult.class);
+    EasyMock.expect(singleSeriesSearchResult.getItems()).andReturn(singleSeriesItems).anyTimes();
+    final SearchResult<Series> aclSeriesSearchResult = EasyMock.createMock(SearchResult.class);
+    EasyMock.expect(aclSeriesSearchResult.getItems()).andReturn(aclSeriesItems1).anyTimes();
+    final SearchResult<Series> aclSeriesSearchResult2 = EasyMock.createMock(SearchResult.class);
+    EasyMock.expect(aclSeriesSearchResult2.getItems()).andReturn(aclSeriesItems2).anyTimes();
+    final SearchResult<Series> emptySearchResult = EasyMock.createMock(SearchResult.class);
+    EasyMock.expect(emptySearchResult.getItems()).andReturn(null).anyTimes();
+    EasyMock.expect(emptySearchResult.getPageSize()).andReturn(0L).anyTimes();
+    EasyMock.expect(emptySearchResult.getDocumentCount()).andReturn(0L).anyTimes();
+    EasyMock.expect(emptySearchResult.getSearchTime()).andReturn(0L).anyTimes();
+
+    final Capture<SeriesSearchQuery> captureSeriesSearchQuery = EasyMock.newCapture();
+    EasyMock.expect(esIndex.getByQuery(EasyMock.capture(captureSeriesSearchQuery)))
+      .andAnswer(new IAnswer<SearchResult<Series>>() {
+
+        @Override
+        public SearchResult<Series> answer() throws Throwable {
+          if (captureSeriesSearchQuery.hasCaptured()
+              && captureSeriesSearchQuery.getValue().getIdentifier().length == 1) {
+            if ("acl1".equals(captureSeriesSearchQuery.getValue().getIdentifier()[0])) {
+              return aclSeriesSearchResult;
+            } else if ("acl2".equals(captureSeriesSearchQuery.getValue().getIdentifier()[0])) {
+              return aclSeriesSearchResult2;
+            } else {
+              return emptySearchResult;
+            }
+          } else if (captureSeriesSearchQuery.hasCaptured()
+              && captureSeriesSearchQuery.getValue().getTitle() != null) {
+            if ("title 1".equals(captureSeriesSearchQuery.getValue().getTitle())) {
+              return singleSeriesSearchResult;
+            } else {
+              return emptySearchResult;
+            }
+          } else if (captureSeriesSearchQuery.hasCaptured()
+              && captureSeriesSearchQuery.getValue().getSeriesTitleSortOrder() == SortCriterion.Order.Ascending) {
+            return ascSeriesSearchResult;
+          } else if (captureSeriesSearchQuery.hasCaptured()
+              && captureSeriesSearchQuery.getValue().getSeriesTitleSortOrder() == SortCriterion.Order.Descending) {
+            return descSeriesSearchResult;
+          } else if (captureSeriesSearchQuery.hasCaptured()
+              && captureSeriesSearchQuery.getValue().getSeriesSubjectSortOrder() == SortCriterion.Order.Ascending) {
+            return ascSeriesSearchResult;
+          } else if (captureSeriesSearchQuery.hasCaptured()
+              && captureSeriesSearchQuery.getValue().getSeriesSubjectSortOrder() == SortCriterion.Order.Descending) {
+            return descSeriesSearchResult;
+          } else if (captureSeriesSearchQuery.hasCaptured()
+              && captureSeriesSearchQuery.getValue().getSeriesIdentifierSortOrder() == SortCriterion.Order.Ascending) {
+            return ascSeriesSearchResult;
+          } else if (captureSeriesSearchQuery.hasCaptured()
+              && captureSeriesSearchQuery.getValue().getSeriesIdentifierSortOrder() == SortCriterion.Order.Descending) {
+            return descSeriesSearchResult;
+          } else {
+            return emptySearchResult;
+          }
+        }
+
+      }).anyTimes();
+
+
+    EasyMock.replay(item1, item2, item3, aclItem1, aclItem2);
+    EasyMock.replay(ascSeriesSearchResult, descSeriesSearchResult, aclSeriesSearchResult, aclSeriesSearchResult2,
+            emptySearchResult, singleSeriesSearchResult);
   }
 
   /**
@@ -166,9 +347,9 @@ public class SeriesServiceImplTest {
   @After
   public void tearDown() throws Exception {
     seriesDatabase = null;
-    index.deactivate();
+//    index.deactivate();
     FileUtils.deleteQuietly(new File(root));
-    index = null;
+//    index = null;
   }
 
   @Test
@@ -194,45 +375,53 @@ public class SeriesServiceImplTest {
 
   @Test
   public void testSorting() throws Exception {
-    seriesService.updateSeries(testCatalog);
-    seriesService.updateSeries(testCatalog2);
+    seriesService.updateSeries(testCatalogNew);
+    seriesService.updateSeries(testCatalogNew2);
+    seriesService.updateSeries(testCatalogNew3);
     {
-      SeriesQuery q = new SeriesQuery().withSort(SeriesQuery.Sort.TITLE, true);
+      SeriesSearchQuery q = new SeriesSearchQuery(defaultOrganization.getId(), defaultUser)
+              .sortByTitle(SortCriterion.Order.Ascending);
       DublinCoreCatalogList r = seriesService.getSeries(q);
-      Assert.assertEquals(2, r.getCatalogList().size());
-      Assert.assertEquals("ABC", r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_TITLE));
+      Assert.assertEquals(3, r.getCatalogList().size());
+      Assert.assertEquals("title 1", r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_TITLE));
     }
     {
-      SeriesQuery q = new SeriesQuery().withSort(SeriesQuery.Sort.TITLE, false);
+      SeriesSearchQuery q = new SeriesSearchQuery(defaultOrganization.getId(), defaultUser)
+              .sortByTitle(SortCriterion.Order.Descending);
       DublinCoreCatalogList r = seriesService.getSeries(q);
-      Assert.assertEquals(2, r.getCatalogList().size());
-      Assert.assertEquals("Land and Vegetation: Key players on the Climate Scene",
+      Assert.assertEquals(3, r.getCatalogList().size());
+      Assert.assertEquals("title 3",
               r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_TITLE));
     }
     {
-      SeriesQuery q = new SeriesQuery().withSort(SeriesQuery.Sort.SUBJECT, true);
+      SeriesSearchQuery q = new SeriesSearchQuery(defaultOrganization.getId(), defaultUser)
+          .sortBySubject(SortCriterion.Order.Ascending);
       DublinCoreCatalogList r = seriesService.getSeries(q);
-      Assert.assertEquals(2, r.getCatalogList().size());
-      Assert.assertEquals("climate, land, vegetation", r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_SUBJECT));
+      Assert.assertEquals(3, r.getCatalogList().size());
+      Assert.assertEquals("subject 1",
+          r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_SUBJECT));
     }
     {
-      SeriesQuery q = new SeriesQuery().withSort(SeriesQuery.Sort.SUBJECT, false);
+      SeriesSearchQuery q = new SeriesSearchQuery(defaultOrganization.getId(), defaultUser)
+              .sortBySubject(SortCriterion.Order.Descending);
       DublinCoreCatalogList r = seriesService.getSeries(q);
-      Assert.assertEquals(2, r.getCatalogList().size());
-      Assert.assertEquals("x, y, z", r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_SUBJECT));
+      Assert.assertEquals(3, r.getCatalogList().size());
+      Assert.assertEquals("subject 3", r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_SUBJECT));
     }
     { // sort by series id, verify sort asc
-      SeriesQuery q = new SeriesQuery().withSort(SeriesQuery.Sort.IDENTIFIER, true);
+      SeriesSearchQuery q = new SeriesSearchQuery(defaultOrganization.getId(), defaultUser)
+          .sortByIdentifer(SortCriterion.Order.Ascending);
       DublinCoreCatalogList r = seriesService.getSeries(q);
-      Assert.assertEquals(2, r.getCatalogList().size());
+      Assert.assertEquals(3, r.getCatalogList().size());
       String id1 = r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_IDENTIFIER);
       String id2 = r.getCatalogList().get(1).getFirst(DublinCore.PROPERTY_IDENTIFIER);
       Assert.assertTrue(id1.compareTo(id2) < 1);
     }
     { // sort by series id, verify sort desc
-      SeriesQuery q = new SeriesQuery().withSort(SeriesQuery.Sort.IDENTIFIER, false);
+      SeriesSearchQuery q = new SeriesSearchQuery(defaultOrganization.getId(), defaultUser)
+              .sortByIdentifer(SortCriterion.Order.Descending);
       DublinCoreCatalogList r = seriesService.getSeries(q);
-      Assert.assertEquals(2, r.getCatalogList().size());
+      Assert.assertEquals(3, r.getCatalogList().size());
       String id1 = r.getCatalogList().get(0).getFirst(DublinCore.PROPERTY_IDENTIFIER);
       String id2 = r.getCatalogList().get(1).getFirst(DublinCore.PROPERTY_IDENTIFIER);
       Assert.assertTrue(id1.compareTo(id2) > -1);
@@ -241,25 +430,14 @@ public class SeriesServiceImplTest {
 
   @Test
   public void testSeriesQuery() throws Exception {
-    testCatalog.set(DublinCore.PROPERTY_TITLE, "Some title");
-    seriesService.updateSeries(testCatalog);
-    SeriesQuery q = new SeriesQuery().setSeriesTitle("other");
+    seriesService.updateSeries(testCatalogNew);
+    SeriesSearchQuery q = new SeriesSearchQuery(defaultOrganization.getId(), defaultUser)
+            .withTitle("other");
     List<DublinCoreCatalog> result = seriesService.getSeries(q).getCatalogList();
     Assert.assertEquals(0, result.size());
 
-    testCatalog.set(DublinCore.PROPERTY_TITLE, "Some other title");
-    seriesService.updateSeries(testCatalog);
+    q.withTitle(series1.getTitle());
     result = seriesService.getSeries(q).getCatalogList();
-    Assert.assertEquals(1, result.size());
-  }
-
-  @Test
-  public void testSeriesFuzzyIdSearchQuery() throws Exception {
-    testCatalog.set(DublinCore.PROPERTY_IDENTIFIER, "20160119999");
-    seriesService.updateSeries(testCatalog);
-    SeriesQuery q = new SeriesQuery().setSeriesId("201601");
-    q.setFuzzyMatch(true);
-    List<DublinCoreCatalog> result = seriesService.getSeries(q).getCatalogList();
     Assert.assertEquals(1, result.size());
   }
 
@@ -274,32 +452,25 @@ public class SeriesServiceImplTest {
 
   @Test
   public void testACLManagement() throws Exception {
-    // sample access control list
-    AccessControlList accessControlList = new AccessControlList();
-    List<AccessControlEntry> acl = accessControlList.getEntries();
-    acl.add(new AccessControlEntry("admin", "delete", true));
+    List<AccessControlEntry> acl;
 
     try {
-      seriesService.updateAccessControl("failid", accessControlList);
+      seriesService.updateAccessControl("failid", accessControlList1);
       Assert.fail("Should fail when adding ACL to nonexistent series,");
     } catch (NotFoundException e) {
       // expected
     }
 
     seriesService.updateSeries(testCatalog);
-    seriesService.updateAccessControl(testCatalog.getFirst(DublinCore.PROPERTY_IDENTIFIER), accessControlList);
-    AccessControlList retrievedACL = seriesService.getSeriesAccessControl(testCatalog
-            .getFirst(DublinCore.PROPERTY_IDENTIFIER));
+    seriesService.updateAccessControl(testCatalog.getFirst(DublinCore.PROPERTY_IDENTIFIER), accessControlList1);
+    AccessControlList retrievedACL = seriesService.getSeriesAccessControl("acl1");
     Assert.assertNotNull(retrievedACL);
     acl = retrievedACL.getEntries();
     Assert.assertEquals(acl.size(), 1);
     Assert.assertEquals("admin", acl.get(0).getRole());
 
-    acl = accessControlList.getEntries();
-    acl.clear();
-    acl.add(new AccessControlEntry("student", Permissions.Action.READ.toString(), true));
-    seriesService.updateAccessControl(testCatalog.getFirst(DublinCore.PROPERTY_IDENTIFIER), accessControlList);
-    retrievedACL = seriesService.getSeriesAccessControl(testCatalog.getFirst(DublinCore.PROPERTY_IDENTIFIER));
+    seriesService.updateAccessControl(testCatalog.getFirst(DublinCore.PROPERTY_IDENTIFIER), accessControlList2);
+    retrievedACL = seriesService.getSeriesAccessControl("acl2");
     Assert.assertNotNull(retrievedACL);
     acl = retrievedACL.getEntries();
     Assert.assertEquals(acl.size(), 1);
@@ -438,6 +609,18 @@ public class SeriesServiceImplTest {
     assertTrue(seriesService.deleteSeriesElement(seriesId, ELEMENT_TYPE));
     assertFalse(seriesService.deleteSeriesElement(seriesId, ELEMENT_TYPE));
     assertEquals(Opt.none(), seriesService.getSeriesElementData(seriesId, ELEMENT_TYPE));
+  }
+
+  private Series createSeries(String id, String title, String contributor, String organizer, long time, Long themeId) {
+    Series series = new Series(id, defaultOrganization.getId());
+    series.setCreatedDateTime(new Date(time));
+    series.addContributor(contributor);
+    series.addOrganizer(organizer);
+    series.setTitle(title);
+    if (themeId != null) {
+      series.setTheme(themeId);
+    }
+    return series;
   }
 
 }

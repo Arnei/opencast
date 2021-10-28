@@ -62,7 +62,6 @@ import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.User;
 import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.series.api.SeriesException;
-import org.opencastproject.series.api.SeriesQuery;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.util.DateTimeSupport;
 import org.opencastproject.util.NotFoundException;
@@ -181,7 +180,7 @@ public class TestSeriesEndpoint extends SeriesEndpoint {
     final AccessControlList acl = new AccessControlList(
             new AccessControlEntry(anonymousRole, Permissions.Action.READ.toString(), true));
 
-    EasyMock.expect(seriesService.getSeries(EasyMock.anyObject(SeriesQuery.class)))
+    EasyMock.expect(seriesService.getSeries(EasyMock.anyObject(SeriesSearchQuery.class)))
             .andReturn(new DublinCoreCatalogList(catalogs, catalogs.size())).anyTimes();
     EasyMock.expect(seriesService.updateSeries(EasyMock.anyObject(DublinCoreCatalog.class))).andReturn(dc).anyTimes();
     EasyMock.expect(seriesService.getSeriesCount()).andReturn(3).anyTimes();

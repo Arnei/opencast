@@ -21,6 +21,7 @@
 
 package org.opencastproject.series.api;
 
+import org.opencastproject.elasticsearch.index.series.SeriesSearchQuery;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalogList;
 import org.opencastproject.security.api.AccessControlList;
@@ -142,14 +143,14 @@ public interface SeriesService {
    * Search over series
    *
    * @param query
-   *          {@link SeriesQuery} representing query
+   *          {@link SeriesSearchQuery} representing query
    * @return List of all matching series
    * @throws UnauthorizedException
    *           if the current user is not authorized to perform this action
    * @throws SeriesException
    *           if query could not be performed
    */
-  DublinCoreCatalogList getSeries(SeriesQuery query) throws SeriesException, UnauthorizedException;
+  DublinCoreCatalogList getSeries(SeriesSearchQuery query) throws SeriesException, UnauthorizedException;
 
   /**
    * Returns a map of series Id to title of all series the user can access

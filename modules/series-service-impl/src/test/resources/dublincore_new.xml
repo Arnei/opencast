@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<dublincore xmlns="http://www.opencastproject.org/xsd/1.0/dublincore/"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xmlns:dcterms="http://purl.org/dc/terms/">
+
+  <dcterms:title xml:lang="en">
+    title 1
+  </dcterms:title>
+  <dcterms:subject>
+    subject 1
+  </dcterms:subject>
+  <dcterms:description xml:lang="en">
+    description 1
+  </dcterms:description>
+  <dcterms:publisher>
+    Publisher 1_1, Publisher 1_2
+  </dcterms:publisher>
+  <dcterms:publisher>
+    Publisher 1_1, Publisher 1_2
+  </dcterms:publisher>
+  <dcterms:identifier>
+    1
+  </dcterms:identifier>
+</dublincore>

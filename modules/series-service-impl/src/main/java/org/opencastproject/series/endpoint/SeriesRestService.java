@@ -39,6 +39,8 @@ import static org.opencastproject.util.doc.rest.RestParameter.Type.BOOLEAN;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.TEXT;
 
+import org.opencastproject.elasticsearch.index.series.SeriesIndexSchema;
+import org.opencastproject.elasticsearch.index.series.SeriesSearchQuery;
 import org.opencastproject.mediapackage.EName;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
@@ -48,20 +50,20 @@ import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.rest.RestConstants;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AccessControlParser;
+import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.series.api.SeriesException;
-import org.opencastproject.series.api.SeriesQuery;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.systems.OpencastConstants;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.RestUtil.R;
-import org.opencastproject.util.SolrUtils;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.doc.rest.RestParameter;
 import org.opencastproject.util.doc.rest.RestParameter.Type;
 import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
+import org.opencastproject.util.requests.SortCriterion;
 
 import com.entwinemedia.fn.Stream;
 import com.entwinemedia.fn.data.Opt;
@@ -74,6 +76,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.osgi.service.component.ComponentContext;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,6 +87,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
@@ -133,6 +139,9 @@ public class SeriesRestService {
 
   /** Dublin Core Catalog service */
   private DublinCoreCatalogService dcService;
+
+
+  private SecurityService securityService;
 
   /** Default server URL */
   protected String serverUrl = "http://localhost:8080";
@@ -204,6 +213,13 @@ public class SeriesRestService {
   public void setDublinCoreService(DublinCoreCatalogService dcService) {
     this.dcService = dcService;
   }
+
+  /** OSGi callback for the security service */
+  @Reference
+  public void setSecurityService(SecurityService securityService) {
+    this.securityService = securityService;
+  }
+
 
   /**
    * Activates REST service.
@@ -927,12 +943,6 @@ public class SeriesRestService {
               type = STRING
           ),
           @RestParameter(
-              name = "abstract",
-              isRequired = false,
-              description = "The series abstract",
-              type = STRING
-          ),
-          @RestParameter(
               name = "description",
               isRequired = false,
               description = "The series description",
@@ -942,10 +952,9 @@ public class SeriesRestService {
               name = "sort",
               isRequired = false,
               description = "The sort order. May include any of the following: TITLE, SUBJECT, "
-                  + "CREATOR, PUBLISHER, CONTRIBUTOR, ABSTRACT, DESCRIPTION, CREATED, "
-                  + "AVAILABLE_FROM, AVAILABLE_TO, LANGUAGE, RIGHTS_HOLDER, SPATIAL, TEMPORAL, "
-                  + "IS_PART_OF, REPLACES, TYPE, ACCESS, LICENCE.  Add '_DESC' to reverse the "
-                  + "sort order (e.g. TITLE_DESC).",
+                  + "CREATOR, PUBLISHERS, CONTRIBUTORS, DESCRIPTION, CREATED_DATE_TIME, "
+                  + "LANGUAGE, RIGHTS_HOLDER, MANAGED_ACL, LICENCE. "
+                  + "Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).",
               type = STRING
           ),
           @RestParameter(
@@ -984,7 +993,6 @@ public class SeriesRestService {
       @QueryParam("language") String language,
       @QueryParam("license") String license,
       @QueryParam("subject") String subject,
-      @QueryParam("abstract") String seriesAbstract,
       @QueryParam("description") String description,
       @QueryParam("sort") String sort,
       @QueryParam("startPage") String startPage,
@@ -992,7 +1000,7 @@ public class SeriesRestService {
   ) throws UnauthorizedException {
     try {
       DublinCoreCatalogList result = getSeries(text, seriesId, edit, seriesTitle, creator, contributor, publisher,
-              rightsHolder, createdFrom, createdTo, language, license, subject, seriesAbstract, description, sort,
+              rightsHolder, createdFrom, createdTo, language, license, subject, description, sort,
               startPage, count, fuzzyMatch);
       return Response.ok(result.getResultsAsJson()).build();
     } catch (UnauthorizedException e) {
@@ -1096,12 +1104,6 @@ public class SeriesRestService {
               type = STRING
           ),
           @RestParameter(
-              name = "abstract",
-              isRequired = false,
-              description = "The series abstract",
-              type = STRING
-          ),
-          @RestParameter(
               name = "description",
               isRequired = false,
               description = "The series description",
@@ -1110,11 +1112,10 @@ public class SeriesRestService {
           @RestParameter(
               name = "sort",
               isRequired = false,
-              description = "The sort order.  May include any of the following: TITLE, SUBJECT, "
-                  + "CREATOR, PUBLISHER, CONTRIBUTOR, ABSTRACT, DESCRIPTION, CREATED, "
-                  + "AVAILABLE_FROM, AVAILABLE_TO, LANGUAGE, RIGHTS_HOLDER, SPATIAL, TEMPORAL, "
-                  + "IS_PART_OF, REPLACES, TYPE, ACCESS, LICENCE.  Add '_DESC' to reverse the "
-                  + "sort order (e.g. TITLE_DESC).",
+              description = "The sort order. May include any of the following: TITLE, SUBJECT, "
+                      + "CREATOR, PUBLISHERS, CONTRIBUTORS, DESCRIPTION, CREATED_DATE_TIME, "
+                      + "LANGUAGE, RIGHTS_HOLDER, MANAGED_ACL, LICENCE. "
+                      + "Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).",
               type = STRING
           ),
           @RestParameter(
@@ -1156,7 +1157,6 @@ public class SeriesRestService {
       @QueryParam("language") String language,
       @QueryParam("license") String license,
       @QueryParam("subject") String subject,
-      @QueryParam("abstract") String seriesAbstract,
       @QueryParam("description") String description,
       @QueryParam("sort") String sort,
       @QueryParam("startPage") String startPage,
@@ -1164,7 +1164,7 @@ public class SeriesRestService {
   ) throws UnauthorizedException {
     try {
       DublinCoreCatalogList result = getSeries(text, seriesId, edit, seriesTitle, creator, contributor, publisher,
-              rightsHolder, createdFrom, createdTo, language, license, subject, seriesAbstract, description, sort,
+              rightsHolder, createdFrom, createdTo, language, license, subject, description, sort,
               startPage, count, fuzzyMatch);
       return Response.ok(result.getResultsAsXML()).build();
     } catch (UnauthorizedException e) {
@@ -1411,22 +1411,21 @@ public class SeriesRestService {
       String language,
       String license,
       String subject,
-      String seriesAbstract,
       String description,
       String sort,
-      String startPageString,
+      String offsetString,
       String countString,
       Boolean fuzzyMatch
   ) throws SeriesException, UnauthorizedException {
-    int startPage = 0;
-    if (StringUtils.isNotEmpty(startPageString)) {
+    int offset = 0;
+    if (StringUtils.isNotEmpty(offsetString)) {
       try {
-        startPage = Integer.parseInt(startPageString);
+        offset = Integer.parseInt(offsetString);
       } catch (NumberFormatException e) {
         logger.warn("Bad start page parameter");
       }
-      if (startPage < 0) {
-        startPage = 0;
+      if (offset < 0) {
+        offset = 0;
       }
     }
 
@@ -1442,79 +1441,112 @@ public class SeriesRestService {
       }
     }
 
-    SeriesQuery q = new SeriesQuery();
-    q.setCount(count);
-    q.setStartPage(startPage);
+    SeriesSearchQuery q = new SeriesSearchQuery(securityService.getOrganization().getId(), securityService.getUser());
+    q.withLimit(count);
+    q.withOffset(offset);
     if (edit != null) {
-      q.setEdit(edit);
+      q.withEdit(edit);
     }
     if (StringUtils.isNotEmpty(text)) {
-      q.setText(text);
+      q.withText(fuzzyMatch.booleanValue(), text);
     }
     if (StringUtils.isNotEmpty(seriesId)) {
-      q.setSeriesId(seriesId);
+      q.withIdentifier(seriesId);
     }
     if (StringUtils.isNotEmpty(seriesTitle)) {
-      q.setSeriesTitle(seriesTitle);
+      q.withTitle(seriesTitle);
     }
     if (StringUtils.isNotEmpty(creator)) {
-      q.setCreator(creator);
+      q.withCreator(creator);
     }
     if (StringUtils.isNotEmpty(contributor)) {
-      q.setContributor(contributor);
+      q.withContributor(contributor);
     }
     if (StringUtils.isNotEmpty(language)) {
-      q.setLanguage(language);
+      q.withLanguage(language);
     }
     if (StringUtils.isNotEmpty(license)) {
-      q.setLicense(license);
+      q.withLicense(license);
     }
     if (StringUtils.isNotEmpty(subject)) {
-      q.setSubject(subject);
+      q.withSubject(subject);
     }
     if (StringUtils.isNotEmpty(publisher)) {
-      q.setPublisher(publisher);
-    }
-    if (StringUtils.isNotEmpty(seriesAbstract)) {
-      q.setSeriesAbstract(seriesAbstract);
+      q.withPublisher(publisher);
     }
     if (StringUtils.isNotEmpty(description)) {
-      q.setDescription(description);
+      q.withDescription(description);
     }
     if (StringUtils.isNotEmpty(rightsHolder)) {
-      q.setRightsHolder(rightsHolder);
-    }
-    if (fuzzyMatch != null) {
-      q.setFuzzyMatch(fuzzyMatch.booleanValue());
+      q.withRightsHolder(rightsHolder);
     }
     try {
       if (StringUtils.isNotEmpty(createdFrom)) {
-        q.setCreatedFrom(SolrUtils.parseDate(createdFrom));
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH);
+        Date date = formatter.parse(createdFrom);
+        q.withCreatedFrom(date);
       }
       if (StringUtils.isNotEmpty(createdTo)) {
-        q.setCreatedTo(SolrUtils.parseDate(createdTo));
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH);
+        Date date = formatter.parse(createdTo);
+        q.withCreatedFrom(date);
       }
     } catch (ParseException e1) {
       logger.warn("Could not parse date parameter: {}", e1);
     }
 
     if (StringUtils.isNotBlank(sort)) {
-      SeriesQuery.Sort sortField = null;
+      String enumKey;
+      SortCriterion.Order order;
       if (sort.endsWith("_DESC")) {
-        String enumKey = sort.substring(0, sort.length() - "_DESC".length()).toUpperCase();
-        try {
-          sortField = SeriesQuery.Sort.valueOf(enumKey);
-          q.withSort(sortField, false);
-        } catch (IllegalArgumentException e) {
-          logger.warn("No sort enum matches '{}'", enumKey);
-        }
+        enumKey = sort.substring(0, sort.length() - "_DESC".length()).toUpperCase();
+        order = SortCriterion.Order.Descending;
       } else {
-        try {
-          sortField = SeriesQuery.Sort.valueOf(sort);
-          q.withSort(sortField);
-        } catch (IllegalArgumentException e) {
-          logger.warn("No sort enum matches '{}'", sort);
+        enumKey = sort;
+        order = SortCriterion.Order.Ascending;
+      }
+
+      try {
+        switch (enumKey) {
+          case SeriesIndexSchema.TITLE:
+            q.sortByTitle(order);
+            break;
+          case SeriesIndexSchema.SUBJECT:
+            q.sortBySubject(order);
+            break;
+          case SeriesIndexSchema.CREATOR:
+            q.sortByCreator(order);
+            break;
+          case SeriesIndexSchema.PUBLISHERS:
+            q.sortByPublishers(order);
+            break;
+          case SeriesIndexSchema.CONTRIBUTORS:
+            q.sortByContributors(order);
+            break;
+          case SeriesIndexSchema.DESCRIPTION:
+            q.sortByDescription(order);
+            break;
+          case SeriesIndexSchema.LANGUAGE:
+            q.sortByLanguage(order);
+            break;
+          case SeriesIndexSchema.RIGHTS_HOLDER:
+            q.sortByRightsHolder(order);
+            break;
+          case SeriesIndexSchema.LICENSE:
+            q.sortByLicense(order);
+            break;
+          case SeriesIndexSchema.CREATED_DATE_TIME:
+            q.sortByCreatedDateTime(order);
+            break;
+          case SeriesIndexSchema.MANAGED_ACL:
+            q.sortByManagedAcl(order);
+            break;
+          default:
+            logger.info("Unknown filter criteria {}", enumKey);
+            throw new IllegalArgumentException("Unknown filter criteria " + enumKey);
         }
+      } catch (IllegalArgumentException e) {
+        logger.warn("No sort enum matches '{}'", enumKey);
       }
     }
 

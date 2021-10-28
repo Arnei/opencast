@@ -34,16 +34,18 @@ import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.BOOLEAN;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
 
+import org.opencastproject.elasticsearch.index.series.SeriesIndexSchema;
+import org.opencastproject.elasticsearch.index.series.SeriesSearchQuery;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalogList;
 import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AccessControlParser;
+import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.TrustedHttpClient;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.series.api.SeriesException;
-import org.opencastproject.series.api.SeriesQuery;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.serviceregistry.api.RemoteBase;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
@@ -53,7 +55,7 @@ import org.opencastproject.util.doc.rest.RestParameter;
 import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
-
+import org.opencastproject.util.requests.SortCriterion;
 
 import com.entwinemedia.fn.data.Opt;
 
@@ -82,9 +84,12 @@ import org.slf4j.LoggerFactory;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -135,6 +140,13 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
 
   /** Default number of items on page */
   private static final int DEFAULT_LIMIT = 20;
+
+  private SecurityService securityService;
+  /** OSGi callback for the security service */
+  @Reference
+  public void setSecurityService(SecurityService securityService) {
+    this.securityService = securityService;
+  }
 
   /**
    * Sets the trusted http client
@@ -439,12 +451,6 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
               type = STRING
           ),
           @RestParameter(
-              name = "abstract",
-              isRequired = false,
-              description = "The series abstract",
-              type = STRING
-          ),
-          @RestParameter(
               name = "description",
               isRequired = false,
               description = "The series description",
@@ -461,9 +467,9 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
               type = STRING
           ),
           @RestParameter(
-              name = "startPage",
+              name = "offset",
               isRequired = false,
-              description = "The page offset",
+              description = "The offset",
               type = STRING
           ),
           @RestParameter(
@@ -499,17 +505,16 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
       @QueryParam("language") String language,
       @QueryParam("license") String license,
       @QueryParam("subject") String subject,
-      @QueryParam("abstract") String seriesAbstract,
       @QueryParam("description") String description,
       @QueryParam("sort") String sort,
-      @QueryParam("startPage") String startPage,
+      @QueryParam("offset") String offset,
       @QueryParam("count") String count
   ) throws UnauthorizedException {
     try {
-      SeriesQuery seriesQuery = getSeries(
+      SeriesSearchQuery seriesQuery = getSeries(
           text, seriesId, edit, seriesTitle, creator, contributor, publisher,
-          rightsHolder, createdFrom, createdTo, language, license, subject, seriesAbstract, description, sort,
-          startPage, count, fuzzyMatch);
+          rightsHolder, createdFrom, createdTo, language, license, subject, description, sort,
+              offset, count, fuzzyMatch);
       DublinCoreCatalogList result = getSeries(seriesQuery);
       return Response.ok(result.getResultsAsJson()).build();
     } catch (UnauthorizedException e) {
@@ -521,7 +526,7 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
   }
 
   @Override
-  public DublinCoreCatalogList getSeries(SeriesQuery query) throws SeriesException, UnauthorizedException {
+  public DublinCoreCatalogList getSeries(SeriesSearchQuery query) throws SeriesException, UnauthorizedException {
     HttpGet get = new HttpGet(getSeriesUrl(query));
     HttpResponse response = getResponse(get, SC_OK, SC_UNAUTHORIZED);
     try {
@@ -612,30 +617,31 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
    *          the series query
    * @return the series URL
    */
-  private String getSeriesUrl(SeriesQuery q) {
+  private String getSeriesUrl(SeriesSearchQuery q) {
     StringBuilder url = new StringBuilder();
     url.append("/series.xml?");
 
     List<NameValuePair> queryStringParams = new ArrayList<>();
-    if (q.getText() != null) {
-      queryStringParams.add(new BasicNameValuePair("q", q.getText()));
+    if (q.getTerms() != null) {
+      // TODO: Properly pass arrays???
+      queryStringParams.add(new BasicNameValuePair("q", q.getTerms().toString()));
     }
-    if (q.getSeriesId() != null) {
-      queryStringParams.add(new BasicNameValuePair("seriesId", q.getSeriesId()));
+    if (q.getIdentifier() != null) {
+      queryStringParams.add(new BasicNameValuePair("seriesId", q.getIdentifier().toString()));
     }
-    queryStringParams.add(new BasicNameValuePair("edit", Boolean.toString(q.isEdit())));
-    queryStringParams.add(new BasicNameValuePair("fuzzyMatch", Boolean.toString(q.isFuzzyMatch())));
-    if (q.getSeriesTitle() != null) {
-      queryStringParams.add(new BasicNameValuePair("seriesTitle", q.getSeriesTitle()));
+    queryStringParams.add(new BasicNameValuePair("edit", Boolean.toString(q.isEditOnly())));
+    queryStringParams.add(new BasicNameValuePair("fuzzyMatch", Boolean.toString(q.isFuzzySearch())));
+    if (q.getTitle() != null) {
+      queryStringParams.add(new BasicNameValuePair("seriesTitle", q.getTitle()));
     }
     if (q.getCreator() != null) {
       queryStringParams.add(new BasicNameValuePair("creator", q.getCreator()));
     }
-    if (q.getContributor() != null) {
-      queryStringParams.add(new BasicNameValuePair("contributor", q.getContributor()));
+    if (q.getContributors() != null) {
+      queryStringParams.add(new BasicNameValuePair("contributor", q.getContributors().toString()));
     }
-    if (q.getPublisher() != null) {
-      queryStringParams.add(new BasicNameValuePair("publisher", q.getPublisher()));
+    if (q.getPublishers() != null) {
+      queryStringParams.add(new BasicNameValuePair("publisher", q.getPublishers().toString()));
     }
     if (q.getRightsHolder() != null) {
       queryStringParams.add(new BasicNameValuePair("rightsholder", q.getRightsHolder()));
@@ -652,24 +658,22 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
     if (q.getLicense() != null) {
       queryStringParams.add(new BasicNameValuePair("license", q.getLicense()));
     }
-    if (q.getSubject() != null) {
-      queryStringParams.add(new BasicNameValuePair("subject", q.getSubject()));
-    }
-    if (q.getAbstract() != null) {
-      queryStringParams.add(new BasicNameValuePair("abstract", q.getAbstract()));
+    if (q.getSubjects() != null) {
+      queryStringParams.add(new BasicNameValuePair("subject", q.getSubjects().toString()));
     }
     if (q.getDescription() != null) {
       queryStringParams.add(new BasicNameValuePair("description", q.getDescription()));
     }
-    if (q.getSort() != null) {
-      String sortString = q.getSort().toString();
-      if (!q.isSortAscending()) {
-        sortString = sortString.concat("_DESC");
-      }
-      queryStringParams.add(new BasicNameValuePair("sort", sortString));
-    }
-    queryStringParams.add(new BasicNameValuePair("startPage", Long.toString(q.getStartPage())));
-    queryStringParams.add(new BasicNameValuePair("count", Long.toString(q.getCount())));
+//    if (q.getSortOrders() != null) {
+//      String sortString = q.getSortOrders().toString();
+//      if (!q.isSortAscending()) {
+//        sortString = sortString.concat("_DESC");
+//      }
+//      queryStringParams.add(new BasicNameValuePair("sort", sortString));
+//    }
+    queryStringParams.add(new BasicNameValuePair("offset", Long.toString(q.getOffset())));
+//    queryStringParams.add(new BasicNameValuePair("startPage", Long.toString(q.getStartPage())));
+//    queryStringParams.add(new BasicNameValuePair("count", Long.toString(q.getCount())));
 
     url.append(URLEncodedUtils.format(queryStringParams, StandardCharsets.UTF_8));
     return url.toString();
@@ -963,7 +967,7 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
     }
   }
 
-  private SeriesQuery getSeries(
+  private SeriesSearchQuery getSeries(
       String text,
       String seriesId,
       Boolean edit,
@@ -977,22 +981,21 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
       String language,
       String license,
       String subject,
-      String seriesAbstract,
       String description,
       String sort,
-      String startPageString,
+      String offsetString,
       String countString,
       Boolean isFuzzyMatch
   ) throws SeriesException, UnauthorizedException {
-    int startPage = 0;
-    if (StringUtils.isNotEmpty(startPageString)) {
+    int offset = 0;
+    if (StringUtils.isNotEmpty(offsetString)) {
       try {
-        startPage = Integer.parseInt(startPageString);
+        offset = Integer.parseInt(offsetString);
       } catch (NumberFormatException e) {
         logger.warn("Bad start page parameter");
       }
-      if (startPage < 0) {
-        startPage = 0;
+      if (offset < 0) {
+        offset = 0;
       }
     }
 
@@ -1008,80 +1011,112 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
       }
     }
 
-    SeriesQuery q = new SeriesQuery();
-    q.setCount(count);
-    q.setStartPage(startPage);
+    SeriesSearchQuery q = new SeriesSearchQuery(securityService.getOrganization().getId(), securityService.getUser());
+    q.withLimit(count);
+    q.withOffset(offset);
     if (edit != null) {
-      q.setEdit(edit);
+      q.withEdit(edit);
     }
     if (StringUtils.isNotEmpty(text)) {
-      q.setText(text);
+      q.withText(isFuzzyMatch, text);
     }
     if (StringUtils.isNotEmpty(seriesId)) {
-      q.setSeriesId(seriesId);
+      q.withIdentifier(seriesId);
     }
     if (StringUtils.isNotEmpty(seriesTitle)) {
-      q.setSeriesTitle(seriesTitle);
+      q.withTitle(seriesTitle);
     }
     if (StringUtils.isNotEmpty(creator)) {
-      q.setCreator(creator);
+      q.withCreator(creator);
     }
     if (StringUtils.isNotEmpty(contributor)) {
-      q.setContributor(contributor);
+      q.withContributor(contributor);
     }
     if (StringUtils.isNotEmpty(language)) {
-      q.setLanguage(language);
+      q.withLanguage(language);
     }
     if (StringUtils.isNotEmpty(license)) {
-      q.setLicense(license);
+      q.withLicense(license);
     }
     if (StringUtils.isNotEmpty(subject)) {
-      q.setSubject(subject);
+      q.withSubject(subject);
     }
     if (StringUtils.isNotEmpty(publisher)) {
-      q.setPublisher(publisher);
-    }
-    if (StringUtils.isNotEmpty(seriesAbstract)) {
-      q.setSeriesAbstract(seriesAbstract);
+      q.withPublisher(publisher);
     }
     if (StringUtils.isNotEmpty(description)) {
-      q.setDescription(description);
+      q.withDescription(description);
     }
     if (StringUtils.isNotEmpty(rightsHolder)) {
-      q.setRightsHolder(rightsHolder);
-    }
-    // allow seriesId wild card search
-    if (isFuzzyMatch != null) {
-      q.setFuzzyMatch(isFuzzyMatch.booleanValue());
+      q.withRightsHolder(rightsHolder);
     }
     try {
       if (StringUtils.isNotEmpty(createdFrom)) {
-        q.setCreatedFrom(SolrUtils.parseDate(createdFrom));
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH);
+        Date date = formatter.parse(createdFrom);
+        q.withCreatedFrom(date);
       }
       if (StringUtils.isNotEmpty(createdTo)) {
-        q.setCreatedTo(SolrUtils.parseDate(createdTo));
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH);
+        Date date = formatter.parse(createdTo);
+        q.withCreatedFrom(date);
       }
     } catch (ParseException e1) {
       logger.warn("Could not parse date parameter: {}", e1);
     }
 
     if (StringUtils.isNotBlank(sort)) {
-      SeriesQuery.Sort sortField = null;
+      String enumKey;
+      SortCriterion.Order order;
       if (sort.endsWith("_DESC")) {
-        String enumKey = sort.substring(0, sort.length() - "_DESC".length()).toUpperCase();
-        try {
-          sortField = SeriesQuery.Sort.valueOf(enumKey);
-          q.withSort(sortField, false);
-        } catch (IllegalArgumentException e) {
-          logger.warn("No sort enum matches '{}'", enumKey);
-        }
+        enumKey = sort.substring(0, sort.length() - "_DESC".length()).toUpperCase();
+        order = SortCriterion.Order.Descending;
       } else {
-        try {
-          sortField = SeriesQuery.Sort.valueOf(sort);
-          q.withSort(sortField);
-        } catch (IllegalArgumentException e) {
-          logger.warn("No sort enum matches '{}'", sort);
+        enumKey = sort;
+        order = SortCriterion.Order.Ascending;
+      }
+
+      try {
+        switch (enumKey) {
+          case SeriesIndexSchema.TITLE:
+            q.sortByTitle(order);
+            break;
+          case SeriesIndexSchema.SUBJECT:
+            q.sortBySubject(order);
+            break;
+          case SeriesIndexSchema.CREATOR:
+            q.sortByCreator(order);
+            break;
+          case SeriesIndexSchema.PUBLISHERS:
+            q.sortByPublishers(order);
+            break;
+          case SeriesIndexSchema.CONTRIBUTORS:
+            q.sortByContributors(order);
+            break;
+          case SeriesIndexSchema.DESCRIPTION:
+            q.sortByDescription(order);
+            break;
+          case SeriesIndexSchema.LANGUAGE:
+            q.sortByLanguage(order);
+            break;
+          case SeriesIndexSchema.RIGHTS_HOLDER:
+            q.sortByRightsHolder(order);
+            break;
+          case SeriesIndexSchema.LICENSE:
+            q.sortByLicense(order);
+            break;
+          case SeriesIndexSchema.CREATED_DATE_TIME:
+            q.sortByCreatedDateTime(order);
+            break;
+          case SeriesIndexSchema.MANAGED_ACL:
+            q.sortByManagedAcl(order);
+            break;
+          default:
+            logger.info("Unknown filter criteria {}", enumKey);
+            throw new IllegalArgumentException("Unknown filter criteria " + enumKey);
         }
+      } catch (IllegalArgumentException e) {
+        logger.warn("No sort enum matches '{}'", enumKey);
       }
     }
     return q;

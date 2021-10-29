@@ -90,7 +90,6 @@ import java.util.function.Function;
 public class SeriesServiceImplTest {
 
   private SeriesServiceDatabaseImpl seriesDatabase;
-//  private SeriesServiceIndex index;
   private AbstractSearchIndex esIndex;
   private DublinCoreCatalogService dcService;
   private String root;
@@ -147,10 +146,6 @@ public class SeriesServiceImplTest {
     seriesDatabase.setSecurityService(securityService);
 
     root = PathSupport.concat("target", Long.toString(currentTime));
-//    index = EasyMock.createNiceMock(SeriesServiceIndex.class);
-//    index.setDublinCoreService(dcService);
-//    index.setSecurityService(securityService);
-//    index.activate();
 
     MessageSender messageSender = EasyMock.createNiceMock(MessageSender.class);
     EasyMock.replay(messageSender);
@@ -185,7 +180,6 @@ public class SeriesServiceImplTest {
 
     seriesService = new SeriesServiceImpl();
     seriesService.setPersistence(seriesDatabase);
-//    seriesService.setIndex(index);
     seriesService.setSecurityService(securityService);
     seriesService.setMessageSender(messageSender);
     seriesService.setAdminUiIndex(esIndex);

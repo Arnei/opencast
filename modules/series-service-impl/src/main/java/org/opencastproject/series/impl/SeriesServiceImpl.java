@@ -94,7 +94,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * Implements {@link SeriesService}. Uses {@link SeriesServiceDatabase} for permanent storage and
- * {@link SeriesServiceIndex} for searching.
+ * {@link org.opencastproject.elasticsearch.impl.AbstractElasticsearchIndex} for searching.
  */
 @Component(
     property = {

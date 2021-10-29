@@ -950,9 +950,9 @@ public class SeriesRestService {
               type = STRING
           ),
           @RestParameter(
-              name = "startPage",
+              name = "offset",
               isRequired = false,
-              description = "The page offset",
+              description = "The offset",
               type = STRING
           ),
           @RestParameter(
@@ -987,13 +987,13 @@ public class SeriesRestService {
       @QueryParam("subject") String subject,
       @QueryParam("description") String description,
       @QueryParam("sort") String sort,
-      @QueryParam("startPage") String startPage,
+      @QueryParam("offset") String offset,
       @QueryParam("count") String count
   ) throws UnauthorizedException {
     try {
       DublinCoreCatalogList result = getSeries(text, seriesId, edit, seriesTitle, creator, contributor, publisher,
               rightsHolder, createdFrom, createdTo, language, license, subject, description, sort,
-              startPage, count, fuzzyMatch);
+              offset, count, fuzzyMatch);
       return Response.ok(result.getResultsAsJson()).build();
     } catch (UnauthorizedException e) {
       throw e;

@@ -22,6 +22,7 @@
 package org.opencastproject.series.remote;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 import static javax.ws.rs.core.Response.Status.NOT_FOUND;
@@ -56,6 +57,7 @@ import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
 import org.opencastproject.util.requests.SortCriterion;
+import org.opencastproject.util.requests.SortCriterion.Order;
 
 import com.entwinemedia.fn.data.Opt;
 
@@ -91,6 +93,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 import javax.ws.rs.GET;
@@ -141,7 +144,9 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
   /** Default number of items on page */
   private static final int DEFAULT_LIMIT = 20;
 
+  /** The security service */
   private SecurityService securityService;
+
   /** OSGi callback for the security service */
   @Reference
   public void setSecurityService(SecurityService securityService) {
@@ -459,11 +464,10 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
           @RestParameter(
               name = "sort",
               isRequired = false,
-              description = "The sort order.  May include any of the following: TITLE, SUBJECT, "
-                  + "CREATOR, PUBLISHER, CONTRIBUTOR, ABSTRACT, DESCRIPTION, CREATED, "
-                  + "AVAILABLE_FROM, AVAILABLE_TO, LANGUAGE, RIGHTS_HOLDER, SPATIAL, TEMPORAL, "
-                  + "IS_PART_OF, REPLACES, TYPE, ACCESS, LICENCE.  Add '_DESC' to reverse the "
-                  + "sort order (e.g. TITLE_DESC).",
+              description = "The sort order. May include any of the following: TITLE, SUBJECT, "
+                      + "CREATOR, PUBLISHERS, CONTRIBUTORS, DESCRIPTION, CREATED_DATE_TIME, "
+                      + "LANGUAGE, RIGHTS_HOLDER, MANAGED_ACL, LICENCE. "
+                      + "Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).",
               type = STRING
           ),
           @RestParameter(
@@ -664,16 +668,21 @@ public class SeriesServiceRemoteImpl extends RemoteBase implements SeriesService
     if (q.getDescription() != null) {
       queryStringParams.add(new BasicNameValuePair("description", q.getDescription()));
     }
-//    if (q.getSortOrders() != null) {
-//      String sortString = q.getSortOrders().toString();
-//      if (!q.isSortAscending()) {
-//        sortString = sortString.concat("_DESC");
-//      }
-//      queryStringParams.add(new BasicNameValuePair("sort", sortString));
-//    }
+
+    if (q.getSortOrders() != null) {
+      Map<String, Order> sortOrders = q.getSortOrders();
+      String sortString = sortOrders.entrySet()
+              .stream()
+              .map(e -> e.getKey())
+              .collect(joining(", "));
+      Optional<Map.Entry<String, Order>> firstResult = sortOrders.entrySet().stream().findFirst();
+      if (firstResult.isPresent() && firstResult.get().getValue().equals(Order.Descending)) {
+        sortString = sortString.concat("_DESC");
+      }
+      queryStringParams.add(new BasicNameValuePair("sort", sortString));
+    }
     queryStringParams.add(new BasicNameValuePair("offset", Long.toString(q.getOffset())));
-//    queryStringParams.add(new BasicNameValuePair("startPage", Long.toString(q.getStartPage())));
-//    queryStringParams.add(new BasicNameValuePair("count", Long.toString(q.getCount())));
+    queryStringParams.add(new BasicNameValuePair("count", Long.toString(q.getLimit())));
 
     url.append(URLEncodedUtils.format(queryStringParams, StandardCharsets.UTF_8));
     return url.toString();

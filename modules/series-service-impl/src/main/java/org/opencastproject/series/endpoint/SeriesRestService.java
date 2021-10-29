@@ -140,7 +140,7 @@ public class SeriesRestService {
   /** Dublin Core Catalog service */
   private DublinCoreCatalogService dcService;
 
-
+  /** The security service */
   private SecurityService securityService;
 
   /** Default server URL */
@@ -412,12 +412,6 @@ public class SeriesRestService {
           @RestParameter(
               description = "Series metadata value",
               isRequired = false,
-              name = "abstract",
-              type = RestParameter.Type.STRING
-          ),
-          @RestParameter(
-              description = "Series metadata value",
-              isRequired = false,
               name = "accessRights",
               type = RestParameter.Type.STRING
           ),
@@ -607,7 +601,6 @@ public class SeriesRestService {
   public Response addOrUpdateSeries(
       @FormParam("series") String series,
       @FormParam("acl") String accessControl,
-      @FormParam("abstract") String dcAbstract,
       @FormParam("accessRights") String dcAccessRights,
       @FormParam("available") String dcAvailable,
       @FormParam("contributor") String dcContributor,
@@ -650,7 +643,6 @@ public class SeriesRestService {
       }
     } else if (StringUtils.isNotBlank(dcTitle)) {
       dc = DublinCores.mkOpencastSeries().getCatalog();
-      addDcData(dc, "abstract", dcAbstract);
       addDcData(dc, "accessRights", dcAccessRights);
       addDcData(dc, "available", dcAvailable);
       addDcData(dc, "contributor", dcContributor);

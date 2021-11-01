@@ -958,7 +958,7 @@ public class SeriesRestService {
           @RestParameter(
               name = "count",
               isRequired = false,
-              description = "Results per page (max 100)",
+              description = "Number of results (default is 20)",
               type = STRING
           )
       },
@@ -1119,7 +1119,7 @@ public class SeriesRestService {
           @RestParameter(
               name = "count",
               isRequired = false,
-              description = "Results per page (max 100)",
+              description = "Number of results (default is 20)",
               type = STRING
           )
       },

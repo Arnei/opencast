@@ -977,77 +977,59 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    * @see org.opencastproject.workflow.api.WorkflowService#remove(long,boolean)
    */
   @Override
-  public void remove(long workflowInstanceId, boolean force) throws WorkflowDatabaseException, NotFoundException,
+  public void remove(long workflowInstanceId, boolean force) throws NotFoundException,
           UnauthorizedException, WorkflowParsingException, WorkflowStateException {
     final Lock lock = this.lock.get(workflowInstanceId);
     lock.lock();
     try {
       WorkflowQuery query = new WorkflowQuery();
       query.withId(Long.toString(workflowInstanceId));
-      WorkflowSet workflows = index.getWorkflowInstances(query, Permissions.Action.READ.toString(), false);
-      adminUiIndex.deleteWorkflow(securityService.getOrganization(), securityService.getUser());
-      if (workflows.size() == 1) {
-        WorkflowInstance instance = workflows.getItems()[0];
+      WorkflowInstance instance = getWorkflowById(workflowInstanceId);
 
-        WorkflowInstance.WorkflowState state = instance.getState();
-        if (state != WorkflowState.SUCCEEDED && state != WorkflowState.FAILED
-            && state != WorkflowState.STOPPED) {
-          if (!force) {
-            throw new WorkflowStateException("Workflow instance with state '" + state + "' cannot be removed. " + "Only states SUCCEEDED, FAILED & STOPPED are allowed");
-          }
-          logger.info("Using force, removing workflow " + workflowInstanceId + " despite being in state " + state);
+      WorkflowInstance.WorkflowState state = instance.getState();
+      if (state != WorkflowState.SUCCEEDED && state != WorkflowState.FAILED
+          && state != WorkflowState.STOPPED) {
+        if (!force) {
+          throw new WorkflowStateException("Workflow instance with state '" + state + "' cannot be removed. " + "Only states SUCCEEDED, FAILED & STOPPED are allowed");
         }
+        logger.info("Using force, removing workflow " + workflowInstanceId + " despite being in state " + state);
+      }
 
-        assertPermission(instance, Permissions.Action.WRITE.toString(), instance.getOrganizationId());
+      assertPermission(instance, Permissions.Action.WRITE.toString(), instance.getOrganizationId());
 
-        // First, remove temporary files DO THIS BEFORE REMOVING FROM INDEX
-        removeTempFiles(instance);
+      // First, remove temporary files DO THIS BEFORE REMOVING FROM INDEX
+      removeTempFiles(instance);
 
-        // Second, remove jobs related to a operation which belongs to the workflow instance
-        List<WorkflowOperationInstance> operations = instance.getOperations();
-        List<Long> jobsToDelete = new ArrayList<>();
-        for (WorkflowOperationInstance op : operations) {
-          if (op.getId() != null) {
-            long workflowOpId = op.getId();
-            if (workflowOpId != workflowInstanceId) {
-              jobsToDelete.add(workflowOpId);
-            }
+      // Second, remove jobs related to a operation which belongs to the workflow instance
+      List<WorkflowOperationInstance> operations = instance.getOperations();
+      List<Long> jobsToDelete = new ArrayList<>();
+      for (WorkflowOperationInstance op : operations) {
+        if (op.getId() != null) {
+          long workflowOpId = op.getId();
+          if (workflowOpId != workflowInstanceId) {
+            jobsToDelete.add(workflowOpId);
           }
         }
-        try {
-          serviceRegistry.removeJobs(jobsToDelete);
-        } catch (ServiceRegistryException e) {
-          logger.warn("Problems while removing jobs related to workflow operations '%s': %s", jobsToDelete,
-                  e.getMessage());
-        } catch (NotFoundException e) {
-          logger.debug("No jobs related to one of the workflow operations '%s' found in the service registry",
-                  jobsToDelete);
-        }
+      }
+      try {
+        serviceRegistry.removeJobs(jobsToDelete);
+      } catch (ServiceRegistryException e) {
+        logger.warn("Problems while removing jobs related to workflow operations '%s': %s", jobsToDelete,
+                e.getMessage());
+      } catch (NotFoundException e) {
+        logger.debug("No jobs related to one of the workflow operations '%s' found in the service registry",
+                jobsToDelete);
+      }
 
-        // Third, remove workflow instance job itself
-        try {
-          serviceRegistry.removeJobs(Collections.singletonList(workflowInstanceId));
-          removeWorkflowInstanceFromIndex(instance, adminUiIndex);
-          removeWorkflowInstanceFromIndex(instance, externalApiIndex);
-        } catch (ServiceRegistryException e) {
-          logger.warn("Problems while removing workflow instance job '%d'", workflowInstanceId, e);
-        } catch (NotFoundException e) {
-          logger.info("No workflow instance job '%d' found in the service registry", workflowInstanceId);
-        }
-
-        // At last, remove workflow instance from the index
-        try {
-          index.remove(workflowInstanceId);
-        } catch (NotFoundException e) {
-          // This should never happen, because we got workflow instance by querying the index...
-          logger.warn("Workflow instance could not be removed from index", e);
-        }
-      } else if (workflows.size() == 0) {
-        throw new NotFoundException("Workflow instance with id '" + Long.toString(workflowInstanceId)
-                                              + "' could not be found");
-      } else {
-        throw new WorkflowDatabaseException("More than one workflow found with id: "
-                                                    + Long.toString(workflowInstanceId));
+      // Third, remove workflow instance job itself
+      try {
+        serviceRegistry.removeJobs(Collections.singletonList(workflowInstanceId));
+        removeWorkflowInstanceFromIndex(instance, adminUiIndex);
+        removeWorkflowInstanceFromIndex(instance, externalApiIndex);
+      } catch (ServiceRegistryException e) {
+        logger.warn("Problems while removing workflow instance job '%d'", workflowInstanceId, e);
+      } catch (NotFoundException e) {
+        logger.info("No workflow instance job '%d' found in the service registry", workflowInstanceId);
       }
     } finally {
       lock.unlock();
@@ -1338,7 +1320,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
           updateWorkflowInstanceInIndex(workflowInstance, accessControlList, episodeDublinCoreCatalog,
                   externalApiIndex);
         }
-        index(workflowInstance);
       } catch (ServiceRegistryException e) {
         logger.error(
                 "Update of workflow job %s in the service registry failed, service registry and workflow index may be out of sync",
@@ -1391,6 +1372,10 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public long countWorkflowInstances() throws WorkflowDatabaseException {
+    // Used in:
+    // - jobEndpoint: getTasksAsJson
+    //   - AbstractEventEndpoint (AdminUI): getEventWorkflows
+    // - remoteImpl
 //    return index.countWorkflowInstances(null, null);
     try {
       return serviceRegistry.getJobCount(Operation.START_WORKFLOW.toString());
@@ -1407,6 +1392,10 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public long countWorkflowInstances(WorkflowState state, String operation) throws WorkflowDatabaseException {
+    // Used in:
+    // - RestService
+    // - RemoteImpl
+    // TODO: Needs access to job payload to get WorkflowState
     return index.countWorkflowInstances(state, operation);
   }
 
@@ -1417,6 +1406,11 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public WorkflowStatistics getStatistics() throws WorkflowDatabaseException {
+    // Used in:
+    // - RestService
+    // - RemoteImpl
+    // - Intern ??? No idea why there is an internal variable for that, it's not used anywhere?
+    // TODO: Needs access to job payload
     return index.getStatistics();
   }
 
@@ -1427,6 +1421,45 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public WorkflowSet getWorkflowInstances(WorkflowQuery query) throws WorkflowDatabaseException {
+    // Used in:
+    // - jobEndpoint: getTasksAsJson
+    //   - jobEndpoint: getTasks (REST) [uses full query capacities]
+    //   - AbstractEventEndpoint (ADMIN UI): getEventWorkflows (REST) [All workflows for a MP]
+    // - jobEndpoint: getWorkflowById
+    //   [single workflow by id]
+    //   [The jobEndpoint really shouldn't have an extra implementation of this, should it?]
+    //   - getTasksAsJson
+    //     - AbstractEventEndpoint (ADMIN UI): getEventWorkflow (REST)
+    //   - getOperation(s)asJson
+    //     - AbstractEventEndpoint (ADMIN UI): getEventOperation(s)
+    // - workflowsEndpoint (EXTERNAL API): getWorkflowInstances (REST) [uses full query capacities]
+    // - IndexServiceImpl: startAddAssetWorkflow [All workflows for a MP]
+    //   - AbstractEventEndpoint (ADMIN UI): updateAssets
+    // - IndexServiceImpl: removeEvent [All workflows for a MP] [to stop and remove all related wf instances]
+    //   - AbstractEventEndpoint (ADMIN UI): deleteEvent(s)
+    //   - EventsEndpoint (External API): deleteEvent
+    //   - LtiServiceImpl: deleteEvent
+    // - IndexServiceImpl: getCurrentWorkflowInstance [All workflows for a MP]
+    //    - removeCatalogByFlavor
+    //      - EventsEndpoint (External API): deleteEventMetadataByType
+    //    - updateEventMetadata
+    //      - EventsEndpoint (External API): updateEventMetadata(ByType)
+    //      - LtiService: updateEvent
+    //      - updateAllEventMetadata
+    //         - AbstractEventEndpoint (ADMIN UI)
+    //         - EditorServiceImpl
+    //         - LtiServiceImpl
+    // - WorkflowListProvider (Auch IndexService)
+    //   - ListProviderService
+    // - RestService: getWorkflowsAsXML
+    // - Intern
+    //   - start [All workflows for a MP THAT ARE ACTIVE]
+    //   - isReadyToAccept [All workflows for a MP THAT ARE RUNNING, PAUSED, FAILING]
+    //   - getHoldWorkflows [All workflows for a MP THAT ARE PAUSED]
+    //   - cleanupWorkflowInstances [All workflows for a MP with some state and date]
+    // TODO: Needs access to at least job payload to get all the info
+    //  workflowPayloads =  serviceRegistry.getJobPayloads(WorkflowServiceImpl.Operation.START_WORKFLOW.toString());
+    //  Also needs mediaPackageInfos
     return index.getWorkflowInstances(query, Permissions.Action.READ.toString(), true);
   }
 
@@ -1438,6 +1471,11 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
   @Override
   public WorkflowSet getWorkflowInstancesForAdministrativeRead(WorkflowQuery query) throws WorkflowDatabaseException,
           UnauthorizedException {
+    // Used in:
+    // - RestService
+    // - WorkflowPermissionsUpdateEventHandler: handleEvent [All workflows for a SERIES]
+    //   - conductor ???
+    // TODO: see above
     User user = securityService.getUser();
     if (!user.hasRole(GLOBAL_ADMIN_ROLE) && !user.hasRole(user.getOrganization().getAdminRole()))
       throw new UnauthorizedException(user, getClass().getName() + ".getForAdministrativeRead");
@@ -2074,17 +2112,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
   @Reference(name = "orgDirectory")
   public void setOrganizationDirectoryService(OrganizationDirectoryService organizationDirectory) {
     this.organizationDirectoryService = organizationDirectory;
-  }
-
-  /**
-   * Sets the search indexer to use in this service.
-   *
-   * @param index
-   *          The search index
-   */
-  @Reference(name = "index")
-  protected void setDao(WorkflowServiceIndex index) {
-    this.index = index;
   }
 
   /**

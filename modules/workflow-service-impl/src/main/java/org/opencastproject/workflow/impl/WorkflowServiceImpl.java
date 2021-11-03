@@ -221,9 +221,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
   /** The metadata services */
   private SortedSet<MediaPackageMetadataService> metadataServices;
 
-  /** The data access object responsible for storing and retrieving workflow instances */
-  protected WorkflowServiceIndex index;
-
   /** The list of workflow listeners */
   private final List<WorkflowListener> listeners = new CopyOnWriteArrayList<WorkflowListener>();
 
@@ -988,6 +985,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
       WorkflowQuery query = new WorkflowQuery();
       query.withId(Long.toString(workflowInstanceId));
       WorkflowSet workflows = index.getWorkflowInstances(query, Permissions.Action.READ.toString(), false);
+      adminUiIndex.deleteWorkflow(securityService.getOrganization(), securityService.getUser());
       if (workflows.size() == 1) {
         WorkflowInstance instance = workflows.getItems()[0];
 
@@ -1372,18 +1370,19 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     }
   }
 
-  /**
-   * Updates the search index entries for this workflow instance.
-   *
-   * @param workflowInstance
-   *          the workflow
-   * @throws WorkflowDatabaseException
-   *           if there is a problem storing the workflow instance
-   */
-  protected void index(final WorkflowInstance workflowInstance) throws WorkflowDatabaseException {
-    // Update the search index
-    index.update(workflowInstance);
-  }
+  // TODO: No Index, no updates???
+//  /**
+//   * Updates the search index entries for this workflow instance.
+//   *
+//   * @param workflowInstance
+//   *          the workflow
+//   * @throws WorkflowDatabaseException
+//   *           if there is a problem storing the workflow instance
+//   */
+//  protected void index(final WorkflowInstance workflowInstance) throws WorkflowDatabaseException {
+//    // Update the search index
+//    index.update(workflowInstance);
+//  }
 
   /**
    * {@inheritDoc}
@@ -1392,7 +1391,12 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public long countWorkflowInstances() throws WorkflowDatabaseException {
-    return index.countWorkflowInstances(null, null);
+//    return index.countWorkflowInstances(null, null);
+    try {
+      return serviceRegistry.getJobCount(Operation.START_WORKFLOW.toString());
+    } catch (ServiceRegistryException e) {
+      throw new WorkflowDatabaseException(e);
+    }
   }
 
   /**

@@ -45,7 +45,6 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.systems.OpencastConstants;
 import org.opencastproject.util.LocalHashMap;
 import org.opencastproject.util.NotFoundException;
-import org.opencastproject.util.SolrUtils;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.doc.rest.RestParameter;
 import org.opencastproject.util.doc.rest.RestParameter.Type;
@@ -85,8 +84,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.locks.Lock;
 
@@ -366,8 +367,9 @@ public class WorkflowRestService extends AbstractJobProducerEndpoint {
     q.withCreator(creator);
     q.withContributor(contributor);
     try {
-      q.withDateAfter(SolrUtils.parseDate(fromDate));
-      q.withDateBefore(SolrUtils.parseDate(toDate));
+      SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.ENGLISH);
+      q.withDateAfter(formatter.parse(fromDate));
+      q.withDateBefore(formatter.parse(toDate));
     } catch (ParseException e) {
       return Response
           .status(Status.BAD_REQUEST)

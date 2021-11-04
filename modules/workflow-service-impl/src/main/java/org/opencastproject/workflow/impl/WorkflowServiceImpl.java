@@ -1396,7 +1396,8 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     // - RestService
     // - RemoteImpl
     // TODO: Needs access to job payload to get WorkflowState
-    return index.countWorkflowInstances(state, operation);
+//    return index.countWorkflowInstances(state, operation);
+    throw new WorkflowDatabaseException("Not implemented");
   }
 
   /**
@@ -1411,7 +1412,8 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     // - RemoteImpl
     // - Intern ??? No idea why there is an internal variable for that, it's not used anywhere?
     // TODO: Needs access to job payload
-    return index.getStatistics();
+//    return index.getStatistics();
+    throw new WorkflowDatabaseException("Not implemented");
   }
 
   /**

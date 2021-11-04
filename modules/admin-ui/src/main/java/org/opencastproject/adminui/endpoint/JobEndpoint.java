@@ -35,6 +35,7 @@ import org.opencastproject.index.service.util.RestUtils;
 import org.opencastproject.job.api.Incident;
 import org.opencastproject.job.api.IncidentTree;
 import org.opencastproject.job.api.Job;
+import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.security.api.User;
 import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.HostRegistration;
@@ -491,7 +492,13 @@ public class JobEndpoint {
    * @throws NotFoundException
    */
   public JObject getTasksAsJSON(long id) throws JobEndpointException, NotFoundException {
-    WorkflowInstance instance = getWorkflowById(id);
+    WorkflowInstance instance = null;
+    try {
+      instance = workflowService.getWorkflowById(id);
+    } catch (WorkflowDatabaseException | UnauthorizedException e) {
+      throw new JobEndpointException(String.format("Not able to get the list of job from the database: %s", e),
+              e.getCause());
+    }
     // Gather user information
     User user = userDirectoryService.loadUser(instance.getCreatorName());
     List<Field> userInformation = new ArrayList<>();
@@ -539,7 +546,13 @@ public class JobEndpoint {
    * @throws NotFoundException
    */
   public JValue getOperationsAsJSON(long jobId) throws JobEndpointException, NotFoundException {
-    WorkflowInstance instance = getWorkflowById(jobId);
+    WorkflowInstance instance = null;
+    try {
+      instance = workflowService.getWorkflowById(jobId);
+    } catch (WorkflowDatabaseException | UnauthorizedException e) {
+      throw new JobEndpointException(String.format("Not able to get the list of job from the database: %s", e),
+              e.getCause());
+    }
 
     List<WorkflowOperationInstance> operations = instance.getOperations();
     List<JValue> operationsJSON = new ArrayList<>();
@@ -569,7 +582,13 @@ public class JobEndpoint {
    */
   public JObject getOperationAsJSON(long jobId, int operationPosition)
           throws JobEndpointException, NotFoundException {
-    WorkflowInstance instance = getWorkflowById(jobId);
+    WorkflowInstance instance = null;
+    try {
+      instance = workflowService.getWorkflowById(jobId);
+    } catch (WorkflowDatabaseException | UnauthorizedException e) {
+      throw new JobEndpointException(String.format("Not able to get the list of job from the database: %s", e),
+              e.getCause());
+    }
 
     List<WorkflowOperationInstance> operations = instance.getOperations();
 
@@ -660,31 +679,31 @@ public class JobEndpoint {
     }
   }
 
-  /**
-   * Returns the workflow by the given identifier. This also returns STOPPED workflows, which is the reason for not
-   * using the existing {@link WorkflowService:getWorkflowById()} method.
-   *
-   * @param id
-   *          the workflow identifier
-   * @return the workflow instance
-   * @throws NotFoundException
-   *           it the workflow was not found
-   * @throws JobEndpointException
-   *           if there was an issue reading the workflow from the database
-   */
-  private WorkflowInstance getWorkflowById(long id) throws NotFoundException, JobEndpointException {
-    try {
-      WorkflowSet workflowInstances = workflowService
-              .getWorkflowInstances(new WorkflowQuery().withId(Long.toString(id)));
-      if (workflowInstances.getItems().length == 0)
-        throw new NotFoundException();
-
-      return workflowInstances.getItems()[0];
-    } catch (WorkflowDatabaseException e) {
-      throw new JobEndpointException(String.format("Not able to get the list of job from the database: %s", e),
-              e.getCause());
-    }
-  }
+//  /**
+//   * Returns the workflow by the given identifier. This also returns STOPPED workflows, which is the reason for not
+//   * using the existing {@link WorkflowService:getWorkflowById()} method.
+//   *
+//   * @param id
+//   *          the workflow identifier
+//   * @return the workflow instance
+//   * @throws NotFoundException
+//   *           it the workflow was not found
+//   * @throws JobEndpointException
+//   *           if there was an issue reading the workflow from the database
+//   */
+//  private WorkflowInstance getWorkflowById(long id) throws NotFoundException, JobEndpointException {
+//    try {
+//      WorkflowSet workflowInstances = workflowService
+//              .getWorkflowInstances(new WorkflowQuery().withId(Long.toString(id)));
+//      if (workflowInstances.getItems().length == 0)
+//        throw new NotFoundException();
+//
+//      return workflowInstances.getItems()[0];
+//    } catch (WorkflowDatabaseException e) {
+//      throw new JobEndpointException(String.format("Not able to get the list of job from the database: %s", e),
+//              e.getCause());
+//    }
+//  }
 
   /**
    * Return an incident serialized as JSON.

@@ -1284,7 +1284,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
           updateWorkflowInstanceInIndex(workflowInstance, accessControlList, episodeDublinCoreCatalog,
                   elasticsearchIndex);
         }
-        index(workflowInstance);
 
         //Update the database
         persistence.updateInDatabase(workflowInstance);
@@ -1970,17 +1969,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
   @Reference(name = "orgDirectory")
   public void setOrganizationDirectoryService(OrganizationDirectoryService organizationDirectory) {
     this.organizationDirectoryService = organizationDirectory;
-  }
-
-  /**
-   * Sets the search indexer to use in this service.
-   *
-   * @param index
-   *          The search index
-   */
-  @Reference(name = "index")
-  protected void setDao(WorkflowServiceIndex index) {
-    this.index = index;
   }
 
   /**

@@ -65,7 +65,6 @@ import com.entwinemedia.fn.data.Opt;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -89,7 +88,6 @@ public class PauseWorkflowTest {
   private WorkflowDefinition def = null;
   private WorkflowInstance workflow = null;
   private MediaPackage mp = null;
-  private WorkflowServiceSolrIndex dao = null;
   private Workspace workspace = null;
   private SecurityService securityService = null;
   private ResumableTestWorkflowOperationHandler firstHandler = null;
@@ -203,14 +201,6 @@ public class PauseWorkflowTest {
     EasyMock.expect(workspace.getCollectionContents((String) EasyMock.anyObject())).andReturn(new URI[0]);
     EasyMock.replay(workspace);
 
-    dao = new WorkflowServiceSolrIndex();
-    dao.setServiceRegistry(serviceRegistry);
-    dao.setAuthorizationService(authzService);
-    dao.solrRoot = sRoot + File.separator + "solr";
-    dao.setSecurityService(securityService);
-    dao.setOrgDirectory(organizationDirectoryService);
-    dao.activate("System Admin");
-    service.setDao(dao);
     service.setServiceRegistry(serviceRegistry);
     service.activate(null);
 
@@ -226,12 +216,6 @@ public class PauseWorkflowTest {
     EasyMock.replay(result, index);
 
     service.setIndex(index);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    dao.deactivate();
-    service.deactivate();
   }
 
   @Test

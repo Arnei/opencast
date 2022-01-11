@@ -67,7 +67,6 @@ import com.entwinemedia.fn.data.Opt;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -89,7 +88,6 @@ public class PauseFinalOperationTest {
   private WorkflowDefinition def = null;
   private WorkflowInstance workflow = null;
   private MediaPackage mp = null;
-  private WorkflowServiceSolrIndex dao = null;
   private Workspace workspace = null;
   private SecurityService securityService = null;
   private ResumableTestWorkflowOperationHandler handler = null;
@@ -230,15 +228,6 @@ public class PauseFinalOperationTest {
     EasyMock.expect(assetManager.createQuery()).andReturn(query).anyTimes();
     EasyMock.replay(assetManager, version, snapshot, aRec, p, r, t, selectQuery, query, v);
 
-    dao = new WorkflowServiceSolrIndex();
-    dao.setServiceRegistry(serviceRegistry);
-    dao.setAuthorizationService(authzService);
-    dao.solrRoot = sRoot + File.separator + "solr";
-    dao.setSecurityService(securityService);
-    dao.setOrgDirectory(organizationDirectoryService);
-    dao.setAssetManager(assetManager);
-    dao.activate("System Admin");
-    service.setDao(dao);
     service.activate(null);
     service.setServiceRegistry(serviceRegistry);
 
@@ -254,12 +243,6 @@ public class PauseFinalOperationTest {
     EasyMock.replay(result, index);
 
     service.setIndex(index);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    dao.deactivate();
-    service.deactivate();
   }
 
   @Test()

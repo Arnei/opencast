@@ -79,7 +79,6 @@ import com.entwinemedia.fn.data.Opt;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -104,7 +103,6 @@ public class WorkflowOperationSkippingTest {
   private WorkflowDefinition workingDefinition = null;
   private MediaPackage mediapackage1 = null;
   private SucceedingWorkflowOperationHandler succeedingOperationHandler = null;
-  private WorkflowServiceSolrIndex dao = null;
   protected Set<HandlerRegistration> handlerRegistrations = null;
   private Workspace workspace = null;
   private Property property = null;
@@ -176,9 +174,6 @@ public class WorkflowOperationSkippingTest {
     ServiceRegistryInMemoryImpl serviceRegistry = new ServiceRegistryInMemoryImpl(service, securityService,
             userDirectoryService, organizationDirectoryService, EasyMock.createNiceMock(IncidentService.class));
 
-    dao = new WorkflowServiceSolrIndex();
-    dao.solrRoot = sRoot + File.separator + "solr." + System.currentTimeMillis();
-
     AuthorizationService authzService = EasyMock.createNiceMock(AuthorizationService.class);
     EasyMock.expect(authzService.getActiveAcl((MediaPackage) EasyMock.anyObject()))
             .andReturn(Tuple.tuple(acl, AclScope.Series)).anyTimes();
@@ -225,13 +220,6 @@ public class WorkflowOperationSkippingTest {
     EasyMock.expect(assetManager.createQuery()).andReturn(query).anyTimes();
     EasyMock.replay(assetManager, version, snapshot, p, r, t, selectQuery, query, v, aRec);
 
-    dao.setServiceRegistry(serviceRegistry);
-    dao.setSecurityService(securityService);
-    dao.setAuthorizationService(authzService);
-    dao.setOrgDirectory(organizationDirectoryService);
-    dao.setAssetManager(assetManager);
-    dao.activate("System Admin");
-    service.setDao(dao);
     service.setServiceRegistry(serviceRegistry);
     service.setUserDirectoryService(userDirectoryService);
     service.activate(null);
@@ -261,12 +249,6 @@ public class WorkflowOperationSkippingTest {
     EasyMock.replay(result, index);
 
     service.setIndex(index);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    dao.deactivate();
-    service.deactivate();
   }
 
   @Test

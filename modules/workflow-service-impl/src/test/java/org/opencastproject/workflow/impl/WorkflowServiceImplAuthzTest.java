@@ -62,7 +62,6 @@ import com.entwinemedia.fn.data.Opt;
 import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -92,7 +91,6 @@ public class WorkflowServiceImplAuthzTest {
 
   private WorkflowServiceImpl service = null;
   private WorkflowDefinitionScanner scanner = null;
-  private WorkflowServiceSolrIndex dao = null;
   private Workspace workspace = null;
   private ServiceRegistryInMemoryImpl serviceRegistry = null;
   private SecurityService securityService = null;
@@ -235,14 +233,6 @@ public class WorkflowServiceImplAuthzTest {
     // Search Index
     sRoot = new File(getStorageRoot());
     FileUtils.forceMkdir(sRoot);
-    dao = new WorkflowServiceSolrIndex();
-    dao.setServiceRegistry(serviceRegistry);
-    dao.setAuthorizationService(authzService);
-    dao.setSecurityService(securityService);
-    dao.setOrgDirectory(organizationDirectoryService);
-    dao.solrRoot = sRoot + File.separator + "solr." + System.currentTimeMillis();
-    dao.activate("System Admin");
-    service.setDao(dao);
 
     SearchResult result = EasyMock.createNiceMock(SearchResult.class);
 
@@ -255,13 +245,6 @@ public class WorkflowServiceImplAuthzTest {
 
     // Activate
     service.activate(null);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    serviceRegistry.deactivate();
-    dao.deactivate();
-    service.deactivate();
   }
 
   @Test
@@ -280,7 +263,6 @@ public class WorkflowServiceImplAuthzTest {
             .andReturn(true).anyTimes();
     EasyMock.replay(authzService);
     service.setAuthorizationService(authzService);
-    dao.setAuthorizationService(authzService);
 
     // Create the workflow and its dependent object graph
     WorkflowDefinitionImpl def = new WorkflowDefinitionImpl();
@@ -352,7 +334,6 @@ public class WorkflowServiceImplAuthzTest {
             .andReturn(false).anyTimes();
     EasyMock.replay(authzService);
     service.setAuthorizationService(authzService);
-    dao.setAuthorizationService(authzService);
 
     // Create the workflow and its dependent object graph
     WorkflowDefinitionImpl def = new WorkflowDefinitionImpl();

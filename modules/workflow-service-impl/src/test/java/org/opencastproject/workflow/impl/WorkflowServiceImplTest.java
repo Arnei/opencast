@@ -75,7 +75,6 @@ import org.opencastproject.workflow.api.WorkflowOperationInstance.OperationState
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
 import org.opencastproject.workflow.api.WorkflowParser;
-import org.opencastproject.workflow.api.WorkflowQuery;
 import org.opencastproject.workflow.api.WorkflowStateException;
 import org.opencastproject.workflow.api.WorkflowStateListener;
 import org.opencastproject.workflow.handler.workflow.ErrorResolutionWorkflowOperationHandler;
@@ -119,7 +118,6 @@ public class WorkflowServiceImplTest {
   private MediaPackage mediapackage2 = null;
   private SucceedingWorkflowOperationHandler succeedingOperationHandler = null;
   private WorkflowOperationHandler failingOperationHandler = null;
-  private WorkflowServiceSolrIndex dao = null;
   protected Set<HandlerRegistration> handlerRegistrations = null;
   private Workspace workspace = null;
   private ServiceRegistryInMemoryImpl serviceRegistry = null;
@@ -232,14 +230,6 @@ public class WorkflowServiceImplTest {
     serviceRegistry.registerService(REMOTE_SERVICE, REMOTE_HOST, "/path", true);
     service.setWorkspace(workspace);
 
-    dao = new WorkflowServiceSolrIndex();
-    dao.setServiceRegistry(serviceRegistry);
-    dao.setSecurityService(securityService);
-    dao.setOrgDirectory(organizationDirectoryService);
-    dao.setAuthorizationService(authzService);
-    dao.solrRoot = sRoot + File.separator + "solr." + System.currentTimeMillis();
-    dao.activate("System Admin");
-    service.setDao(dao);
     service.setServiceRegistry(serviceRegistry);
     service.activate(null);
 
@@ -313,7 +303,6 @@ public class WorkflowServiceImplTest {
     EasyMock.expect(query.version()).andReturn(v).anyTimes();
     EasyMock.expect(assetManager.createQuery()).andReturn(query).anyTimes();
     EasyMock.replay(assetManager, version, snapshot, aRec, p, r, t, selectQuery, query, v);
-    dao.setAssetManager(assetManager);
 
     SearchResult result = EasyMock.createNiceMock(SearchResult.class);
 
@@ -329,8 +318,6 @@ public class WorkflowServiceImplTest {
   public void tearDown() throws Exception {
     serviceRegistry.deactivate();
     serviceRegistry.unRegisterService(REMOTE_SERVICE, REMOTE_HOST);
-    dao.deactivate();
-    service.deactivate();
   }
 
   @SuppressWarnings("unused")

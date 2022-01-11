@@ -71,14 +71,24 @@ public interface WorkflowServiceDatabase {
   List<WorkflowInstance> getAllWorkflowInstances(int limit, int offset) throws WorkflowServiceDatabaseException;
 
   /**
-   * Gets all workflow instances for a mediapackage.
+   * Gets the amount of workflow instances.
    *
-   * @param mediaPackageId
-   *          the mediapackage id
-   * @return list of all {@link WorkflowInstance}s for the given mediapackage id
+   * @param state Only counts workflows currently in the given state
+   * @param operation Only counts workflows currently in the given operation
+   * @return Amount of workflow instances
    * @throws WorkflowServiceDatabaseException
-   *           if there is a problem communicating with the underlying data store
    */
+  int countWorkflows(WorkflowInstance.WorkflowState state, String operation) throws WorkflowServiceDatabaseException;
+
+    /**
+     * Gets all workflow instances for a mediapackage.
+     *
+     * @param mediaPackageId
+     *          the mediapackage id
+     * @return list of all {@link WorkflowInstance}s for the given mediapackage id
+     * @throws WorkflowServiceDatabaseException
+     *           if there is a problem communicating with the underlying data store
+     */
   List<WorkflowInstance> getWorkflowInstancesByMediaPackage(String mediaPackageId) throws WorkflowServiceDatabaseException;
 
   /**

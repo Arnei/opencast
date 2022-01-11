@@ -106,9 +106,7 @@ import org.opencastproject.workflow.api.WorkflowDefinition;
 import org.opencastproject.workflow.api.WorkflowDefinitionImpl;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationDefinitionImpl;
-import org.opencastproject.workflow.api.WorkflowQuery;
 import org.opencastproject.workflow.api.WorkflowService;
-import org.opencastproject.workflow.api.WorkflowSet;
 import org.opencastproject.workflow.api.WorkflowSetImpl;
 import org.opencastproject.workspace.api.Workspace;
 
@@ -331,18 +329,6 @@ public class TestEventEndpoint extends AbstractEventEndpoint {
     WorkflowService workflowService = EasyMock.createNiceMock(WorkflowService.class);
     EasyMock.expect(workflowService.getWorkflowDefinitionById(EasyMock.anyString())).andReturn(wfD).anyTimes();
     EasyMock.expect(workflowService.getWorkflowById(EasyMock.anyLong())).andReturn(workflowInstance1).anyTimes();
-    EasyMock.expect(workflowService.getWorkflowInstances(EasyMock.anyObject(WorkflowQuery.class)))
-            .andAnswer(new IAnswer<WorkflowSet>() {
-              @Override
-              public WorkflowSet answer() throws Throwable {
-                WorkflowQuery query = (WorkflowQuery) EasyMock.getCurrentArguments()[0];
-                if (query.getId() != null && Long.parseLong(query.getId()) == 9999L) {
-                  return new WorkflowSetImpl();
-                } else {
-                  return workflowSet;
-                }
-              }
-            }).anyTimes();
     EasyMock.expect(workflowService.listAvailableWorkflowDefinitions()).andReturn(Arrays.asList(wfD, wfD2));
     EasyMock.replay(workflowService);
     env.setWorkflowService(workflowService);

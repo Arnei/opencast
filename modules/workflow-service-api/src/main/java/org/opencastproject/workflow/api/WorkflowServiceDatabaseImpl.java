@@ -32,6 +32,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -186,6 +187,33 @@ public class WorkflowServiceDatabaseImpl implements WorkflowServiceDatabase {
   /**
    * {@inheritDoc}
    *
+   * @see WorkflowServiceDatabase#getWorkflowInstancesForCleanup(WorkflowInstance.WorkflowState state, Date dateCreated)
+   */
+  public List<WorkflowInstance> getWorkflowInstancesForCleanup(WorkflowInstance.WorkflowState state, Date dateCreated)
+          throws WorkflowServiceDatabaseException {
+
+    EntityManager em = null;
+    try {
+      em = emf.createEntityManager();
+      Query query = em.createNamedQuery("Workflow.toCleanup");
+
+      String orgId = securityService.getOrganization().getId();
+      query.setParameter("organizationId", orgId);
+      query.setParameter("state", state.toString());
+      query.setParameter("dateCreated", dateCreated);
+
+      return query.getResultList();
+    } catch (Exception e) {
+      throw new WorkflowServiceDatabaseException(e);
+    } finally {
+      if (em != null)
+        em.close();
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   *
    * @see WorkflowServiceDatabase#countWorkflows(WorkflowInstance.WorkflowState state, String operation)
    */
   public int countWorkflows(WorkflowInstance.WorkflowState state, String operation) throws WorkflowServiceDatabaseException {
@@ -258,6 +286,31 @@ public class WorkflowServiceDatabaseImpl implements WorkflowServiceDatabase {
       query.setParameter("stateOne", WorkflowInstance.WorkflowState.RUNNING);
       query.setParameter("stateTwo", WorkflowInstance.WorkflowState.PAUSED);
       query.setParameter("stateThree", WorkflowInstance.WorkflowState.FAILING);
+
+      return query.getResultList();
+    } catch (Exception e) {
+      throw new WorkflowServiceDatabaseException(e);
+    } finally {
+      if (em != null)
+        em.close();
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see WorkflowServiceDatabase#getWorkflowInstancesBySeries(String seriesId)
+   */
+  public List<WorkflowInstance> getWorkflowInstancesBySeries(String seriesId) throws WorkflowServiceDatabaseException {
+
+    EntityManager em = null;
+    try {
+      em = emf.createEntityManager();
+      Query query = em.createNamedQuery("Workflow.bySeries");
+
+      String orgId = securityService.getOrganization().getId();
+      query.setParameter("organizationId", orgId);
+      query.setParameter("seriesId", seriesId);
 
       return query.getResultList();
     } catch (Exception e) {

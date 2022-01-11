@@ -46,7 +46,6 @@ import org.opencastproject.workflow.api.WorkflowQuery;
 import org.opencastproject.workflow.api.WorkflowQuery.QueryTerm;
 import org.opencastproject.workflow.api.WorkflowService;
 import org.opencastproject.workflow.api.WorkflowSet;
-import org.opencastproject.workflow.api.WorkflowStatistics;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
@@ -314,26 +313,6 @@ public class WorkflowServiceRemoteImpl extends RemoteBase implements WorkflowSer
       closeConnection(response);
     }
     throw new WorkflowDatabaseException("Workflow instances can not be loaded from a remote workflow service");
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.opencastproject.workflow.api.WorkflowService#getStatistics()
-   */
-  @Override
-  public WorkflowStatistics getStatistics() throws WorkflowDatabaseException {
-    HttpGet get = new HttpGet("/statistics.xml");
-    HttpResponse response = getResponse(get);
-    try {
-      if (response != null)
-        return WorkflowParser.parseWorkflowStatistics(response.getEntity().getContent());
-    } catch (Exception e) {
-      throw new WorkflowDatabaseException("Unable to load workflow statistics", e);
-    } finally {
-      closeConnection(response);
-    }
-    throw new WorkflowDatabaseException("Unable to connect to a remote workflow service");
   }
 
   /**

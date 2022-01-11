@@ -220,9 +220,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
   /** The metadata services */
   private SortedSet<MediaPackageMetadataService> metadataServices;
 
-  /** The data access object responsible for storing and retrieving workflow instances */
-  protected WorkflowServiceIndex index;
-
   /** Persistent storage */
   protected WorkflowServiceDatabase persistence;
 
@@ -1036,14 +1033,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
           logger.info("No workflow instance job '%d' found in the service registry", workflowInstanceId);
         }
 
-        // At last, remove workflow instance from the index
-        try {
-          index.remove(workflowInstanceId);
-        } catch (NotFoundException e) {
-          // This should never happen, because we got workflow instance by querying the index...
-          logger.warn("Workflow instance could not be removed from index", e);
-        }
-
         //Remove workflow from database
         persistence.removeFromDatabase(instance);
     } catch (WorkflowServiceDatabaseException e) {
@@ -1363,19 +1352,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     } finally {
       lock.unlock();
     }
-  }
-
-  /**
-   * Updates the search index entries for this workflow instance.
-   *
-   * @param workflowInstance
-   *          the workflow
-   * @throws WorkflowDatabaseException
-   *           if there is a problem storing the workflow instance
-   */
-  protected void index(final WorkflowInstance workflowInstance) throws WorkflowDatabaseException {
-    // Update the search index
-    index.update(workflowInstance);
   }
 
   /**

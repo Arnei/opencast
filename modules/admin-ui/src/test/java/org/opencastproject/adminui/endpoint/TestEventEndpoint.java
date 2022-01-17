@@ -354,6 +354,7 @@ public class TestEventEndpoint extends AbstractEventEndpoint {
                   }
                 }
               }).anyTimes();
+    EasyMock.expect(workflowService.getWorkflowInstancesByMediaPackage(EasyMock.anyString())).andReturn(workflowList).anyTimes();
     EasyMock.expect(workflowService.listAvailableWorkflowDefinitions()).andReturn(Arrays.asList(wfD, wfD2));
     EasyMock.replay(workflowService);
     env.setWorkflowService(workflowService);

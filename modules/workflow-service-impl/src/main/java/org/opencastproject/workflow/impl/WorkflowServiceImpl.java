@@ -955,10 +955,12 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
       WorkflowInstance instance = getWorkflowById(workflowInstanceId);
       WorkflowInstance.WorkflowState state = instance.getState();
       if (state != WorkflowState.SUCCEEDED && state != WorkflowState.FAILED && state != WorkflowState.STOPPED)
-        throw new WorkflowStateException("Workflow instance with state '" + state
-                + "' cannot be removed. Only states SUCCEEDED, FAILED & STOPPED are allowed");
+        if (!force) {
+          throw new WorkflowStateException("Workflow instance with state '" + state + "' cannot be removed. "
+                  + "Only states SUCCEEDED, FAILED & STOPPED are allowed");
+        }
 
-      assertPermission(instance, Permissions.Action.READ.toString(), instance.getOrganizationId());
+      assertPermission(instance, Permissions.Action.WRITE.toString(), instance.getOrganizationId());
 
       // First, remove temporary files
       removeTempFiles(instance);
@@ -1270,6 +1272,9 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
 
       // Update both workflow and workflow job
       try {
+        //Update the database
+        persistence.updateInDatabase(workflowInstance);
+
         job = serviceRegistry.updateJob(job);
 
         WorkflowOperationInstance op = workflowInstance.getCurrentOperation();
@@ -1282,8 +1287,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
                   elasticsearchIndex);
         }
 
-        //Update the database
-        persistence.updateInDatabase(workflowInstance);
       } catch (ServiceRegistryException e) {
         logger.error(
                 "Update of workflow job %s in the service registry failed, service registry and workflow table may be out of sync",

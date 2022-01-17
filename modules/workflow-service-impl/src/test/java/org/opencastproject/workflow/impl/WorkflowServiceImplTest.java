@@ -21,10 +21,12 @@
 
 package org.opencastproject.workflow.impl;
 
+import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
+import static org.opencastproject.util.persistence.PersistenceUtil.newTestEntityManagerFactory;
 import static org.opencastproject.workflow.api.WorkflowOperationResult.Action.CONTINUE;
 import static org.opencastproject.workflow.impl.SecurityServiceStub.DEFAULT_ORG_ADMIN;
 
@@ -75,6 +77,7 @@ import org.opencastproject.workflow.api.WorkflowOperationInstance.OperationState
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
 import org.opencastproject.workflow.api.WorkflowParser;
+import org.opencastproject.workflow.api.WorkflowServiceDatabaseImpl;
 import org.opencastproject.workflow.api.WorkflowStateException;
 import org.opencastproject.workflow.api.WorkflowStateListener;
 import org.opencastproject.workflow.handler.workflow.ErrorResolutionWorkflowOperationHandler;
@@ -218,6 +221,8 @@ public class WorkflowServiceImplTest {
 
     workspace = createNiceMock(Workspace.class);
     expect(workspace.getCollectionContents((String) EasyMock.anyObject())).andReturn(new URI[0]);
+    EasyMock.expect(workspace.read(anyObject()))
+            .andAnswer(() -> getClass().getResourceAsStream("/dc-1.xml")).anyTimes();
     replay(workspace);
 
     IncidentService incidentService = createNiceMock(IncidentService.class);
@@ -229,6 +234,12 @@ public class WorkflowServiceImplTest {
             availableProcessors(), Runtime.getRuntime().availableProcessors());
     serviceRegistry.registerService(REMOTE_SERVICE, REMOTE_HOST, "/path", true);
     service.setWorkspace(workspace);
+
+    WorkflowServiceDatabaseImpl workflowDb = new WorkflowServiceDatabaseImpl();
+    workflowDb.setEntityManagerFactory(newTestEntityManagerFactory(WorkflowServiceDatabaseImpl.PERSISTENCE_UNIT));
+    workflowDb.setSecurityService(securityService);
+    workflowDb.activate(null);
+    service.setPersistence(workflowDb);
 
     service.setServiceRegistry(serviceRegistry);
     service.activate(null);
@@ -720,7 +731,7 @@ public class WorkflowServiceImplTest {
     wi1 = service.getWorkflowById(wi1.getId());
 
     UserDirectoryService userDirectoryService = EasyMock.createMock(UserDirectoryService.class);
-    expect(userDirectoryService.loadUser((String) EasyMock.anyObject())).andReturn(null);
+    expect(userDirectoryService.loadUser((String) EasyMock.anyObject())).andReturn(null).anyTimes();
     replay(userDirectoryService);
     service.setUserDirectoryService(userDirectoryService);
     service.remove(wi1.getId());

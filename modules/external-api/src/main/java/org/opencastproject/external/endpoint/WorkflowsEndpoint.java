@@ -27,36 +27,51 @@ import static com.entwinemedia.fn.data.json.Jsons.f;
 import static com.entwinemedia.fn.data.json.Jsons.obj;
 import static com.entwinemedia.fn.data.json.Jsons.v;
 import static java.time.ZoneOffset.UTC;
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNoneBlank;
+import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.opencastproject.util.RestUtil.getEndpointUrl;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.BOOLEAN;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.INTEGER;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
 
+import org.opencastproject.elasticsearch.api.SearchIndexException;
+import org.opencastproject.elasticsearch.api.SearchResult;
+import org.opencastproject.elasticsearch.api.SearchResultItem;
 import org.opencastproject.elasticsearch.index.ElasticsearchIndex;
 import org.opencastproject.elasticsearch.index.objects.event.Event;
+import org.opencastproject.elasticsearch.index.objects.workflow.Workflow;
+import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowIndexSchema;
+import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowSearchQuery;
 import org.opencastproject.external.common.ApiMediaType;
 import org.opencastproject.external.common.ApiResponses;
 import org.opencastproject.external.common.ApiVersion;
 import org.opencastproject.index.service.api.IndexService;
+import org.opencastproject.index.service.util.RestUtils;
 import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.rest.RestConstants;
+import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.systems.OpencastConstants;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.RestUtil;
 import org.opencastproject.util.UrlSupport;
+import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Tuple;
 import org.opencastproject.util.doc.rest.RestParameter;
 import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
+import org.opencastproject.util.requests.SortCriterion;
 import org.opencastproject.workflow.api.RetryStrategy;
 import org.opencastproject.workflow.api.WorkflowDefinition;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowService;
+import org.opencastproject.workflow.api.WorkflowSetImpl;
 import org.opencastproject.workflow.api.WorkflowStateException;
 
 import com.entwinemedia.fn.data.Opt;
@@ -76,6 +91,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletResponse;
@@ -89,6 +105,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 @Path("/")
@@ -101,12 +119,20 @@ public class WorkflowsEndpoint {
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(WorkflowsEndpoint.class);
 
+  /** The default number of results returned */
+  private static final int DEFAULT_LIMIT = 20;
+  /** The constant used to negate a querystring parameter. This is only supported on some parameters. */
+  public static final String NEGATE_PREFIX = "-";
+  /** The constant used to switch the direction of the sorting querystring parameter. */
+  public static final String DESCENDING_SUFFIX = "_DESC";
+
   /** Base URL of this endpoint */
   protected String endpointBaseUrl;
 
   /* OSGi service references */
   private WorkflowService workflowService;
   private ElasticsearchIndex elasticsearchIndex;
+  private SecurityService securityService;
   private IndexService indexService;
 
   /** OSGi DI */
@@ -117,6 +143,11 @@ public class WorkflowsEndpoint {
   /** OSGi DI */
   public void setElasticsearchIndex(ElasticsearchIndex elasticsearchIndex) {
     this.elasticsearchIndex = elasticsearchIndex;
+  }
+
+  /** OSGi DI */
+  void setSecurityService(SecurityService securityService) {
+    this.securityService = securityService;
   }
 
   /** OSGi DI */
@@ -225,6 +256,200 @@ public class WorkflowsEndpoint {
     }
 
     return ApiResponses.Json.ok(acceptHeader, workflowInstanceToJSON(wi, withOperations, withConfiguration));
+  }
+
+  @GET
+  @Produces(MediaType.TEXT_XML)
+  @Path("instances.xml")
+  @RestQuery(name = "workflowsasxml", description = "List all workflow instances matching the query parameters", returnDescription = "An XML representation of the set of workflows matching these query parameters", restParameters = {
+          @RestParameter(name = "state", isRequired = false, description = "Filter results by workflows' current state", type = STRING),
+          @RestParameter(name = "template", isRequired = false, description = "Filter results by workflows' template", type = STRING),
+          @RestParameter(name = "title", isRequired = false, description = "Filter results by workflows' title", type = STRING),
+          @RestParameter(name = "description", isRequired = false, description = "Filter results by workflows' description", type = STRING),
+          @RestParameter(name = "creator", isRequired = false, description = "Filter results by workflows' creator", type = STRING),
+          @RestParameter(name = "op", isRequired = false, description = "Filter results by workflows' current operation.", type = STRING),
+          @RestParameter(name = "dateCreated", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
+          @RestParameter(name = "dateCompleted", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
+          @RestParameter(name = "mp", isRequired = false, description = "Filter results by mediapackage identifier.", type = STRING),
+          @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
+          @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
+          @RestParameter(name = "mpLicense", isRequired = false, description = "Filter results by mediapackage's license.", type = STRING),
+          @RestParameter(name = "mpTitle", isRequired = false, description = "Filter results by mediapackage's title.", type = STRING),
+          @RestParameter(name = "mpSubject", isRequired = false, description = "Filter results by mediapackage's subject.", type = STRING),
+          @RestParameter(name = "seriesId", isRequired = false, description = "Filter results by series identifier", type = STRING),
+          @RestParameter(name = "seriesTitle", isRequired = false, description = "Filter results by series title", type = STRING),
+          @RestParameter(name = "q", isRequired = false, description = "Filter results by free text query", type = STRING),
+          @RestParameter(name = "sort", isRequired = false, description = "The sort order.  May include any "
+                  + "of the following: DATE_CREATED, TITLE, SERIES_TITLE, SERIES_ID, MEDIA_PACKAGE_ID, WORKFLOW_DEFINITION_ID, CREATOR, "
+                  + "CONTRIBUTOR, LANGUAGE, LICENSE, SUBJECT.  Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).", type = STRING),
+          @RestParameter(name = "offset", isRequired = false, description = "Return results after this offset", type = INTEGER),
+          @RestParameter(name = "limit", isRequired = false, description = "The number of results to return. Default is " + DEFAULT_LIMIT, type = INTEGER),
+          @RestParameter(name = "compact", isRequired = false, description = "Whether to return a compact version of "
+                  + "the workflow instance, with mediapackage elements, workflow and workflow operation configurations and "
+                  + "non-current operations removed.", type = BOOLEAN)},
+          responses = {
+                  @RestResponse(responseCode = SC_OK, description = "An XML representation of the workflow set."),
+                  @RestResponse(responseCode = SC_BAD_REQUEST, description = "Invalid data was provided in the request.") })
+  // CHECKSTYLE:OFF
+  // The number of method parameters is too large for checkstyle's taste, but we need to handle many potential query
+  // parameters. CXF provides a bean approach to accepting many parameters, but it is not part of the JAX-RS spec.
+  // So for now, we disable checkstyle here.
+  public Response getWorkflowsAsXml(@QueryParam("state") List<String> states,
+          @QueryParam("template") String template, @QueryParam("title") String title,
+          @QueryParam("description") String description, @QueryParam("creator") String creator,
+          @QueryParam("op") List<String> currentOperations,
+          @QueryParam("dateCreated") String dateCreated, @QueryParam("dateCompleted") String dateCompleted,
+          @QueryParam("mp") String mediapackageId,
+          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
+          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
+          @QueryParam("mpSubject") String mpSubject,
+          @QueryParam("seriesId") String seriesId, @QueryParam("seriesTitle") String seriesTitle,
+          @QueryParam("q") String text, @QueryParam("sort") String sort,
+          @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
+          throws Exception {
+    // CHECKSTYLE:ON
+    Option<String> optSort = Option.option(trimToNull(sort));
+
+    WorkflowSearchQuery q = new WorkflowSearchQuery(securityService.getOrganization().getId(),
+            securityService.getUser());
+    q.withLimit(limit < 1 ? DEFAULT_LIMIT : limit);
+    if (offset > 0) {
+      q.withOffset(offset);
+    }
+//    q.withText(text);
+
+//    if (states != null && states.size() > 0) {
+//      try {
+//        for (String state : states) {
+//          if (StringUtils.isBlank(state)) {
+//            continue;
+//          }
+//          if (state.startsWith(NEGATE_PREFIX)) {
+//            q.withoutState(WorkflowInstance.WorkflowState.valueOf(state.substring(1).toUpperCase()));
+//          } else {
+//            q.withState(WorkflowInstance.WorkflowState.valueOf(state.toUpperCase()));
+//          }
+//        }
+//      } catch (IllegalArgumentException e) {
+//        logger.debug("Unknown workflow state.", e);
+//      }
+//    }
+//
+//    q.withTemplate(template);
+//    q.withTitle(title);
+//    q.withDescription(description);
+//    q.withCreator(creator);
+//    if (currentOperations != null && currentOperations.size() > 0) {
+//      for (String op : currentOperations) {
+//        if (StringUtils.isBlank(op)) {
+//          continue;
+//        }
+//        if (op.startsWith(NEGATE_PREFIX)) {
+//          q.withoutCurrentOperation(op.substring(1));
+//        } else {
+//          q.withCurrentOperation(op);
+//        }
+//      }
+//    }
+//    try {
+//      q.withDateCreated(SolrUtils.parseDate(dateCreated));
+//      q.withDateCompleted(SolrUtils.parseDate(dateCompleted));
+//    } catch (java.text.ParseException e) {
+//      return Response
+//              .status(Response.Status.BAD_REQUEST)
+//              .entity("Invalid date format")
+//              .build();
+//    }
+//    q.withMediaPackage(mediapackageId);
+//    for (String contributor : mpContributors) {
+//      if (StringUtils.isBlank(contributor)) {
+//        continue;
+//      }
+//      q.withCurrentOperation(contributor);
+//    }
+//    q.withMediaPackageLanguage(mpLanguage);
+//    q.withMediaPackageTitle(mpTitle);
+//    q.withMediaPackageSubject(mpSubject);
+//    q.withSeriesId(seriesId);
+//    q.withSeriesTitle(seriesTitle);
+
+    if (optSort.isSome()) {
+      Set<SortCriterion> sortCriteria = RestUtils.parseSortQueryParameter(optSort.get());
+      for (SortCriterion criterion : sortCriteria) {
+
+        switch (criterion.getFieldName()) {
+          case WorkflowIndexSchema.ID:
+          case WorkflowIndexSchema.STATE:
+          case WorkflowIndexSchema.TEMPLATE:
+          case WorkflowIndexSchema.TITLE:
+          case WorkflowIndexSchema.DESCRIPTION:
+          case WorkflowIndexSchema.PARENT_ID:
+          case WorkflowIndexSchema.CREATOR_NAME:
+          case WorkflowIndexSchema.ORGANIZATION_ID:
+          case WorkflowIndexSchema.CURRENT_OPERATION:
+          case WorkflowIndexSchema.DATE_CREATED:
+          case WorkflowIndexSchema.DATE_COMPLETED:
+          case WorkflowIndexSchema.MEDIAPACKAGE:
+          case WorkflowIndexSchema.MP_CONTRIBUTOR:
+          case WorkflowIndexSchema.MP_LANGUAGE:
+          case WorkflowIndexSchema.MP_LICENSE:
+          case WorkflowIndexSchema.MP_TITLE:
+          case WorkflowIndexSchema.MP_SUBJECT:
+          case WorkflowIndexSchema.SERIES:
+          case WorkflowIndexSchema.SERIES_TITLE:
+            q.sortBy(criterion.getFieldName(), criterion.getOrder());
+            break;
+          default:
+            logger.info("Unknown sort criteria {}", criterion.getFieldName());
+            return Response.status(SC_BAD_REQUEST).build();
+        }
+      }
+    }
+
+    SearchResult<Workflow> results = null;
+    try {
+      results = elasticsearchIndex.getByQuery(q);
+    } catch (SearchIndexException e) {
+      logger.error("The External Search Index was not able to get the events list", e);
+      throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+    }
+
+    // TODO: Either return the documents from the ElasticsearchIndex
+    //  Or get the workflows from the workflowService and return those instead
+    WorkflowSetImpl workflowSet = new WorkflowSetImpl();
+    for (SearchResultItem<Workflow> resultItem : results.getItems()) {
+      final Workflow workflow = resultItem.getSource();
+      workflowSet.addItem(workflowService.getWorkflowById(workflow.getIdentifier()));
+    }
+    // TODO: Fix search metadata in return value (e.g. limit, offset)
+
+    // Marshalling of a full workflow takes a long time. Therefore, we strip everything that's not needed.
+    if (compact) {
+      for (WorkflowInstance instance : workflowSet.getItems()) {
+
+        // Remove all operations but the current one
+        WorkflowOperationInstance currentOperation = instance.getCurrentOperation();
+        List<WorkflowOperationInstance> operations = instance.getOperations();
+        operations.clear(); // instance.getOperations() is a copy
+        if (currentOperation != null) {
+          for (String key : currentOperation.getConfigurationKeys()) {
+            currentOperation.removeConfiguration(key);
+          }
+          operations.add(currentOperation);
+        }
+        instance.setOperations(operations);
+
+        // Remove all mediapackage elements (but keep the duration)
+        MediaPackage mediaPackage = instance.getMediaPackage();
+        Long duration = instance.getMediaPackage().getDuration();
+        for (MediaPackageElement element : mediaPackage.elements()) {
+          mediaPackage.remove(element);
+        }
+        mediaPackage.setDuration(duration);
+      }
+    }
+
+    return Response.ok(workflowSet).build();
   }
 
   @PUT

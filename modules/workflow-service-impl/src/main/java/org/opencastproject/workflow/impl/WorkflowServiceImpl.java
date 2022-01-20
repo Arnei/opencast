@@ -37,6 +37,7 @@ import org.opencastproject.elasticsearch.api.SearchIndexException;
 import org.opencastproject.elasticsearch.index.ElasticsearchIndex;
 import org.opencastproject.elasticsearch.index.objects.event.Event;
 import org.opencastproject.elasticsearch.index.objects.event.EventIndexUtils;
+import org.opencastproject.elasticsearch.index.objects.workflow.Workflow;
 import org.opencastproject.elasticsearch.index.rebuild.AbstractIndexProducer;
 import org.opencastproject.elasticsearch.index.rebuild.IndexProducer;
 import org.opencastproject.elasticsearch.index.rebuild.IndexRebuildException;
@@ -127,6 +128,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -2277,7 +2279,8 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     try {
       logger.debug("Removing workflow instance {} of event {} from the {} index.", workflowInstanceId, eventId,
               index.getIndexName());
-      index.deleteWorkflow(organization, user, eventId, workflowInstanceId);
+      index.deleteWorkflowFromEvent(organization, user, eventId, workflowInstanceId);
+      index.delete(Workflow.DOCUMENT_TYPE, Long.toString(workflowInstanceId), organization);
       logger.debug("Workflow instance {} of event {} removed from the {} index.", workflowInstanceId, eventId,
               index.getIndexName());
     } catch (NotFoundException e) {
@@ -2330,6 +2333,45 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
 
     try {
       index.addOrUpdateEvent(eventId, updateFunction, organization, user);
+      logger.debug("Workflow instance {} of event {} updated in the {} index.", workflowInstanceId, eventId,
+              index.getIndexName());
+    } catch (SearchIndexException e) {
+      logger.error("Error updating the workflow instance {} of event {} in the {} index.", workflowInstanceId, eventId,
+              index.getIndexName(), e);
+    }
+
+
+    Function<Optional<Workflow>, Optional<Workflow>> updateFunction2 = (Optional<Workflow> workflowOpt) -> {
+      Workflow workflow = workflowOpt.orElse(new Workflow(workflowInstanceId, organization));
+      workflow.setState(workflowInstance.getState());
+      workflow.setTemplate(workflowInstance.getTemplate());
+      workflow.setTitle(workflowInstance.getTitle());
+      workflow.setDescription(workflowInstance.getDescription());
+      workflow.setParentId(workflowInstance.getParentId());
+      workflow.setCreator(workflowInstance.getCreatorName());
+      workflow.setOrganizationId(workflowInstance.getOrganizationId());
+      WorkflowOperationInstance currentOp = workflowInstance.getCurrentOperation();
+      if (currentOp != null) {
+        workflow.setCurrentOperation(currentOp.getTemplate());
+      } else {
+        workflow.setCurrentOperation(null);
+      }
+      workflow.setDateCreated(workflowInstance.getDateCreated());
+      workflow.setDateCompleted(workflowInstance.getDateCompleted());
+      workflow.setMediaPackage(workflowInstance.getMediaPackage().getIdentifier().toString());
+      workflow.setMpContributors(Arrays.asList(workflowInstance.getMediaPackage().getContributors()));
+      workflow.setMpLanguage(workflowInstance.getMediaPackage().getLanguage());
+      workflow.setMpLicense(workflowInstance.getMediaPackage().getLicense());
+      workflow.setMpTitle(workflowInstance.getMediaPackage().getTitle());
+      workflow.setMpSubject(workflowInstance.getMediaPackage().getTitle());
+      workflow.setSeriesId(workflowInstance.getMediaPackage().getSeries());
+      workflow.setSeriesTitle(workflowInstance.getMediaPackage().getSeriesTitle());
+
+      return Optional.of(workflow);
+    };
+
+    try {
+      index.addOrUpdateWorkflow(eventId, updateFunction2, organization, user);
       logger.debug("Workflow instance {} of event {} updated in the {} index.", workflowInstanceId, eventId,
               index.getIndexName());
     } catch (SearchIndexException e) {

@@ -1,0 +1,50 @@
+{
+  "_source" : { "enabled" : true },
+  "dynamic": true,
+  "properties" : {
+
+    "id": { "type" : "keyword", "store" : true },
+
+    "object": { "type" : "text", "index": false, "store" : true },
+
+    "state": { "type" : "keyword" },
+
+    "template": { "type" : "keyword" },
+
+    "title": { "type" : "keyword" },
+
+    "description": { "type" : "keyword" },
+
+    "parentId": { "type" : "keyword" },
+
+    "creatorName": { "type" : "keyword" },
+
+    "organizationId": { "type" : "keyword", "store" : true },
+
+    "currentOperation": { "type" : "keyword" },
+
+    "dateCreated": { "type" : "date", "format" : "yyyy-MM-dd'T'HH:mm:ss'Z'" },
+
+    "dateCompleted": { "type" : "date", "format" : "yyyy-MM-dd'T'HH:mm:ss'Z'" },
+
+    "mediaPackage": { "type" : "keyword" },
+
+    "mpContributor": { "copy_to" : "contributor", "type" : "keyword" },
+
+    "mpLanguage": { "type" : "keyword" },
+
+    "mpLicense": { "type" : "keyword" },
+
+    "mpTitle": { "type" : "keyword" },
+
+    "mpSubject": { "type" : "keyword" },
+
+    "series": { "type" : "keyword" },
+
+    "seriesTitle": { "type" : "keyword" },
+
+    "text": { "type" : "text", "analyzer": "lowercasespaceanalyzer" },
+    "text_fuzzy": { "type" : "text", "analyzer": "lowercasespaceanalyzer" }
+
+  }
+}

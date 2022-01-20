@@ -170,7 +170,8 @@
               org.opencastproject.elasticsearch.index.objects,
               org.opencastproject.elasticsearch.index.objects.event,
               org.opencastproject.elasticsearch.index.objects.series,
-              org.opencastproject.elasticsearch.index.objects.theme
+              org.opencastproject.elasticsearch.index.objects.theme,
+              org.opencastproject.elasticsearch.index.objects.workflow
             </Export-Package>
             <Service-Component>
             </Service-Component>

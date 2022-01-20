@@ -40,6 +40,10 @@ import org.opencastproject.elasticsearch.index.objects.series.SeriesSearchQuery;
 import org.opencastproject.elasticsearch.index.objects.theme.IndexTheme;
 import org.opencastproject.elasticsearch.index.objects.theme.ThemeQueryBuilder;
 import org.opencastproject.elasticsearch.index.objects.theme.ThemeSearchQuery;
+import org.opencastproject.elasticsearch.index.objects.workflow.Workflow;
+import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowIndexUtils;
+import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowQueryBuilder;
+import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowSearchQuery;
 import org.opencastproject.security.api.User;
 import org.opencastproject.util.NotFoundException;
 
@@ -97,6 +101,7 @@ public class ElasticsearchIndex extends AbstractElasticsearchIndex {
       Event.DOCUMENT_TYPE,
       Series.DOCUMENT_TYPE,
       IndexTheme.DOCUMENT_TYPE,
+      Workflow.DOCUMENT_TYPE,
       VERSION_DOCUMENT_TYPE
   };
 
@@ -232,6 +237,34 @@ public class ElasticsearchIndex extends AbstractElasticsearchIndex {
       return Optional.of(searchResult.getItems()[0].getSource());
     } else {
       throw new IllegalStateException("Multiple themes with identifier " + themeId + " found in search index");
+    }
+  }
+
+  /**
+   * Loads the workflow from the search index if it exists.
+   *
+   * @param workflowId
+   *          the workflow identifier
+   * @param organization
+   *          the organization
+   * @param user
+   *          the user
+   * @return the workflow (optional)
+   * @throws SearchIndexException
+   *           if querying the search index fails
+   * @throws IllegalStateException
+   *           if multiple workflow with the same identifier are found
+   */
+  public Optional<Workflow> getWorkflow(String workflowId, String organization, User user)
+          throws SearchIndexException {
+    WorkflowSearchQuery query = new WorkflowSearchQuery(organization, user).withIdentifier(workflowId);
+    SearchResult<Workflow> searchResult = getByQuery(query);
+    if (searchResult.getDocumentCount() == 0) {
+      return Optional.empty();
+    } else if (searchResult.getDocumentCount() == 1) {
+      return Optional.of(searchResult.getItems()[0].getSource());
+    } else {
+      throw new IllegalStateException("Multiple workflows with identifier " + workflowId + " found in search index");
     }
   }
 
@@ -405,6 +438,61 @@ public class ElasticsearchIndex extends AbstractElasticsearchIndex {
     }
   }
 
+  /**
+   * Adds or updates the series in the search index. Uses a locking mechanism to avoid issues like Lost Update.
+   *
+   * @param id
+   *          The id of the series to add
+   * @param updateFunction
+   *          The function that does the actual updating
+   * @param orgId
+   *           the organization the series belongs to
+   * @param user
+   *           the user
+   * @throws SearchIndexException
+   *           Thrown if unable to add or update the series.
+   */
+  public Optional<Workflow> addOrUpdateWorkflow(String id, Function<Optional<Workflow>,
+          Optional<Workflow>> updateFunction, String orgId, User user) throws SearchIndexException {
+    final Lock lock = this.locks.get(id);
+    lock.lock();
+    logger.debug("Locked workflow '{}'", id);
+
+    try {
+      Optional<Workflow> workflowOpt = getWorkflow(id, orgId, user);
+      Optional<Workflow> updatedWorkflowOpt = updateFunction.apply(workflowOpt);
+      if (updatedWorkflowOpt.isPresent()) {
+        update(updatedWorkflowOpt.get());
+      }
+      return updatedWorkflowOpt;
+    } finally {
+      lock.unlock();
+      logger.debug("Released locked workflow '{}'", id);
+    }
+  }
+
+  /**
+   * Add or update a workflow in the search index.
+   *
+   * @param workflow
+   * @throws SearchIndexException
+   */
+  private void update(Workflow workflow) throws SearchIndexException {
+    logger.debug("Adding workflow {} to search index", workflow.getIdentifier());
+
+    // Add the resource to the index
+    SearchMetadataCollection inputDocument = WorkflowIndexUtils.toSearchMetadata(workflow);
+    List<SearchMetadata<?>> resourceMetadata = inputDocument.getMetadata();
+    ElasticsearchDocument doc = new ElasticsearchDocument(inputDocument.getIdentifier(),
+            inputDocument.getDocumentType(), resourceMetadata);
+    try {
+      update(doc);
+    } catch (Throwable t) {
+      throw new SearchIndexException("Cannot write resource " + workflow + " to index", t);
+    }
+  }
+
+
   /*
    * Delete index objects
    */
@@ -534,7 +622,7 @@ public class ElasticsearchIndex extends AbstractElasticsearchIndex {
    * @throws NotFoundException
    *           Thrown if the event cannot be found.
    */
-  public void deleteWorkflow(String organization, User user, String uid, Long workflowId)
+  public void deleteWorkflowFromEvent(String organization, User user, String uid, Long workflowId)
           throws SearchIndexException, NotFoundException {
     Optional<Event> eventOpt = getEvent(uid, organization, user);
     if (!eventOpt.isPresent()) {
@@ -632,6 +720,31 @@ public class ElasticsearchIndex extends AbstractElasticsearchIndex {
       });
     } catch (Throwable t) {
       throw new SearchIndexException("Error querying theme index", t);
+    }
+  }
+
+  /**
+   * @param query
+   *          The query to use to retrieve the workflow that match the query
+   * @return {@link SearchResult} collection of {@link Workflow} from a query.
+   * @throws SearchIndexException
+   *           Thrown if there is an error getting the results.
+   */
+  public SearchResult<Workflow> getByQuery(WorkflowSearchQuery query) throws SearchIndexException {
+    logger.debug("Searching index using workflow query '{}'", query);
+    // Create the request
+    final SearchRequest searchRequest = getSearchRequest(query, new WorkflowQueryBuilder(query));
+    try {
+      final Unmarshaller unmarshaller = Workflow.createUnmarshaller();
+      return executeQuery(query, searchRequest, metadata -> {
+        try {
+          return WorkflowIndexUtils.toWorkflow(metadata, unmarshaller);
+        } catch (IOException e) {
+          return chuck(e);
+        }
+      });
+    } catch (Throwable t) {
+      throw new SearchIndexException("Error querying workflow index", t);
     }
   }
 }

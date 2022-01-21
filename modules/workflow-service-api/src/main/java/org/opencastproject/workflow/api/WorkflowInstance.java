@@ -38,22 +38,26 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javax.persistence.Access;
 import javax.persistence.AccessType;
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
+import javax.persistence.CollectionTable;
 import javax.persistence.Column;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
+import javax.persistence.MapKeyColumn;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
@@ -160,11 +164,6 @@ public class WorkflowInstance {
   @Column(name = "mediaPackage", length = 16777215)
   private String mediaPackage;
 
-//  @Lob
-//  @Basic(fetch = FetchType.LAZY)
-//  @Column(name = "operations", length = 16777215)
-//  protected String operations;
-
   @OneToMany(
           mappedBy = "instance",
           cascade = CascadeType.ALL,
@@ -174,18 +173,15 @@ public class WorkflowInstance {
   @OrderColumn
   protected List<WorkflowOperationInstance> operations;
 
-//  @Lob
-//  @Basic(fetch = FetchType.LAZY)
-//  @Column(name = "configurations", length = 16777215)
-//  protected String configurations;
-
-  @OneToMany(
-          mappedBy = "instance",
-          cascade = CascadeType.ALL,
-          orphanRemoval = true,
-          fetch = FetchType.LAZY
+  @ElementCollection
+  @CollectionTable(
+          name = "oc_workflow_configuration",
+          joinColumns = @JoinColumn(name = "workflow_id")
   )
-  protected Set<WorkflowConfigurationForWorkflowInstance> configurations;
+  @MapKeyColumn(name = "key_part", nullable = false)
+  @Lob
+  @Column(name = "value_part", nullable = false)
+  protected Map<String, String> configurations;
 
   @Column(name = "mediaPackageId", length = 128)
   protected String mediaPackageId;
@@ -261,7 +257,7 @@ public class WorkflowInstance {
       logger.error("Error: ", e);
     }
 
-    this.configurations = new TreeSet<WorkflowConfigurationForWorkflowInstance>();
+    this.configurations = new TreeMap<String, String>();
     if (properties != null) {
       for (Map.Entry<String, String> entry : properties.entrySet()) {
         addConfiguration(entry.getKey() , entry.getValue());
@@ -282,7 +278,7 @@ public class WorkflowInstance {
           Date dateCompleted,
           MediaPackage mediaPackage,
           List<WorkflowOperationInstance> operations,
-          Set<WorkflowConfigurationForWorkflowInstance> configurations,
+          Map<String, String> configurations,
           String mediaPackageId,
           String seriesId) {
     this.workflowId = id;
@@ -522,7 +518,7 @@ public class WorkflowInstance {
     return currentOperation;
   }
 
-  public Set<WorkflowConfigurationForWorkflowInstance> getConfigurations() {
+  public Map<String, String> getConfigurations() {
     return configurations;
   }
 
@@ -534,11 +530,7 @@ public class WorkflowInstance {
   public String getConfiguration(String key) {
     if (key == null || configurations == null)
       return null;
-    for (WorkflowConfiguration config : configurations) {
-      if (config.getKey().equals(key))
-        return config.getValue();
-    }
-    return null;
+    return configurations.get(key);
   }
 
   /**
@@ -549,8 +541,8 @@ public class WorkflowInstance {
   public Set<String> getConfigurationKeys() {
     Set<String> keys = new TreeSet<String>();
     if (configurations != null && !configurations.isEmpty()) {
-      for (WorkflowConfiguration config : configurations) {
-        keys.add(config.getKey());
+      for (String key : configurations.keySet()) {
+        keys.add(key);
       }
     }
     return keys;
@@ -564,14 +556,7 @@ public class WorkflowInstance {
   public void removeConfiguration(String key) {
     if (key == null || configurations == null)
       return;
-    for (Iterator<WorkflowConfigurationForWorkflowInstance> configIter = configurations.iterator(); configIter.hasNext();) {
-      WorkflowConfigurationForWorkflowInstance config = configIter.next();
-      if (config.getKey().equals(key)) {
-        config.setWorkflowInstance(null);
-        configIter.remove();
-        return;
-      }
-    }
+    configurations.remove(key);
   }
 
   /**
@@ -583,24 +568,14 @@ public class WorkflowInstance {
     if (key == null)
       return;
     if (configurations == null)
-      configurations = new TreeSet<>();
+      configurations = new TreeMap<String, String>();
 
     // Adjust already existing values
-    for (WorkflowConfigurationForWorkflowInstance config : configurations) {
-      if (config.getKey().equals(key)) {
-        ((WorkflowConfigurationForWorkflowInstance) config).setValue(value);
-        return;
-      }
-    }
-
-    // No configurations were found, so add a new one
-    addConfiguration(key , value);
+    configurations.put(key, value);
   }
 
   private void addConfiguration(String key, String value) {
-    WorkflowConfigurationForWorkflowInstance newConfig = new WorkflowConfigurationForWorkflowInstance(key, value);
-    newConfig.setWorkflowInstance(this);
-    configurations.add(newConfig);
+    configurations.put(key, value);
   }
 
   @Override

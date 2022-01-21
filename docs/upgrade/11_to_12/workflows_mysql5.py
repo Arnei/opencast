@@ -1,12 +1,10 @@
-# TODO: Delete duplicate info from oc_job after successfully copying it to the new tables?
-# TODO: Add other indexes
-
 # Upgrade script for MySQL databases
 # Requires Python3 to run
 # Required packages:
 #   $ pip install mysql-connector-python
 # Set vars to point to your database
 # Run on commandline: "python3 workflow_db_upgrade.py"
+# WARNING: THIS SCRIPT DELETES DATA. CREATE A BACKUP BEFORE RUNNING
 
 # Module Imports
 import mysql.connector
@@ -51,6 +49,16 @@ def execute_query(connection, query):
 
     try:
         cursor.execute(query)
+        connection.commit()
+        print("Query executed successfully")
+    except Error as e:
+        print(f"The error '{e}' occurred")
+
+def execute_query_with_data(connection, query, data):
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute(query, data)
         connection.commit()
         print("Query executed successfully")
     except Error as e:
@@ -123,9 +131,11 @@ def parse_operation_state(state):
   return states.get(state, None)
 
 ### Connect
+print("Creating connection to database...")
 connection = create_connection(host, user, password, database)
 
 # Cleanup artifacts from previous runs of this script
+print("Clearing out potential artifacts from previous runs...")
 delete_workflow_table = f"DROP TABLE {workflow_table_name}"
 delete_workflow_configuration_table = f"DROP TABLE {workflow_configuration_table_name}"
 delete_workflow_operation_table = f"DROP TABLE {workflow_operation_table_name}"
@@ -136,6 +146,10 @@ execute_query(connection, delete_workflow_operation_table)
 execute_query(connection, delete_workflow_operation_configuration_table)
 
 ## Create new tables
+#  Currently added indexes:
+#  - Indexes for bidirectional relationships between Workflow <-> Operation <-> Configuration
+#  - mediaPackageId, seriesId for oc_workflow
+print("Create tables...")
 create_workflow_table = f"""
 CREATE TABLE IF NOT EXISTS {workflow_table_name} (
   id BIGINT(20),
@@ -151,18 +165,18 @@ CREATE TABLE IF NOT EXISTS {workflow_table_name} (
   mediaPackage LONGTEXT,
   mediaPackageId VARCHAR(128),
   seriesId VARCHAR(128),
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  INDEX (mediaPackageId),
+  INDEX (seriesId)
 ) ENGINE = InnoDB
 """
 
 create_workflow_configuration_table = f"""
 CREATE TABLE IF NOT EXISTS {workflow_configuration_table_name} (
-  id BIGINT(20) AUTO_INCREMENT,
-  key_part VARCHAR(255),
-  value_part LONGTEXT,
-  INSTANCE_id BIGINT(20),
-  PRIMARY KEY (id),
-  INDEX (INSTANCE_id)
+  workflow_id BIGINT(20),
+  key_part VARCHAR(255) NOT NULL,
+  value_part LONGTEXT NOT NULL,
+  INDEX (workflow_id)
 ) ENGINE = InnoDB
 """
 
@@ -199,12 +213,10 @@ CREATE TABLE IF NOT EXISTS {workflow_operation_table_name} (
 
 create_workflow_operation_configuration_table = f"""
 CREATE TABLE IF NOT EXISTS {workflow_operation_configuration_table_name} (
-  id BIGINT(20) AUTO_INCREMENT,
+  workflow_operation_id BIGINT(20),
   key_part VARCHAR(255),
   value_part LONGTEXT,
-  OPERATIONINSTANCE_id BIGINT(20),
-  PRIMARY KEY (id),
-  INDEX (OPERATIONINSTANCE_id)
+  INDEX (workflow_operation_id)
 ) ENGINE = InnoDB
 """
 
@@ -214,6 +226,7 @@ execute_query(connection, create_workflow_operation_table)
 execute_query(connection, create_workflow_operation_configuration_table)
 
 ### Get information from database
+print("Collect information from oc_job table...")
 select_payload_from_job_table = """
 SELECT payload FROM oc_job WHERE operation="START_WORKFLOW"
 """
@@ -227,20 +240,19 @@ SELECT date_completed FROM oc_job WHERE operation="START_WORKFLOW"
 payloads = execute_read_query(connection, select_payload_from_job_table)
 date_createds = execute_read_query(connection, select_date_created_from_job_table)
 date_completeds = execute_read_query(connection, select_date_completed_from_job_table)
-#print(payloads)
-#print(date_createds)
-#print(date_completeds)
 
 ### Parse information from XML
+print("Put information from oc_job into the new tables...")
 wf_items = []
 wf_config = []
 wf_operation = []
 wf_operation_config = []
 for (payload, date_created, date_completed) in zip(payloads, date_createds, date_completeds):
-  root = ET.fromstring(payload)
-
-  #for item in root:
-  #  print(item)
+  try:
+    root = ET.fromstring(payload)
+  except:
+    print("Payload was not XML, not parsing. Payload: " + payload)
+    continue
 
   ### oc_workflow
   # Order is important
@@ -276,10 +288,9 @@ for (payload, date_created, date_completed) in zip(payloads, date_createds, date
   ### oc_workflow_configuration
   for configuration in root.find("{http://workflow.opencastproject.org}configurations"):
     configs = []
-    # id does not need to be, generated automatically
+    configs.append(workflow_id)
     configs.append(get_attrib_from_node(configuration, "key"))
     configs.append(configuration.text)
-    configs.append(workflow_id)
 
     wf_config.append(configs)
 
@@ -341,10 +352,10 @@ for (payload, date_created, date_completed) in zip(payloads, date_createds, date
     ### oc_workflow_operation_configuration
     for op_config in operation.find("{http://workflow.opencastproject.org}configurations"):
       op_configs = []
-      # id does not need to be, generated automatically
+
+      op_configs.append(operation_id)
       op_configs.append(get_attrib_from_node(op_config, "key"))
       op_configs.append(op_config.text)
-      op_configs.append(operation_id)
 
       wf_operation_config.append(op_configs)
 
@@ -360,7 +371,7 @@ for (payload, date_created, date_completed) in zip(payloads, date_createds, date
 
   create_workflow_configuration_sql = f"""
   INSERT INTO
-    `{workflow_configuration_table_name}` (`key_part`, `value_part`, `INSTANCE_id`)
+    `{workflow_configuration_table_name}` (`workflow_id`, `key_part`, `value_part`)
   VALUES
     ( %s, %s, %s )
   """
@@ -380,7 +391,7 @@ for (payload, date_created, date_completed) in zip(payloads, date_createds, date
 
   create_workflow_operation_configuration_sql = f"""
   INSERT INTO
-    `{workflow_operation_configuration_table_name}` (`key_part`, `value_part`, `OPERATIONINSTANCE_id`)
+    `{workflow_operation_configuration_table_name}` (`workflow_operation_id`, `key_part`, `value_part`)
   VALUES
     ( %s, %s, %s )
   """
@@ -396,14 +407,19 @@ for (payload, date_created, date_completed) in zip(payloads, date_createds, date
   wf_operation_config = []
 
 
-### Delete workflow information from oc_job
+# ### Delete workflow information from oc_job
+# print("Delete information from oc_job table...")
+# ### Get information from database
+# select_id_from_job_table = """
+# SELECT payload FROM oc_job WHERE operation="START_WORKFLOW"
+# """
+# ids = execute_read_query(connection, select_id_from_job_table)
+#
+# ### Remove workflow XML from oc_job
+# sql_update_job_payload_query = """
+# UPDATE oc_job SET payload = %s where id = %s
+# """
+# for id in ids:
+#   execute_query_with_data(connection, sql_update_job_payload_query, (id, id))
 
-
-
-# print(wf_items)
-# print("-----")
-# print(wf_config)
-# print("-----")
-# print(wf_operation)
-# print("-----")
-# print(wf_operation_config)
+print("Update complete!")

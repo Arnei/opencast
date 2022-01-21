@@ -118,11 +118,16 @@ public class JaxbWorkflowInstance {
             .stream()
             .map(operation -> new JaxbWorkflowOperationInstance(operation))
             .collect(Collectors.toList());
-    this.configurations = Optional.ofNullable(workflow.getConfigurations())
-            .orElseGet(Collections::emptySet)
-            .stream()
-            .map(config -> new JaxbWorkflowConfiguration(config.getKey(), config.getValue()))
-            .collect(Collectors.toSet());
+    if (workflow.getConfigurations() != null) {
+      this.configurations = Optional.ofNullable(workflow.getConfigurations().entrySet())
+              .orElseGet(Collections::emptySet)
+              .stream()
+              .map(config -> new JaxbWorkflowConfiguration(config.getKey(), config.getValue()))
+              .collect(Collectors.toSet());
+    } else {
+      this.configurations = null;
+    }
+
     this.mediaPackageId = mediaPackage == null ? null : mediaPackage.getIdentifier().toString();
     this.seriesId = mediaPackage == null ? null : mediaPackage.getSeries();
   }
@@ -133,7 +138,8 @@ public class JaxbWorkflowInstance {
             Optional.ofNullable(operations).orElseGet(Collections::emptyList)
                     .stream().map(operation -> operation.toWorkflowOperationInstance()).collect(Collectors.toList()),
             Optional.ofNullable(configurations).orElseGet(Collections::emptySet)
-                    .stream().map(config -> new WorkflowConfigurationForWorkflowInstance(config.getKey(), config.getValue())).collect(Collectors.toSet()),
+                    .stream()
+                    .collect(Collectors.toMap(JaxbWorkflowConfiguration::getKey, JaxbWorkflowConfiguration::getValue)),
             mediaPackageId, seriesId);
   }
 

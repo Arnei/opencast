@@ -156,11 +156,15 @@ public class JaxbWorkflowOperationInstance {
     this.jobId = operation.getId();
     this.state = operation.getState();
     this.description = operation.getDescription();
-    this.configurations = Optional.ofNullable(operation.getConfigurations())
-            .orElseGet(Collections::emptySet)
-            .stream()
-            .map(config -> new JaxbWorkflowConfiguration(config.getKey(), config.getValue()))
-            .collect(Collectors.toSet());
+    if (operation.getConfigurations() != null) {
+      this.configurations = Optional.ofNullable(operation.getConfigurations().entrySet())
+              .orElseGet(Collections::emptySet)
+              .stream()
+              .map(config -> new JaxbWorkflowConfiguration(config.getKey(), config.getValue()))
+              .collect(Collectors.toSet());
+    } else {
+      this.configurations = null;
+    }
     this.holdStateUserInterfaceUrl = operation.getHoldStateUserInterfaceUrl();
     this.holdActionTitle = operation.getHoldActionTitle();
     this.failWorkflowOnException = operation.isFailWorkflowOnException();
@@ -181,7 +185,8 @@ public class JaxbWorkflowOperationInstance {
   public WorkflowOperationInstance toWorkflowOperationInstance() {
     return new WorkflowOperationInstance(template, jobId, state, description,
             Optional.ofNullable(configurations).orElseGet(Collections::emptySet)
-                    .stream().map(config -> new WorkflowConfigurationForOperationInstance(config.getKey(), config.getValue())).collect(Collectors.toSet()),
+                    .stream()
+                    .collect(Collectors.toMap(JaxbWorkflowConfiguration::getKey, JaxbWorkflowConfiguration::getValue)),
             holdStateUserInterfaceUrl, holdActionTitle, failWorkflowOnException, executeCondition,
             skipCondition, exceptionHandlingWorkflow, abortable, continuable, dateStarted, dateCompleted, timeInQueue, maxAttempts, failedAttempts,
             executionHost, retryStrategy);

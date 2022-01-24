@@ -58,6 +58,7 @@ import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.systems.OpencastConstants;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.RestUtil;
+import org.opencastproject.util.SolrUtils;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Tuple;
@@ -78,6 +79,7 @@ import com.entwinemedia.fn.data.Opt;
 import com.entwinemedia.fn.data.json.Field;
 import com.entwinemedia.fn.data.json.JValue;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -316,62 +318,64 @@ public class WorkflowsEndpoint {
     if (offset > 0) {
       q.withOffset(offset);
     }
-//    q.withText(text);
+    if (!StringUtils.isBlank(text)) {
+      q.withText(text);
+    }
 
-//    if (states != null && states.size() > 0) {
-//      try {
-//        for (String state : states) {
-//          if (StringUtils.isBlank(state)) {
-//            continue;
-//          }
-//          if (state.startsWith(NEGATE_PREFIX)) {
-//            q.withoutState(WorkflowInstance.WorkflowState.valueOf(state.substring(1).toUpperCase()));
-//          } else {
-//            q.withState(WorkflowInstance.WorkflowState.valueOf(state.toUpperCase()));
-//          }
-//        }
-//      } catch (IllegalArgumentException e) {
-//        logger.debug("Unknown workflow state.", e);
-//      }
-//    }
-//
-//    q.withTemplate(template);
-//    q.withTitle(title);
-//    q.withDescription(description);
-//    q.withCreator(creator);
-//    if (currentOperations != null && currentOperations.size() > 0) {
-//      for (String op : currentOperations) {
-//        if (StringUtils.isBlank(op)) {
-//          continue;
-//        }
-//        if (op.startsWith(NEGATE_PREFIX)) {
-//          q.withoutCurrentOperation(op.substring(1));
-//        } else {
-//          q.withCurrentOperation(op);
-//        }
-//      }
-//    }
-//    try {
-//      q.withDateCreated(SolrUtils.parseDate(dateCreated));
-//      q.withDateCompleted(SolrUtils.parseDate(dateCompleted));
-//    } catch (java.text.ParseException e) {
-//      return Response
-//              .status(Response.Status.BAD_REQUEST)
-//              .entity("Invalid date format")
-//              .build();
-//    }
-//    q.withMediaPackage(mediapackageId);
-//    for (String contributor : mpContributors) {
-//      if (StringUtils.isBlank(contributor)) {
-//        continue;
-//      }
-//      q.withCurrentOperation(contributor);
-//    }
-//    q.withMediaPackageLanguage(mpLanguage);
-//    q.withMediaPackageTitle(mpTitle);
-//    q.withMediaPackageSubject(mpSubject);
-//    q.withSeriesId(seriesId);
-//    q.withSeriesTitle(seriesTitle);
+    if (states != null && states.size() > 0) {
+      try {
+        for (String state : states) {
+          if (StringUtils.isBlank(state)) {
+            continue;
+          }
+          if (state.startsWith(NEGATE_PREFIX)) {
+            q.withoutState(WorkflowInstance.WorkflowState.valueOf(state.substring(1).toUpperCase()));
+          } else {
+            q.withState(WorkflowInstance.WorkflowState.valueOf(state.toUpperCase()));
+          }
+        }
+      } catch (IllegalArgumentException e) {
+        logger.debug("Unknown workflow state.", e);
+      }
+    }
+
+    q.withTemplate(template);
+    q.withTitle(title);
+    q.withDescription(description);
+    q.withCreator(creator);
+    if (currentOperations != null && currentOperations.size() > 0) {
+      for (String op : currentOperations) {
+        if (StringUtils.isBlank(op)) {
+          continue;
+        }
+        if (op.startsWith(NEGATE_PREFIX)) {
+          q.withoutCurrentOperation(op.substring(1));
+        } else {
+          q.withCurrentOperation(op);
+        }
+      }
+    }
+    try {
+      q.withDateCreated(SolrUtils.parseDate(dateCreated));
+      q.withDateCompleted(SolrUtils.parseDate(dateCompleted));
+    } catch (java.text.ParseException e) {
+      return Response
+              .status(Response.Status.BAD_REQUEST)
+              .entity("Invalid date format")
+              .build();
+    }
+    q.withMediaPackage(mediapackageId);
+    for (String contributor : mpContributors) {
+      if (StringUtils.isBlank(contributor)) {
+        continue;
+      }
+      q.withCurrentOperation(contributor);
+    }
+    q.withMediaPackageLanguage(mpLanguage);
+    q.withMediaPackageTitle(mpTitle);
+    q.withMediaPackageSubject(mpSubject);
+    q.withSeriesId(seriesId);
+    q.withSeriesTitle(seriesTitle);
 
     if (optSort.isSome()) {
       Set<SortCriterion> sortCriteria = RestUtils.parseSortQueryParameter(optSort.get());
@@ -450,6 +454,58 @@ public class WorkflowsEndpoint {
     }
 
     return Response.ok(workflowSet).build();
+  }
+
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  @Path("instances.json")
+  @RestQuery(name = "workflowsasjson", description = "List all workflow instances matching the query parameters", returnDescription = "A JSON representation of the set of workflows matching these query parameters", restParameters = {
+          @RestParameter(name = "state", isRequired = false, description = "Filter results by workflows' current state", type = STRING),
+          @RestParameter(name = "template", isRequired = false, description = "Filter results by workflows' template", type = STRING),
+          @RestParameter(name = "title", isRequired = false, description = "Filter results by workflows' title", type = STRING),
+          @RestParameter(name = "description", isRequired = false, description = "Filter results by workflows' description", type = STRING),
+          @RestParameter(name = "creator", isRequired = false, description = "Filter results by workflows' creator", type = STRING),
+          @RestParameter(name = "op", isRequired = false, description = "Filter results by workflows' current operation.", type = STRING),
+          @RestParameter(name = "dateCreated", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
+          @RestParameter(name = "dateCompleted", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
+          @RestParameter(name = "mp", isRequired = false, description = "Filter results by mediapackage identifier.", type = STRING),
+          @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
+          @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
+          @RestParameter(name = "mpLicense", isRequired = false, description = "Filter results by mediapackage's license.", type = STRING),
+          @RestParameter(name = "mpTitle", isRequired = false, description = "Filter results by mediapackage's title.", type = STRING),
+          @RestParameter(name = "mpSubject", isRequired = false, description = "Filter results by mediapackage's subject.", type = STRING),
+          @RestParameter(name = "seriesId", isRequired = false, description = "Filter results by series identifier", type = STRING),
+          @RestParameter(name = "seriesTitle", isRequired = false, description = "Filter results by series title", type = STRING),
+          @RestParameter(name = "q", isRequired = false, description = "Filter results by free text query", type = STRING),
+          @RestParameter(name = "sort", isRequired = false, description = "The sort order.  May include any "
+                  + "of the following: DATE_CREATED, TITLE, SERIES_TITLE, SERIES_ID, MEDIA_PACKAGE_ID, WORKFLOW_DEFINITION_ID, CREATOR, "
+                  + "CONTRIBUTOR, LANGUAGE, LICENSE, SUBJECT.  Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).", type = STRING),
+          @RestParameter(name = "offset", isRequired = false, description = "Return results after this offset", type = INTEGER),
+          @RestParameter(name = "limit", isRequired = false, description = "The number of results to return. Default is " + DEFAULT_LIMIT, type = INTEGER),
+          @RestParameter(name = "compact", isRequired = false, description = "Whether to return a compact version of "
+                  + "the workflow instance, with mediapackage elements, workflow and workflow operation configurations and "
+                  + "non-current operations removed.", type = BOOLEAN)},
+          responses = {
+                  @RestResponse(responseCode = SC_OK, description = "A JSON representation of the workflow set."),
+                  @RestResponse(responseCode = SC_BAD_REQUEST, description = "Invalid data was provided in the request.") })
+  // CHECKSTYLE:OFF
+  public Response getWorkflowsAsJson(@QueryParam("state") List<String> states,
+          @QueryParam("template") String template, @QueryParam("title") String title,
+          @QueryParam("description") String description, @QueryParam("creator") String creator,
+          @QueryParam("op") List<String> currentOperations,
+          @QueryParam("dateCreated") String dateCreated, @QueryParam("dateCompleted") String dateCompleted,
+          @QueryParam("mp") String mediapackageId,
+          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
+          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
+          @QueryParam("mpSubject") String mpSubject,
+          @QueryParam("seriesId") String seriesId, @QueryParam("seriesTitle") String seriesTitle,
+          @QueryParam("q") String text, @QueryParam("sort") String sort,
+          @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
+          throws Exception {
+    // CHECKSTYLE:ON
+    return getWorkflowsAsXml(states, template, title, description, creator, currentOperations, dateCreated, dateCompleted,
+            mediapackageId, mpContributors, mpLanguage, mpLicense, mpTitle, mpSubject, seriesId, seriesTitle, text,
+            sort, offset, limit, compact);
   }
 
   @PUT

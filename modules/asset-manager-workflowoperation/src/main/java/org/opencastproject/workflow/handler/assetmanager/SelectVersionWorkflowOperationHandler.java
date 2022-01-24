@@ -30,6 +30,7 @@ import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.selector.SimpleElementSelector;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
@@ -80,7 +81,12 @@ public class SelectVersionWorkflowOperationHandler extends AbstractWorkflowOpera
       throw new WorkflowOperationException("Cannot get current workflow operation");
     }
     // Get current media package
-    MediaPackage mp = workflowInstance.getMediaPackage();
+    MediaPackage mp = null;
+    try {
+      mp = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     MediaPackage resultMp = null;
 
     // Make sure operation configuration is valid.

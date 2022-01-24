@@ -112,8 +112,12 @@ public class ImageConvertWorkflowOperationHandler extends AbstractWorkflowOperat
     String tagsAndFlavorsOption = StringUtils.trimToNull(operation.getConfiguration(CONFIG_KEY_TAGS_AND_FLAVORS));
     boolean tagsAndFlavorsBool = BooleanUtils.toBoolean(tagsAndFlavorsOption);
 
-
-    MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    MediaPackage mediaPackage = null;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
 
     // Make sure either one of tags or flavors are provided
     if (sourceFlavorsOption.isEmpty() && sourceTagsOption.isEmpty()) {

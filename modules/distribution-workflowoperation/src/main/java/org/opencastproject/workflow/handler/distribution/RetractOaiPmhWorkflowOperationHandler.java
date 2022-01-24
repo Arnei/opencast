@@ -24,6 +24,7 @@ import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElementParser;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.Publication;
 import org.opencastproject.publication.api.OaiPmhPublicationService;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
@@ -79,7 +80,12 @@ public class RetractOaiPmhWorkflowOperationHandler extends AbstractWorkflowOpera
   @Override
   public WorkflowOperationResult start(WorkflowInstance workflowInstance, JobContext context)
           throws WorkflowOperationException {
-    MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    MediaPackage mediaPackage = null;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
 
     String repository = StringUtils.trimToNull(workflowInstance.getCurrentOperation().getConfiguration(REPOSITORY));
     if (repository == null) {

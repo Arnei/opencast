@@ -30,6 +30,7 @@ import org.opencastproject.assetmanager.impl.VersionImpl;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
@@ -67,7 +68,12 @@ public class AssetManagerStorageMoveOperationHandler extends AbstractWorkflowOpe
   @Override
   public WorkflowOperationResult start(WorkflowInstance workflowInstance, JobContext context)
           throws WorkflowOperationException {
-    MediaPackage mp = workflowInstance.getMediaPackage();
+    MediaPackage mp = null;
+    try {
+      mp = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     WorkflowOperationInstance operation = workflowInstance.getCurrentOperation();
 
     logger.debug("Working on mediapackage {}", mp.getIdentifier().toString());

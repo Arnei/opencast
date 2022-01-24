@@ -22,8 +22,10 @@ package org.opencastproject.email.template.impl;
 
 import org.opencastproject.job.api.Incident;
 import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.util.doc.DocData;
 import org.opencastproject.workflow.api.WorkflowInstance;
+import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 
 import java.util.HashMap;
@@ -72,7 +74,11 @@ public class EmailData extends DocData {
     for (String key : workflow.getConfigurationKeys()) {
       workflowConfig.put(key, workflow.getConfiguration(key));
     }
-    this.mediaPackage = workflow.getMediaPackage();
+    try {
+      this.mediaPackage = workflow.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     this.catalogs = catalogs;
     this.failed = failed;
     this.incidents = incidents;

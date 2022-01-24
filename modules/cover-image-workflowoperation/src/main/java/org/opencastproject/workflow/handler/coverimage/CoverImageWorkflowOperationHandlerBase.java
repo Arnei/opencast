@@ -101,7 +101,12 @@ public abstract class CoverImageWorkflowOperationHandlerBase extends AbstractWor
   public WorkflowOperationResult start(final WorkflowInstance workflowInstance, JobContext context)
           throws WorkflowOperationException {
 
-    MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    MediaPackage mediaPackage = null;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     WorkflowOperationInstance operation = workflowInstance.getCurrentOperation();
 
     logger.info("Cover Image Workflow started for media package '{}'", mediaPackage.getIdentifier());

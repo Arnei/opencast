@@ -26,6 +26,7 @@ import org.opencastproject.assetmanager.api.AssetManager;
 import org.opencastproject.assetmanager.api.query.AQueryBuilder;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
@@ -59,7 +60,12 @@ public class AssetManagerDeleteWorkflowOperationHandler extends AbstractWorkflow
   @Override
   public WorkflowOperationResult start(WorkflowInstance workflowInstance, JobContext context)
           throws WorkflowOperationException {
-    final MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    final MediaPackage mediaPackage;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     final String mpId = mediaPackage.getIdentifier().toString();
 
     WorkflowOperationInstance currentOperation = workflowInstance.getCurrentOperation();

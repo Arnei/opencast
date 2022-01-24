@@ -116,7 +116,12 @@ public class PublishOaiPmhWorkflowOperationHandler extends AbstractWorkflowOpera
           throws WorkflowOperationException {
     logger.debug("Running distribution workflow operation");
 
-    MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    MediaPackage mediaPackage = null;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
 
     // Check which tags have been configured
     String downloadTags = StringUtils

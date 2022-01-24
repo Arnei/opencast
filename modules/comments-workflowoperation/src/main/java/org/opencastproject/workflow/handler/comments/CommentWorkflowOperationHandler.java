@@ -25,6 +25,7 @@ import org.opencastproject.event.comment.EventComment;
 import org.opencastproject.event.comment.EventCommentException;
 import org.opencastproject.event.comment.EventCommentService;
 import org.opencastproject.job.api.JobContext;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.User;
 import org.opencastproject.security.api.UserDirectoryService;
@@ -93,7 +94,7 @@ public class CommentWorkflowOperationHandler extends AbstractWorkflowOperationHa
    *           Thrown if the comment cannot be found to delete.
    */
   private WorkflowOperationResult handleCommentOperation(WorkflowInstance workflowInstance)
-          throws EventCommentException, NotFoundException {
+          throws EventCommentException, NotFoundException, MediaPackageException {
     Date date = new Date();
     WorkflowOperationInstance operation = workflowInstance.getCurrentOperation();
     Operation action;
@@ -139,7 +140,7 @@ public class CommentWorkflowOperationHandler extends AbstractWorkflowOperationHa
    *           Thrown if unable to create the comment.
    */
   private void createComment(WorkflowInstance workflowInstance, String reason, String description)
-          throws EventCommentException {
+          throws EventCommentException, MediaPackageException {
     Opt<EventComment> optComment = findComment(workflowInstance.getMediaPackage().getIdentifier().toString(), reason,
             description);
     if (optComment.isNone()) {
@@ -168,7 +169,7 @@ public class CommentWorkflowOperationHandler extends AbstractWorkflowOperationHa
    *           Thrown if unable to update the comment.
    */
   private void resolveComment(WorkflowInstance workflowInstance, String reason, String description)
-          throws EventCommentException {
+          throws EventCommentException, MediaPackageException {
     Opt<EventComment> optComment = findComment(workflowInstance.getMediaPackage().getIdentifier().toString(), reason,
             description);
     if (optComment.isSome()) {
@@ -199,7 +200,7 @@ public class CommentWorkflowOperationHandler extends AbstractWorkflowOperationHa
    *           Thrown if unable to find the comment.
    */
   private void deleteComment(WorkflowInstance workflowInstance, String reason, String description)
-          throws EventCommentException, NotFoundException {
+          throws EventCommentException, NotFoundException, MediaPackageException {
     Opt<EventComment> optComment = findComment(workflowInstance.getMediaPackage().getIdentifier().toString(), reason,
             description);
     if (optComment.isSome()) {

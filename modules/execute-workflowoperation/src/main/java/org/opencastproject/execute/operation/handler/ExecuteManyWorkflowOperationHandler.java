@@ -36,6 +36,7 @@ import org.opencastproject.mediapackage.Track;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.ConfiguredTagsAndFlavors;
+import org.opencastproject.workflow.api.WorkflowException;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
@@ -128,7 +129,12 @@ public class ExecuteManyWorkflowOperationHandler extends AbstractWorkflowOperati
   public WorkflowOperationResult start(WorkflowInstance workflowInstance, JobContext context)
           throws WorkflowOperationException {
 
-    MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    MediaPackage mediaPackage = null;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     WorkflowOperationInstance operation = workflowInstance.getCurrentOperation();
 
     logger.debug("Running execute workflow operation with ID {}", operation.getId());
@@ -337,7 +343,11 @@ public class ExecuteManyWorkflowOperationHandler extends AbstractWorkflowOperati
   @Override
   public WorkflowOperationResult skip(WorkflowInstance workflowInstance, JobContext context)
           throws WorkflowOperationException {
-    return new WorkflowOperationResultImpl(workflowInstance.getMediaPackage(), null, Action.SKIP, 0);
+    try {
+      return new WorkflowOperationResultImpl(workflowInstance.getMediaPackage(), null, Action.SKIP, 0);
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
   }
 
   @Override

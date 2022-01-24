@@ -82,7 +82,12 @@ public class CropWorkflowOperationHandler extends AbstractWorkflowOperationHandl
           throws WorkflowOperationException {
 
     WorkflowOperationInstance operation = workflowInstance.getCurrentOperation();
-    MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    MediaPackage mediaPackage = null;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
 
     logger.info("Start cropping workflow operation for mediapackage {}", mediaPackage.getIdentifier().toString());
 

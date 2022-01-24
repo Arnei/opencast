@@ -90,7 +90,12 @@ public class PartialRetractEngageWorkflowOperationHandler extends RetractEngageW
       retractElementSelector.addTag(tag);
     }
 
-    MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    MediaPackage mediaPackage = null;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     MediaPackage searchMP = null;
     logger.info("Partially retracting {}", mediaPackage.getIdentifier());
     List<Job> jobs;

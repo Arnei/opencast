@@ -48,6 +48,7 @@ import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElements;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.MediaPackageParser;
 import org.opencastproject.mediapackage.MediaPackageSupport;
 import org.opencastproject.metadata.api.MediaPackageMetadata;
@@ -950,14 +951,21 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
 
   private void removeTempFiles(WorkflowInstance workflowInstance) {
     logger.info("Removing temporary files for workflow {}", workflowInstance);
-    if (null == workflowInstance.getMediaPackage()) {
+    MediaPackage mp;
+    try {
+      mp = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      logger.warn("Could not parse mediapackage for workflow {}, skipping...", workflowInstance);
+      return
+    }
+    if (null == mp) {
       logger.warn("Workflow instance {} does not have an media package set", workflowInstance.getId());
       return;
     }
-    for (MediaPackageElement elem : workflowInstance.getMediaPackage().getElements()) {
+    for (MediaPackageElement elem : mp.getElements()) {
       if (null == elem.getURI()) {
         logger.warn("Mediapackage element {} from the media package {} does not have an URI set",
-                elem.getIdentifier(), workflowInstance.getMediaPackage().getIdentifier().toString());
+                elem.getIdentifier(), mp.getIdentifier().toString());
         continue;
       }
       try {
@@ -1200,7 +1208,12 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     String currentOrgAdminRole = currentOrg.getAdminRole();
     String currentOrgId = currentOrg.getId();
 
-    MediaPackage mediapackage = workflow.getMediaPackage();
+    MediaPackage mediapackage = null;
+    try {
+      mediapackage = workflow.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new MediaPackageException(e);
+    }
 
     WorkflowState state = workflow.getState();
     if (state != INSTANTIATED && state != RUNNING && workflow.getState() != FAILING) {
@@ -1316,8 +1329,13 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
         throw new WorkflowDatabaseException(e);
       }
 
-      final DublinCoreCatalog episodeDublinCoreCatalog = getEpisodeDublinCoreCatalog(
-              workflowInstance.getMediaPackage());
+      final DublinCoreCatalog episodeDublinCoreCatalog;
+      try {
+        episodeDublinCoreCatalog = getEpisodeDublinCoreCatalog(
+                workflowInstance.getMediaPackage());
+      } catch (MediaPackageException e) {
+        throw new WorkflowException(e);
+      }
       final AccessControlList accessControlList = authorizationService.getActiveAcl(updatedMediaPackage).getA();
 
       // Update both workflow and workflow job
@@ -1578,7 +1596,11 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     if (result == null) {
       logger.warn("Handling a null operation result for workflow %s in operation %s", workflow.getId(),
               currentOperation.getTemplate());
-      result = new WorkflowOperationResultImpl(workflow.getMediaPackage(), null, Action.CONTINUE, 0);
+      try {
+        result = new WorkflowOperationResultImpl(workflow.getMediaPackage(), null, Action.CONTINUE, 0);
+      } catch (MediaPackageException e) {
+        throw new WorkflowDatabaseException(e);
+      }
     } else {
       MediaPackage mp = result.getMediaPackage();
       if (mp != null) {
@@ -1736,6 +1758,10 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
       throw new UndispatchableJobException(e);
     } catch (WorkflowServiceDatabaseException e) {
       logger.error("An database error occured while checking if a workflow is already active %s: %s", job.getId(),
+              e.getMessage());
+      throw new UndispatchableJobException(e);
+    } catch (MediaPackageException e) {
+      logger.error("An error occured while fetching the mediapackage from the workflow %s: %s", job.getId(),
               e.getMessage());
       throw new UndispatchableJobException(e);
     }
@@ -2382,7 +2408,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
             logger.error("Found workflow with non-existing organization {}", instance.getOrganizationId());
             continue;
           }
-
           // get metadata for index update
           final DublinCoreCatalog episodeDublinCoreCatalog = getEpisodeDublinCoreCatalog(instance.getMediaPackage());
 
@@ -2401,6 +2426,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
                     updateWorkflowInstanceInIndex(instance, accessControlList, episodeDublinCoreCatalog, index);
                   });
           logIndexRebuildProgress(logger.getSlf4jLogger(), index.getIndexName(), total, current);
+
         }
       } while (current < total);
     }

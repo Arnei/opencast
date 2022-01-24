@@ -133,7 +133,12 @@ public class SegmentPreviewsWorkflowOperationHandler extends AbstractWorkflowOpe
     logger.debug("Running segments preview workflow operation on {}", workflowInstance);
 
     // Check if there is an mpeg-7 catalog containing video segments
-    MediaPackage src = (MediaPackage) workflowInstance.getMediaPackage().clone();
+    MediaPackage src = null;
+    try {
+      src = (MediaPackage) workflowInstance.getMediaPackage().clone();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     Catalog[] segmentCatalogs = src.getCatalogs(MediaPackageElements.SEGMENTS);
     if (segmentCatalogs.length == 0) {
       logger.info("Media package {} does not contain segment information", src);

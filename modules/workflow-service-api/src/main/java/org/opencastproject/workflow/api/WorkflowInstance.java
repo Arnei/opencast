@@ -365,17 +365,11 @@ public class WorkflowInstance {
     this.dateCompleted = dateCompleted;
   }
 
-  public MediaPackage getMediaPackage()  {
-    try {
-      if (mediaPackage == null) {
-        return null;
-      }
-      return MediaPackageParser.getFromXml(mediaPackage);
-    } catch (MediaPackageException e) {
-      // TODO: Error handling
-      logger.error("Error: ", e);
+  public MediaPackage getMediaPackage() throws MediaPackageException {
+    if (mediaPackage == null) {
+      return null;
     }
-    return null;
+    return MediaPackageParser.getFromXml(mediaPackage);
   }
 
   public void setMediaPackage(MediaPackage mediaPackage) {

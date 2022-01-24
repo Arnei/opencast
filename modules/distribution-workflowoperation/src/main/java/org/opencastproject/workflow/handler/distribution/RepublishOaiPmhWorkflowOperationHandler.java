@@ -58,7 +58,12 @@ public final class RepublishOaiPmhWorkflowOperationHandler extends AbstractWorkf
 
   @Override
   public WorkflowOperationResult start(WorkflowInstance wi, JobContext context) throws WorkflowOperationException {
-    final MediaPackage mp = wi.getMediaPackage();
+    final MediaPackage mp;
+    try {
+      mp = wi.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     // The flavors of the elements that are to be published
     final Set<String> flavors = new HashSet<>();
     // Check which flavors have been configured

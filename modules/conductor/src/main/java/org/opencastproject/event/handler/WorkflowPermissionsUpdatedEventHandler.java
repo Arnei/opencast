@@ -228,7 +228,7 @@ public class WorkflowPermissionsUpdatedEventHandler {
         q = q.withStartPage(offset);
         result = workflowService.getWorkflowInstancesForAdministrativeRead(q);
       }
-    } catch (WorkflowException | NotFoundException | IOException | UnauthorizedException e) {
+    } catch (WorkflowException | NotFoundException | IOException | UnauthorizedException | MediaPackageException e) {
       logger.warn("Unable to handle update event for series {}: {}", seriesItem, e.getMessage());
     } finally {
       securityService.setOrganization(prevOrg);

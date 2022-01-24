@@ -66,7 +66,12 @@ public class AssetManagerSnapshotWorkflowOperationHandler extends AbstractWorkfl
   @Override
   public WorkflowOperationResult start(WorkflowInstance wi, JobContext ctx)
           throws WorkflowOperationException {
-    final MediaPackage mpWorkflow = wi.getMediaPackage();
+    final MediaPackage mpWorkflow;
+    try {
+      mpWorkflow = wi.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
     final WorkflowOperationInstance currentOperation = wi.getCurrentOperation();
 
     // Check which tags have been configured

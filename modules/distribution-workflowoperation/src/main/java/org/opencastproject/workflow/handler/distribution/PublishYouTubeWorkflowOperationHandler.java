@@ -72,7 +72,12 @@ public class PublishYouTubeWorkflowOperationHandler extends AbstractWorkflowOper
           throws WorkflowOperationException {
     logger.debug("Running youtube publication workflow operation");
 
-    MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    MediaPackage mediaPackage = null;
+    try {
+      mediaPackage = workflowInstance.getMediaPackage();
+    } catch (MediaPackageException e) {
+      throw new WorkflowOperationException(e);
+    }
 
     // Check which tags have been configured
     ConfiguredTagsAndFlavors tagsAndFlavors = getTagsAndFlavors(workflowInstance,

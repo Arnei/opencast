@@ -121,8 +121,8 @@ public class WorkflowQueryBuilder extends AbstractElasticsearchQueryBuilder<Work
       and(WorkflowIndexSchema.MEDIAPACKAGE, query.getMediaPackageId());
     }
 
-    if (query.getMediaPackageContributor() != null) {
-      and(WorkflowIndexSchema.MP_CONTRIBUTOR, query.getMediaPackageContributor());
+    if (query.getMediaPackageContributor().length > 0) {
+      and(WorkflowIndexSchema.MP_CONTRIBUTORS, query.getMediaPackageContributor());
     }
 
     if (query.getMediaPackageLanguage() != null) {

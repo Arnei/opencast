@@ -239,7 +239,7 @@ public class Workflow implements IndexObject {
   }
 
   public void setOrganizationId(String organization) {
-    this.organizationId = organizationId;
+    this.organizationId = organization;
   }
 
   public void setCurrentOperation(String currentOperation) {

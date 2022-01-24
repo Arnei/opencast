@@ -111,7 +111,7 @@ public final class WorkflowIndexUtils {
       metadata.addField(WorkflowIndexSchema.MEDIAPACKAGE, workflow.getMediaPackage(), true);
     }
     if (workflow.getMpContributors() != null) {
-      metadata.addField(WorkflowIndexSchema.MP_CONTRIBUTOR, workflow.getMpContributors().toArray(), true);
+      metadata.addField(WorkflowIndexSchema.MP_CONTRIBUTORS, workflow.getMpContributors().toArray(), true);
     }
     if (StringUtils.trimToNull(workflow.getMpLanguage()) != null) {
       metadata.addField(WorkflowIndexSchema.MP_LANGUAGE, workflow.getMpLanguage(), true);

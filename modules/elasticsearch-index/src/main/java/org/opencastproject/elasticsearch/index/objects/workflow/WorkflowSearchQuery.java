@@ -48,7 +48,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   private Date dateCreated = null;
   private Date dateCompleted = null;
   private String mediaPackageId = null;
-  private String mpContributor = null;
+  private List<String> mpContributors = new ArrayList<>();
   private String mpLanguage = null;
   private String mpLicense = null;
   private String mpTitle = null;
@@ -452,7 +452,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    */
   public WorkflowSearchQuery withMediaPackageContributor(String mpContributor) {
     if (StringUtils.isNotBlank(mpContributor)) {
-      this.mpContributor = mpContributor;
+      this.mpContributors.add(mpContributor);
     }
     return this;
   }
@@ -639,8 +639,8 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    *
    * @return the media package contributor
    */
-  public String getMediaPackageContributor() {
-    return mpContributor;
+  public String[] getMediaPackageContributor() {
+    return mpContributors.toArray(new String[mpContributors.size()]);
   }
 
   /**

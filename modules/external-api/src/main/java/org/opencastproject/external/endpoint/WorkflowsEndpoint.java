@@ -390,7 +390,7 @@ public class WorkflowsEndpoint {
           case WorkflowIndexSchema.DATE_CREATED:
           case WorkflowIndexSchema.DATE_COMPLETED:
           case WorkflowIndexSchema.MEDIAPACKAGE:
-          case WorkflowIndexSchema.MP_CONTRIBUTOR:
+          case WorkflowIndexSchema.MP_CONTRIBUTORS:
           case WorkflowIndexSchema.MP_LANGUAGE:
           case WorkflowIndexSchema.MP_LICENSE:
           case WorkflowIndexSchema.MP_TITLE:

@@ -66,7 +66,7 @@ public interface WorkflowIndexSchema extends IndexSchema {
   String MEDIAPACKAGE = "mediaPackage";
 
   /** The organizers for the workflow */
-  String MP_CONTRIBUTOR = "mpContributor";
+  String MP_CONTRIBUTORS = "mpContributors";
 
   String MP_LANGUAGE = "mpLanguage";
 

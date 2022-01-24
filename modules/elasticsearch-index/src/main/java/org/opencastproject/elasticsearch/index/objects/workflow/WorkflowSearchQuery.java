@@ -95,7 +95,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    *
    * @return the identifiers
    */
-  public String[] getIdentifier() {
+  public String[] getIdentifiers() {
     return identifiers.toArray(new String[identifiers.size()]);
   }
 

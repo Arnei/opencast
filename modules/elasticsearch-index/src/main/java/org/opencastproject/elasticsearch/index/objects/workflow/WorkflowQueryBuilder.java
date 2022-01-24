@@ -56,8 +56,8 @@ public class WorkflowQueryBuilder extends AbstractElasticsearchQueryBuilder<Work
     and(WorkflowIndexSchema.ORGANIZATION_ID, query.getOrganization());
 
     // Workflow identifier
-    if (query.getIdentifier() != null) {
-      and(WorkflowIndexSchema.ID, query.getIdentifier());
+    if (query.getIdentifiers().length > 0) {
+      and(WorkflowIndexSchema.ID, query.getIdentifiers());
     }
 
 //    // Action

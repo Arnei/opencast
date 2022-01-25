@@ -104,7 +104,6 @@ public interface WorkflowServiceDatabase {
 
   /**
    * Gets all workflow instances that are currently running on the mediapackage.
-   * TODO: Contemplate if this method shouldn't better be removed
    *
    * @param mediaPackageId
    *          the mediapackage id

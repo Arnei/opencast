@@ -19,12 +19,18 @@ not using the Solr Index.
 
 API changes
 -----------
-- [TBD] - Remove tasks.json Endpoint from Admin-UI JobEndpoint
-- [TBD] - Add check for active workflows on a mediapackage to WorkflowRestService
-- [TBD] - Add GET all workflows of a mediapackage to WorkflowRestService
-- [TBD2] - Remove full text query for workflow instances from the WorkflowsEndpoint
-- [TBD2] - Remove full text query for workflow instances from the WorkflowRestService
-- [TBD2] - Remove filtering by currentOperation from the countWorkflow endpoint of the WorkflowRestService
+
+- [[#3376](https://github.com/opencast/opencast/pull/3376)] - Remove tasks.json Endpoint from Admin-UI JobEndpoint
+- [[#3376](https://github.com/opencast/opencast/pull/3376)] - Add check for active workflows on a mediapackage to
+WorkflowRestService
+- [[#3376](https://github.com/opencast/opencast/pull/3376)] - Add GET all workflows of a mediapackage to
+WorkflowRestService
+- [[#3377](https://github.com/opencast/opencast/pull/3377)] - Remove full text query for workflow instances from the
+WorkflowsEndpoint
+- [[#3377](https://github.com/opencast/opencast/pull/3377)] - Remove full text query for workflow instances from the
+WorkflowRestService
+- [[#3377](https://github.com/opencast/opencast/pull/3377)] - Remove filtering by currentOperation from the
+countWorkflow endpoint of the WorkflowRestService
 
 
 Release Schedule

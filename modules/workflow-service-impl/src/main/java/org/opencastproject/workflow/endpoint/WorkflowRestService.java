@@ -39,6 +39,7 @@ import org.opencastproject.mediapackage.MediaPackageParser;
 import org.opencastproject.mediapackage.MediaPackageSupport;
 import org.opencastproject.rest.AbstractJobProducerEndpoint;
 import org.opencastproject.rest.RestConstants;
+import org.opencastproject.security.api.Permissions;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.systems.OpencastConstants;
@@ -81,6 +82,7 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 
 import javax.servlet.http.HttpServletResponse;

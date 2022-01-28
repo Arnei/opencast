@@ -28,6 +28,7 @@ import org.opencastproject.workflow.api.WorkflowInstance.WorkflowState;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Manages {@link WorkflowDefinition}s and {@link WorkflowInstance}s.
@@ -337,4 +338,19 @@ public interface WorkflowService {
    * @throws WorkflowDatabaseException
    */
   List<WorkflowInstance> getWorkflowInstancesBySeries(String seriesId) throws WorkflowDatabaseException;
+
+  /**
+   * Returns the {@link WorkflowInstance} currently running on the given mediaPackage
+   *
+   * @param mediaPackageId
+   *          the identifier of the mediaPackage
+   * @param action
+   *          necessary permissions for the workflowInstance
+   * @return An {@link Optional} containing the currently running {@link WorkflowInstance}
+   * @throws WorkflowException
+   * @throws WorkflowDatabaseException
+   * @throws UnauthorizedException
+   */
+  Optional<WorkflowInstance> getRunningWorkflowInstanceByMediaPackage(String mediaPackageId, String action)
+          throws WorkflowException, UnauthorizedException, WorkflowDatabaseException;
 }

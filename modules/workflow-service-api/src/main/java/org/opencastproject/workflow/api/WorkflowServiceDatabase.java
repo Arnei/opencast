@@ -40,10 +40,10 @@ public interface WorkflowServiceDatabase {
    * @return the {@link WorkflowInstance} for this workflow
    * @throws NotFoundException
    *           if there is no workflow with this identifier
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    *           if there is a problem communicating with the underlying data store
    */
-  WorkflowInstance getWorkflow(long workflowId) throws NotFoundException, WorkflowServiceDatabaseException;
+  WorkflowInstance getWorkflow(long workflowId) throws NotFoundException, WorkflowDatabaseException;
 
   /**
    * Gets all workflow instances.
@@ -52,10 +52,10 @@ public interface WorkflowServiceDatabase {
    * Warning: Potentially very resource intensive. Only used for populating Solr index.
    *
    * @return list of all {@link WorkflowInstance}s
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    *           if there is a problem communicating with the underlying data store
    */
-  List<WorkflowInstance> getAllWorkflowInstancesOrganizationIndependent() throws WorkflowServiceDatabaseException;
+  List<WorkflowInstance> getAllWorkflowInstancesOrganizationIndependent() throws WorkflowDatabaseException;
 
   /**
    * Gets all workflow instances.
@@ -66,10 +66,10 @@ public interface WorkflowServiceDatabase {
    * @param offset
    *          only return workflows from this point onwards
    * @return list of all {@link WorkflowInstance}s
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    *           if there is a problem communicating with the underlying data store
    */
-  List<WorkflowInstance> getAllWorkflowInstances(int limit, int offset) throws WorkflowServiceDatabaseException;
+  List<WorkflowInstance> getAllWorkflowInstances(int limit, int offset) throws WorkflowDatabaseException;
 
   /**
    * Gets all workflow instances previous to the specified date
@@ -77,19 +77,19 @@ public interface WorkflowServiceDatabase {
    * @param state Only returns workflows currently in the given state
    * @param dateCreated Only returns workflows created prior to the given date
    * @return list of the {@link WorkflowInstance}s
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    */
   List<WorkflowInstance> getWorkflowInstancesForCleanup(WorkflowInstance.WorkflowState state, Date dateCreated)
-          throws WorkflowServiceDatabaseException;
+          throws WorkflowDatabaseException;
 
   /**
    * Gets the amount of workflow instances.
    *
    * @param state Only counts workflows currently in the given state
    * @return Amount of workflow instances
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    */
-  int countWorkflows(WorkflowInstance.WorkflowState state) throws WorkflowServiceDatabaseException;
+  int countWorkflows(WorkflowInstance.WorkflowState state) throws WorkflowDatabaseException;
 
     /**
      * Gets all workflow instances for a mediapackage.
@@ -97,10 +97,10 @@ public interface WorkflowServiceDatabase {
      * @param mediaPackageId
      *          the mediapackage id
      * @return list of all {@link WorkflowInstance}s for the given mediapackage id
-     * @throws WorkflowServiceDatabaseException
+     * @throws WorkflowDatabaseException
      *           if there is a problem communicating with the underlying data store
      */
-  List<WorkflowInstance> getWorkflowInstancesByMediaPackage(String mediaPackageId) throws WorkflowServiceDatabaseException;
+  List<WorkflowInstance> getWorkflowInstancesByMediaPackage(String mediaPackageId) throws WorkflowDatabaseException;
 
   /**
    * Gets all workflow instances that are currently running on the mediapackage.
@@ -108,18 +108,18 @@ public interface WorkflowServiceDatabase {
    * @param mediaPackageId
    *          the mediapackage id
    * @return list of all {@link WorkflowInstance}s for the given mediapackage id
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    *           if there is a problem communicating with the underlying data store
    */
-  List<WorkflowInstance> getRunningWorkflowInstancesByMediaPackage(String mediaPackageId) throws WorkflowServiceDatabaseException;
+  List<WorkflowInstance> getRunningWorkflowInstancesByMediaPackage(String mediaPackageId) throws WorkflowDatabaseException;
 
   /**
    * Get all workflow instances belong to a series
    * @param seriesId The id of the series
    * @return list of all {@link WorkflowInstance}s for the given series id
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    */
-  List<WorkflowInstance> getWorkflowInstancesBySeries(String seriesId) throws WorkflowServiceDatabaseException;
+  List<WorkflowInstance> getWorkflowInstancesBySeries(String seriesId) throws WorkflowDatabaseException;
 
   /**
    * Returns true if the mediapackage with the given identifier currently has a workflow running on it.
@@ -127,28 +127,28 @@ public interface WorkflowServiceDatabase {
    * @param mediaPackageId
    *          the mediapackage identifier
    * @return true, if a workflow is running; false otherwise
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    *           if there is a problem communicating with the underlying data store
    */
-  boolean mediaPackageHasActiveWorkflows(String mediaPackageId) throws WorkflowServiceDatabaseException;
+  boolean mediaPackageHasActiveWorkflows(String mediaPackageId) throws WorkflowDatabaseException;
 
   /**
    * Updates a single workflow.
    *
    * @param instance
    *          the workflow instance
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    *           if there is a problem communicating with the underlying data store
    */
-  void updateInDatabase(WorkflowInstance instance) throws WorkflowServiceDatabaseException;
+  void updateInDatabase(WorkflowInstance instance) throws WorkflowDatabaseException;
 
   /**
    * Removes a single workflow.
    *
    * @param instance
    *          the workflow instance
-   * @throws WorkflowServiceDatabaseException
+   * @throws WorkflowDatabaseException
    *           if there is a problem communicating with the underlying data store
    */
-  void removeFromDatabase(WorkflowInstance instance) throws WorkflowServiceDatabaseException;
+  void removeFromDatabase(WorkflowInstance instance) throws WorkflowDatabaseException;
 }

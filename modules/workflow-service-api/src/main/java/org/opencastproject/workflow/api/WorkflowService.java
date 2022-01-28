@@ -28,6 +28,7 @@ import org.opencastproject.workflow.api.WorkflowInstance.WorkflowState;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Manages {@link WorkflowDefinition}s and {@link WorkflowInstance}s.
@@ -85,31 +86,6 @@ public interface WorkflowService {
    */
   WorkflowInstance getWorkflowById(long workflowId) throws WorkflowDatabaseException, NotFoundException,
           UnauthorizedException;
-
-//  /**
-//   * Finds workflow instances based on the specified query.
-//   *
-//   * @param query
-//   *          The query parameters
-//   * @return The {@link List<WorkflowInstance>} containing the workflow instances matching the query parameters
-//   * @throws WorkflowDatabaseException
-//   *           if there is a problem accessing the workflow instances from persistence
-//   */
-//  WorkflowSet getWorkflowInstances(WorkflowQuery query) throws WorkflowDatabaseException;
-//
-//  /**
-//   * Finds workflow instances based on the specified query for administrative access.
-//   *
-//   * @param q
-//   *          The query parameters
-//   * @return The {@link List<WorkflowInstance>} containing the workflow instances matching the query parameters
-//   * @throws WorkflowDatabaseException
-//   *           if there is a problem accessing the workflow instances from persistence
-//   * @throws UnauthorizedException
-//   *           if the user does not own an administrative role
-//   */
-//  WorkflowSet getWorkflowInstancesForAdministrativeRead(WorkflowQuery q) throws WorkflowDatabaseException,
-//          UnauthorizedException;
 
   /**
    * Creates a new workflow instance and starts the workflow.
@@ -332,9 +308,49 @@ public interface WorkflowService {
    */
   Map<String, Map<String, String>> getWorkflowStateMappings();
 
+  /**
+   * Checks if there is at least one workflow currently running on the given mediapackage
+   *
+   * @param mediaPackageId
+   *          the identifier of the mediapackage
+   * @return Whether there is a workflow active on the mediapackage
+   * @throws WorkflowDatabaseException
+   */
   boolean mediaPackageHasActiveWorkflows(String mediaPackageId) throws WorkflowDatabaseException;
 
+  /**
+   * Returns all workflows associated with the given mediapackage
+   * Current user needs permission to the mediapackage
+   *
+   * @param mediaPackageId
+   *          the identifier of the mediapackage
+   * @return a {@Link List} of {@Link WorkflowInstance}
+   * @throws WorkflowDatabaseException
+   */
   List<WorkflowInstance> getWorkflowInstancesByMediaPackage(String mediaPackageId) throws WorkflowDatabaseException;
 
+  /**
+   * Returns all workflows associated with the given series
+   * Only used internally when a series is updated
+   * @param seriesId
+   *          the identifier of the series
+   * @return a {@Link List} of {@Link WorkflowInstance}
+   * @throws WorkflowDatabaseException
+   */
   List<WorkflowInstance> getWorkflowInstancesBySeries(String seriesId) throws WorkflowDatabaseException;
+
+  /**
+   * Returns the {@link WorkflowInstance} currently running on the given mediaPackage
+   *
+   * @param mediaPackageId
+   *          the identifier of the mediaPackage
+   * @param action
+   *          necessary permissions for the workflowInstance
+   * @return An {@link Optional} containing the currently running {@link WorkflowInstance}
+   * @throws WorkflowException
+   * @throws WorkflowDatabaseException
+   * @throws UnauthorizedException
+   */
+  Optional<WorkflowInstance> getRunningWorkflowInstanceByMediaPackage(String mediaPackageId, String action)
+          throws WorkflowException, UnauthorizedException, WorkflowDatabaseException;
 }

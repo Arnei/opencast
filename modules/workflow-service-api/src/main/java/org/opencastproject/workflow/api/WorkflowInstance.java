@@ -113,17 +113,18 @@ import javax.xml.bind.annotation.adapters.XmlAdapter;
                 + "w.mediaPackageId = :mediaPackageId and w.organizationId = :organizationId order by w.dateCreated"),
         @NamedQuery(name = "Workflow.countActiveByMediaPackage", query = "SELECT COUNT(w) FROM WorkflowInstance w where "
                 + "w.mediaPackageId = :mediaPackageId and w.organizationId = :organizationId and "
-                + "(w.state = :stateInstantiated or w.state = :statePaused or w.state = :stateRunning)"),
-        @NamedQuery(name = "Workflow.byMediaPackageAndOneOfThreeStates", query = "SELECT w FROM WorkflowInstance w where "
+                + "(w.state = :stateInstantiated or w.state = :statePaused or w.state = :stateRunning "
+                + "or w.state = :stateFailing)"),
+        @NamedQuery(name = "Workflow.byMediaPackageAndActive", query = "SELECT w FROM WorkflowInstance w where "
                 + "w.mediaPackageId = :mediaPackageId and w.organizationId = :organizationId and "
-                + "(w.state = :stateOne or w.state = :stateTwo or w.state = :stateThree) order by w.dateCreated"),
+                + "(w.state = :stateInstantiated or w.state = :statePaused or w.state = :stateRunning "
+                + "or w.state = :stateFailing) order by w.dateCreated"),
 })
 public class WorkflowInstance {
 
   /** Workflow ID, primary key */
   /** The workflow id is the same as the related job id */
   /** It is set by the workflow service when creating the instance */
-  /** TODO: Figure out reasonable lengths */
   @Id
   @Column(name = "id")
   private long workflowId;
@@ -178,7 +179,7 @@ public class WorkflowInstance {
   )
   @MapKeyColumn(name = "key_part", nullable = false)
   @Lob
-  @Column(name = "value_part", nullable = false)
+  @Column(name = "value_part")
   protected Map<String, String> configurations;
 
   @Column(name = "mediaPackageId", length = 128)
@@ -240,8 +241,7 @@ public class WorkflowInstance {
     this.description = def.getDescription();
     this.parentId = parentWorkflowId;
     this.creatorName = creator != null ? creator.getUsername() : null;
-    if (organization != null)
-      this.organizationId = organization.getId();
+    this.organizationId = organization != null ? organization.getId() : null;
     this.state = WorkflowState.INSTANTIATED;
     this.dateCreated = new Date();
     this.mediaPackage = mediaPackage == null ? null : MediaPackageParser.getAsXml(mediaPackage);
@@ -249,11 +249,7 @@ public class WorkflowInstance {
     this.seriesId = mediaPackage == null ? null : mediaPackage.getSeries();
 
     this.operations = new ArrayList<WorkflowOperationInstance>();
-    try {
-      extend(def);
-    } catch (WorkflowParsingException e) {
-      logger.error("Error: ", e);
-    }
+    extend(def);
 
     this.configurations = new TreeMap<String, String>();
     if (properties != null) {
@@ -596,7 +592,7 @@ public class WorkflowInstance {
   }
 
 
-  public void extend(WorkflowDefinition workflowDefinition) throws WorkflowParsingException {
+  public void extend(WorkflowDefinition workflowDefinition) {
     if (!workflowDefinition.getOperations().isEmpty()) {
       for (WorkflowOperationDefinition entry : workflowDefinition.getOperations()) {
         operations.add(new WorkflowOperationInstance(entry, -1));

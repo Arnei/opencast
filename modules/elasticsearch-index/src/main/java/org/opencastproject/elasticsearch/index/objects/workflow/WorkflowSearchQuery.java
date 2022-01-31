@@ -45,8 +45,10 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   private String creator = null;
   private String organizationId = null;
   private String currentOperation = null;
-  private Date dateCreated = null;
-  private Date dateCompleted = null;
+  private Date dateCreatedFrom = null;
+  private Date dateCreatedTo = null;
+  private Date dateCompletedFrom = null;
+  private Date dateCompletedTo = null;
   private String mediaPackageId = null;
   private List<String> mpContributors = new ArrayList<>();
   private String mpLanguage = null;
@@ -355,22 +357,32 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   /**
    * Limit the results to workflow instances with a creation date starting with <code>dateCreated</code>.
    *
-   * @param dateCreated
+   * @param dateCreatedFrom
    *          the starting date
    */
-  public WorkflowSearchQuery withDateCreated(Date dateCreated) {
-    this.dateCreated = dateCreated;
+  public WorkflowSearchQuery withDateCreatedFrom(Date dateCreatedFrom) {
+    this.dateCreatedFrom = dateCreatedFrom;
+    return this;
+  }
+
+  public WorkflowSearchQuery withDateCreatedTo(Date dateCreatedTo) {
+    this.dateCreatedTo = dateCreatedTo;
     return this;
   }
 
   /**
    * Limit the results to workflow instances with a creation date no later than <code>dateCompleted</code>.
    *
-   * @param dateCompleted
+   * @param dateCompletedFrom
    *          the ending date
    */
-  public WorkflowSearchQuery withDateCompleted(Date dateCompleted) {
-    this.dateCompleted = dateCompleted;
+  public WorkflowSearchQuery withDateCompletedFrom(Date dateCompletedFrom) {
+    this.dateCompletedFrom = dateCompletedFrom;
+    return this;
+  }
+
+  public WorkflowSearchQuery withDateCompletedTo(Date dateCompletedTo) {
+    this.dateCompletedTo = dateCompletedTo;
     return this;
   }
 
@@ -564,8 +576,11 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    *
    * @return the start date
    */
-  public Date getDateCreated() {
-    return dateCreated;
+  public Date getDateCreatedTo() {
+    return dateCreatedTo;
+  }
+  public Date getDateCreatedFrom() {
+    return dateCreatedFrom;
   }
 
   /**
@@ -573,8 +588,11 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    *
    * @return the end date
    */
-  public Date getDateCompleted() {
-    return dateCompleted;
+  public Date getDateCompletedFrom() {
+    return dateCompletedFrom;
+  }
+  public Date getDateCompletedTo() {
+    return dateCompletedTo;
   }
 
   /**

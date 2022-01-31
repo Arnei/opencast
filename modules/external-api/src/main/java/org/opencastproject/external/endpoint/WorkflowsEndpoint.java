@@ -56,9 +56,9 @@ import org.opencastproject.rest.RestConstants;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.systems.OpencastConstants;
+import org.opencastproject.util.DateTimeSupport;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.RestUtil;
-import org.opencastproject.util.SolrUtils;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Tuple;
@@ -90,6 +90,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -270,8 +271,10 @@ public class WorkflowsEndpoint {
           @RestParameter(name = "description", isRequired = false, description = "Filter results by workflows' description", type = STRING),
           @RestParameter(name = "creator", isRequired = false, description = "Filter results by workflows' creator", type = STRING),
           @RestParameter(name = "op", isRequired = false, description = "Filter results by workflows' current operation.", type = STRING),
-          @RestParameter(name = "dateCreated", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
-          @RestParameter(name = "dateCompleted", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
+          @RestParameter(name = "dateCreatedFrom", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
+          @RestParameter(name = "dateCreatedTo", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
+          @RestParameter(name = "dateCompletedFrom", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
+          @RestParameter(name = "dateCompletedTo", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
           @RestParameter(name = "mp", isRequired = false, description = "Filter results by mediapackage identifier.", type = STRING),
 //          @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
 //          @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
@@ -300,7 +303,8 @@ public class WorkflowsEndpoint {
           @QueryParam("template") String template, @QueryParam("title") String title,
           @QueryParam("description") String description, @QueryParam("creator") String creator,
           @QueryParam("op") String currentOperation,
-          @QueryParam("dateCreated") String dateCreated, @QueryParam("dateCompleted") String dateCompleted,
+          @QueryParam("dateCreatedFrom") String dateCreatedFrom, @QueryParam("dateCreatedTo") String dateCreatedTo,
+          @QueryParam("dateCompletedFrom") String dateCompletedFrom, @QueryParam("dateCompletedTo") String dateCompletedTo,
           @QueryParam("mp") String mediapackageId,
 //          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
 //          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
@@ -336,14 +340,27 @@ public class WorkflowsEndpoint {
     q.withCreator(creator);
     q.withCurrentOperation(currentOperation);
     try {
-      q.withDateCreated(SolrUtils.parseDate(dateCreated));
-      q.withDateCompleted(SolrUtils.parseDate(dateCompleted));
-    } catch (java.text.ParseException e) {
-      return Response
-              .status(Response.Status.BAD_REQUEST)
-              .entity("Invalid date format")
-              .build();
+      if (StringUtils.isNotEmpty(dateCreatedFrom) && StringUtils.isNotEmpty(dateCreatedTo)) {
+        q.withDateCreatedFrom(new Date(DateTimeSupport.fromUTC(dateCreatedFrom)));
+        q.withDateCreatedTo(new Date(DateTimeSupport.fromUTC(dateCreatedTo)));
+      }
+      if (StringUtils.isNotEmpty(dateCompletedFrom) && StringUtils.isNotEmpty(dateCreatedTo)) {
+        q.withDateCompletedFrom(new Date(DateTimeSupport.fromUTC(dateCompletedFrom)));
+        q.withDateCompletedTo(new Date(DateTimeSupport.fromUTC(dateCompletedTo)));
+      }
+    } catch (Exception e) {
+      logger.warn("Unable to parse date parameter, {}", e);
+      throw new IllegalArgumentException("Unable to parse date parameter");
     }
+//    try {
+//      q.withDateCreated(SolrUtils.parseDate(dateCreated));
+//      q.withDateCompleted(SolrUtils.parseDate(dateCompleted));
+//    } catch (java.text.ParseException e) {
+//      return Response
+//              .status(Response.Status.BAD_REQUEST)
+//              .entity("Invalid date format")
+//              .build();
+//    }
     q.withMediaPackage(mediapackageId);
     // TODO: Make it possible to query for these fields
     //  Probably by posing another query to the event index
@@ -442,8 +459,10 @@ public class WorkflowsEndpoint {
           @RestParameter(name = "description", isRequired = false, description = "Filter results by workflows' description", type = STRING),
           @RestParameter(name = "creator", isRequired = false, description = "Filter results by workflows' creator", type = STRING),
           @RestParameter(name = "op", isRequired = false, description = "Filter results by workflows' current operation.", type = STRING),
-          @RestParameter(name = "dateCreated", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
-          @RestParameter(name = "dateCompleted", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
+          @RestParameter(name = "dateCreatedFrom", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
+          @RestParameter(name = "dateCreatedTo", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
+          @RestParameter(name = "dateCompletedFrom", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
+          @RestParameter(name = "dateCompletedTo", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
           @RestParameter(name = "mp", isRequired = false, description = "Filter results by mediapackage identifier.", type = STRING),
           @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
           @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
@@ -469,17 +488,16 @@ public class WorkflowsEndpoint {
           @QueryParam("template") String template, @QueryParam("title") String title,
           @QueryParam("description") String description, @QueryParam("creator") String creator,
           @QueryParam("op") String currentOperation,
-          @QueryParam("dateCreated") String dateCreated, @QueryParam("dateCompleted") String dateCompleted,
+          @QueryParam("dateCreatedFrom") String dateCreatedFrom, @QueryParam("dateCreatedTo") String dateCreatedTo,
+          @QueryParam("dateCompletedFrom") String dateCompletedFrom, @QueryParam("dateCompletedTo") String dateCompletedTo,
           @QueryParam("mp") String mediapackageId,
-          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
-          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
-          @QueryParam("mpSubject") String mpSubject,
-          @QueryParam("seriesId") String seriesId, @QueryParam("seriesTitle") String seriesTitle,
+          @QueryParam("seriesId") String seriesId,
           @QueryParam("q") String text, @QueryParam("sort") String sort,
           @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
           throws Exception {
     // CHECKSTYLE:ON
-    return getWorkflowsAsXml(state, template, title, description, creator, currentOperation, dateCreated, dateCompleted,
+    return getWorkflowsAsXml(state, template, title, description, creator, currentOperation,
+            dateCreatedFrom, dateCreatedTo, dateCompletedFrom, dateCompletedTo,
             mediapackageId,
 //            mpContributors, mpLanguage, mpLicense, mpTitle, mpSubject,
             seriesId,

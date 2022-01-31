@@ -127,7 +127,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -2448,13 +2447,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
       workflow.setDateCreated(workflowInstance.getDateCreated());
       workflow.setDateCompleted(workflowInstance.getDateCompleted());
       workflow.setMediaPackage(workflowInstance.getMediaPackage().getIdentifier().toString());
-      workflow.setMpContributors(Arrays.asList(workflowInstance.getMediaPackage().getContributors()));
-      workflow.setMpLanguage(workflowInstance.getMediaPackage().getLanguage());
-      workflow.setMpLicense(workflowInstance.getMediaPackage().getLicense());
-      workflow.setMpTitle(workflowInstance.getMediaPackage().getTitle());
-      workflow.setMpSubject(workflowInstance.getMediaPackage().getTitle());
       workflow.setSeriesId(workflowInstance.getMediaPackage().getSeries());
-      workflow.setSeriesTitle(workflowInstance.getMediaPackage().getSeriesTitle());
 
       return Optional.of(workflow);
     };

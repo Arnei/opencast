@@ -56,15 +56,15 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   private String seriesId = null;
   private String seriesTitle = null;
 
-  /**
-   * The list of current operation terms that have been added to this query.
-   */
-  protected List<QueryTerm> currentOperationTerms = new ArrayList<QueryTerm>();
-
-  /**
-   * The list of state terms that have been added to this query.
-   */
-  protected List<QueryTerm> stateTerms = new ArrayList<QueryTerm>();
+//  /**
+//   * The list of current operation terms that have been added to this query.
+//   */
+//  protected List<QueryTerm> currentOperationTerms = new ArrayList<QueryTerm>();
+//
+//  /**
+//   * The list of state terms that have been added to this query.
+//   */
+//  protected List<QueryTerm> stateTerms = new ArrayList<QueryTerm>();
 
   public WorkflowSearchQuery() {
   }
@@ -162,49 +162,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
 //  }
 
   /**
-   * Limit results to workflow instances with active states.
-   *
-   * @return Reference to itself
-   */
-  public WorkflowSearchQuery isActive() {
-    for (WorkflowInstance.WorkflowState state: WorkflowInstance.WorkflowState.values()) {
-      if (!state.isTerminated()) {
-        stateTerms.add(new QueryTerm(state.toString(), true));
-      }
-    }
-    return this;
-  }
-
-//  /** Include a limit for the number of items to return in the result */
-//  public WorkflowSearchQuery withCount(long count) {
-//    this.count = count;
-//    return this;
-//  }
-//
-//  /** Include a paging offset for the items returned. Will delete any {@link #withStartIndex(long)} settings. */
-//  public WorkflowSearchQuery withStartPage(long startPage) {
-//    this.startPage = startPage;
-//    this.startIndex = 0;
-//    return this;
-//  }
-//
-//  /** Include a start index for the items returned. Will delete any {@link #withStartPage(long)} settings. */
-//  public WorkflowSearchQuery withStartIndex(long index) {
-//    this.startIndex = index;
-//    this.startPage = 0;
-//    return this;
-//  }
-//
-//  /** Limit results to workflow instances matching a free text search */
-//  public WorkflowSearchQuery withText(String text) {
-//    if (StringUtils.isNotBlank(text))
-//      this.text = text;
-//    return this;
-//  }
-
-  /**
-   * Limit results to workflow instances in a specific state. This method overrides and will be overridden by future
-   * calls to {@link #withoutState(WorkflowInstance.WorkflowState)}
+   * Limit results to workflow instances in a specific state.
    *
    * @param state
    *          the workflow state
@@ -212,22 +170,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    */
   public WorkflowSearchQuery withState(WorkflowInstance.WorkflowState state) {
     if (state != null) {
-      stateTerms.add(new QueryTerm(state.toString(), true));
-    }
-    return this;
-  }
-
-  /**
-   * Limit results to workflow instances not in a specific state. This method overrides and will be overridden by future
-   * calls to {@link #withState(WorkflowInstance.WorkflowState)}
-   *
-   * @param state
-   *          the workflow state
-   * @return this query
-   */
-  public WorkflowSearchQuery withoutState(WorkflowInstance.WorkflowState state) {
-    if (state != null) {
-      stateTerms.add(new QueryTerm(state.toString(), false));
+      this.state = state;
     }
     return this;
   }
@@ -367,8 +310,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   }
 
   /**
-   * Limit results to workflow instances that are currently handling the specified operation. This method overrides and
-   * will be overridden by future calls to {@link #withoutCurrentOperation(String)}
+   * Limit results to workflow instances that are currently handling the specified operation.
    *
    * @param currentOperation
    *          the current operation
@@ -376,38 +318,39 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    */
   public WorkflowSearchQuery withCurrentOperation(String currentOperation) {
     if (StringUtils.isNotBlank(currentOperation)) {
-      currentOperationTerms.add(new QueryTerm(currentOperation, true));
+//      currentOperationTerms.add(new QueryTerm(currentOperation, true));
+      this.currentOperation = currentOperation;
     }
     return this;
   }
 
-  /**
-   * Limit results to workflow instances to those that are not currently in the specified operation. This method
-   * overrides and will be overridden by future calls to {@link #withCurrentOperation(String)}
-   *
-   * @param currentOperation
-   *          the current operation
-   * @return this query
-   */
-  public WorkflowSearchQuery withoutCurrentOperation(String currentOperation) {
-    if (StringUtils.isNotBlank(currentOperation)) {
-      currentOperationTerms.add(new QueryTerm(currentOperation, false));
-    }
-    return this;
-  }
+//  /**
+//   * Limit results to workflow instances to those that are not currently in the specified operation. This method
+//   * overrides and will be overridden by future calls to {@link #withCurrentOperation(String)}
+//   *
+//   * @param currentOperation
+//   *          the current operation
+//   * @return this query
+//   */
+//  public WorkflowSearchQuery withoutCurrentOperation(String currentOperation) {
+//    if (StringUtils.isNotBlank(currentOperation)) {
+//      currentOperationTerms.add(new QueryTerm(currentOperation, false));
+//    }
+//    return this;
+//  }
 
   public String getCurrentOperation() {
     return currentOperation;
   }
 
-  /**
-   * Returns the list of current operations that workflow instances need to match.
-   *
-   * @return the current operations
-   */
-  public List<QueryTerm> getCurrentOperations() {
-    return currentOperationTerms;
-  }
+//  /**
+//   * Returns the list of current operations that workflow instances need to match.
+//   *
+//   * @return the current operations
+//   */
+//  public List<QueryTerm> getCurrentOperations() {
+//    return currentOperationTerms;
+//  }
 
   /**
    * Limit the results to workflow instances with a creation date starting with <code>dateCreated</code>.
@@ -580,14 +523,14 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
 //    return text;
 //  }
 
-  /**
-   * Returns the list of states that workflow instances need to match.
-   *
-   * @return the states
-   */
-  public List<QueryTerm> getStates() {
-    return stateTerms;
-  }
+//  /**
+//   * Returns the list of states that workflow instances need to match.
+//   *
+//   * @return the states
+//   */
+//  public List<QueryTerm> getStates() {
+//    return stateTerms;
+//  }
 
   /**
    * Returns the media package series identifier that workflow instances need to match.
@@ -668,24 +611,6 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    */
   public String getMediaPackageSubject() {
     return mpSubject;
-  }
-
-  /**
-   * Returns the search terms for operations. A term can either mean to include or exclude the specified operation.
-   *
-   * @return the operation search terms
-   */
-  public List<QueryTerm> getCurrentOperationTerms() {
-    return currentOperationTerms;
-  }
-
-  /**
-   * Returns the search terms for workflow states. A term can either mean to include or exclude the specified state.
-   *
-   * @return the state search terms
-   */
-  public List<QueryTerm> getStateTerms() {
-    return stateTerms;
   }
 
   /**

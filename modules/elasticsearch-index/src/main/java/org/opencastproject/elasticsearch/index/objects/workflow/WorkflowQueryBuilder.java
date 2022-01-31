@@ -72,17 +72,9 @@ public class WorkflowQueryBuilder extends AbstractElasticsearchQueryBuilder<Work
 //      }
 //    }
 
-//    if (query.getCount().length > 0) {
-//      and(WorkflowIndexSchema.COUNT, query.getCount());
-//    }
-//
-//    if (query.getStartPage() != null) {
-//      and(WorkflowIndexSchema.DESCRIPTION, query.getStartPage());
-//    }
-//
-//    if (query.getStartIndex() != null) {
-//      and(WorkflowIndexSchema.SUBJECT, query.getStartIndex());
-//    }
+    if (query.getState() != null) {
+      and(WorkflowIndexSchema.STATE, query.getState());
+    }
 
     if (query.getTemplate() != null) {
       and(WorkflowIndexSchema.TEMPLATE, query.getTemplate());

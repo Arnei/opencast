@@ -296,10 +296,10 @@ public class WorkflowsEndpoint {
   // The number of method parameters is too large for checkstyle's taste, but we need to handle many potential query
   // parameters. CXF provides a bean approach to accepting many parameters, but it is not part of the JAX-RS spec.
   // So for now, we disable checkstyle here.
-  public Response getWorkflowsAsXml(@QueryParam("state") List<String> states,
+  public Response getWorkflowsAsXml(@QueryParam("state") String state,
           @QueryParam("template") String template, @QueryParam("title") String title,
           @QueryParam("description") String description, @QueryParam("creator") String creator,
-          @QueryParam("op") List<String> currentOperations,
+          @QueryParam("op") String currentOperation,
           @QueryParam("dateCreated") String dateCreated, @QueryParam("dateCompleted") String dateCompleted,
           @QueryParam("mp") String mediapackageId,
 //          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
@@ -322,40 +322,19 @@ public class WorkflowsEndpoint {
     if (!StringUtils.isBlank(text)) {
       q.withText(text);
     }
-
-    if (states != null && states.size() > 0) {
-      try {
-        for (String state : states) {
-          if (StringUtils.isBlank(state)) {
-            continue;
-          }
-          if (state.startsWith(NEGATE_PREFIX)) {
-            q.withoutState(WorkflowInstance.WorkflowState.valueOf(state.substring(1).toUpperCase()));
-          } else {
-            q.withState(WorkflowInstance.WorkflowState.valueOf(state.toUpperCase()));
-          }
-        }
-      } catch (IllegalArgumentException e) {
-        logger.debug("Unknown workflow state.", e);
+    try {
+      if (StringUtils.isNotEmpty(state)) {
+        q.withState(WorkflowInstance.WorkflowState.valueOf(state.toUpperCase()));
       }
+    } catch (IllegalArgumentException e) {
+      logger.debug("Unknown workflow state.", e);
+      throw new WebApplicationException(Response.Status.BAD_REQUEST);
     }
-
     q.withTemplate(template);
     q.withTitle(title);
     q.withDescription(description);
     q.withCreator(creator);
-    if (currentOperations != null && currentOperations.size() > 0) {
-      for (String op : currentOperations) {
-        if (StringUtils.isBlank(op)) {
-          continue;
-        }
-        if (op.startsWith(NEGATE_PREFIX)) {
-          q.withoutCurrentOperation(op.substring(1));
-        } else {
-          q.withCurrentOperation(op);
-        }
-      }
-    }
+    q.withCurrentOperation(currentOperation);
     try {
       q.withDateCreated(SolrUtils.parseDate(dateCreated));
       q.withDateCompleted(SolrUtils.parseDate(dateCompleted));
@@ -429,14 +408,14 @@ public class WorkflowsEndpoint {
       for (WorkflowInstance instance : workflowSet.getItems()) {
 
         // Remove all operations but the current one
-        WorkflowOperationInstance currentOperation = instance.getCurrentOperation();
+        WorkflowOperationInstance currentOp = instance.getCurrentOperation();
         List<WorkflowOperationInstance> operations = instance.getOperations();
         operations.clear(); // instance.getOperations() is a copy
-        if (currentOperation != null) {
-          for (String key : currentOperation.getConfigurationKeys()) {
-            currentOperation.removeConfiguration(key);
+        if (currentOp != null) {
+          for (String key : currentOp.getConfigurationKeys()) {
+            currentOp.removeConfiguration(key);
           }
-          operations.add(currentOperation);
+          operations.add(currentOp);
         }
         instance.setOperations(operations);
 
@@ -486,10 +465,10 @@ public class WorkflowsEndpoint {
                   @RestResponse(responseCode = SC_OK, description = "A JSON representation of the workflow set."),
                   @RestResponse(responseCode = SC_BAD_REQUEST, description = "Invalid data was provided in the request.") })
   // CHECKSTYLE:OFF
-  public Response getWorkflowsAsJson(@QueryParam("state") List<String> states,
+  public Response getWorkflowsAsJson(@QueryParam("state") String state,
           @QueryParam("template") String template, @QueryParam("title") String title,
           @QueryParam("description") String description, @QueryParam("creator") String creator,
-          @QueryParam("op") List<String> currentOperations,
+          @QueryParam("op") String currentOperation,
           @QueryParam("dateCreated") String dateCreated, @QueryParam("dateCompleted") String dateCompleted,
           @QueryParam("mp") String mediapackageId,
           @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
@@ -500,13 +479,44 @@ public class WorkflowsEndpoint {
           @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
           throws Exception {
     // CHECKSTYLE:ON
-    return getWorkflowsAsXml(states, template, title, description, creator, currentOperations, dateCreated, dateCompleted,
+    return getWorkflowsAsXml(state, template, title, description, creator, currentOperation, dateCreated, dateCompleted,
             mediapackageId,
 //            mpContributors, mpLanguage, mpLicense, mpTitle, mpSubject,
             seriesId,
 //            seriesTitle,
             text,
             sort, offset, limit, compact);
+  }
+
+  @GET
+  @Produces(MediaType.TEXT_PLAIN)
+  @Path("count")
+  @RestQuery(name = "count", description = "Returns the number of workflow instances in a specific state and operation", returnDescription = "Returns the number of workflow instances in a specific state and operation", restParameters = {
+          @RestParameter(name = "state", isRequired = false, description = "The workflow state", type = STRING),
+          @RestParameter(name = "operation", isRequired = false, description = "The current operation", type = STRING) }, responses = { @RestResponse(responseCode = SC_OK, description = "The number of workflow instances.") })
+  public Response getCount(@QueryParam("state") String state,
+          @QueryParam("operation") String operation) {
+    WorkflowSearchQuery q = new WorkflowSearchQuery(securityService.getOrganization().getId(),
+            securityService.getUser());
+    try {
+      if (StringUtils.isNotEmpty(state)) {
+        q.withState(WorkflowInstance.WorkflowState.valueOf(state.toUpperCase()));
+      }
+    } catch (IllegalArgumentException e) {
+      logger.debug("Unknown workflow state.", e);
+      throw new WebApplicationException(Response.Status.BAD_REQUEST);
+    }
+    q.withCurrentOperation(operation);
+
+    SearchResult<Workflow> results = null;
+    try {
+      results = elasticsearchIndex.getByQuery(q);
+    } catch (SearchIndexException e) {
+      logger.error("The External Search Index was not able to get the events list", e);
+      throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+    }
+
+    return Response.ok(results.getHitCount()).build();
   }
 
   @PUT

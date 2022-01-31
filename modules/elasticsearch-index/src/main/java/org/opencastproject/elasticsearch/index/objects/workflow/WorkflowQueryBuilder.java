@@ -121,32 +121,12 @@ public class WorkflowQueryBuilder extends AbstractElasticsearchQueryBuilder<Work
       and(WorkflowIndexSchema.MEDIAPACKAGE, query.getMediaPackageId());
     }
 
-    if (query.getMediaPackageContributor().length > 0) {
-      and(WorkflowIndexSchema.MP_CONTRIBUTORS, query.getMediaPackageContributor());
-    }
-
-    if (query.getMediaPackageLanguage() != null) {
-      and(WorkflowIndexSchema.MP_LANGUAGE, query.getMediaPackageLanguage());
-    }
-
-    if (query.getMediaPackageLicense() != null) {
-      and(WorkflowIndexSchema.MP_LICENSE, query.getMediaPackageLicense());
-    }
-
-    if (query.getMediaPackageSubject() != null) {
-      and(WorkflowIndexSchema.MP_SUBJECT, query.getMediaPackageSubject());
-    }
-
     if (query.getMediaPackageId() != null) {
       and(WorkflowIndexSchema.MEDIAPACKAGE, query.getMediaPackageId());
     }
 
     if (query.getSeriesId() != null) {
       and(WorkflowIndexSchema.SERIES, query.getSeriesId());
-    }
-
-    if (query.getSeriesTitle() != null) {
-      and(WorkflowIndexSchema.SERIES_TITLE, query.getSeriesTitle());
     }
 
     // Text

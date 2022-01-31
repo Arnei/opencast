@@ -273,13 +273,13 @@ public class WorkflowsEndpoint {
           @RestParameter(name = "dateCreated", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
           @RestParameter(name = "dateCompleted", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
           @RestParameter(name = "mp", isRequired = false, description = "Filter results by mediapackage identifier.", type = STRING),
-          @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
-          @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
-          @RestParameter(name = "mpLicense", isRequired = false, description = "Filter results by mediapackage's license.", type = STRING),
-          @RestParameter(name = "mpTitle", isRequired = false, description = "Filter results by mediapackage's title.", type = STRING),
-          @RestParameter(name = "mpSubject", isRequired = false, description = "Filter results by mediapackage's subject.", type = STRING),
+//          @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
+//          @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
+//          @RestParameter(name = "mpLicense", isRequired = false, description = "Filter results by mediapackage's license.", type = STRING),
+//          @RestParameter(name = "mpTitle", isRequired = false, description = "Filter results by mediapackage's title.", type = STRING),
+//          @RestParameter(name = "mpSubject", isRequired = false, description = "Filter results by mediapackage's subject.", type = STRING),
           @RestParameter(name = "seriesId", isRequired = false, description = "Filter results by series identifier", type = STRING),
-          @RestParameter(name = "seriesTitle", isRequired = false, description = "Filter results by series title", type = STRING),
+//          @RestParameter(name = "seriesTitle", isRequired = false, description = "Filter results by series title", type = STRING),
           @RestParameter(name = "q", isRequired = false, description = "Filter results by free text query", type = STRING),
           @RestParameter(name = "sort", isRequired = false, description = "The sort order.  May include any "
                   + "of the following: DATE_CREATED, TITLE, SERIES_TITLE, SERIES_ID, MEDIA_PACKAGE_ID, WORKFLOW_DEFINITION_ID, CREATOR, "
@@ -302,10 +302,11 @@ public class WorkflowsEndpoint {
           @QueryParam("op") List<String> currentOperations,
           @QueryParam("dateCreated") String dateCreated, @QueryParam("dateCompleted") String dateCompleted,
           @QueryParam("mp") String mediapackageId,
-          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
-          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
-          @QueryParam("mpSubject") String mpSubject,
-          @QueryParam("seriesId") String seriesId, @QueryParam("seriesTitle") String seriesTitle,
+//          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
+//          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
+//          @QueryParam("mpSubject") String mpSubject,
+          @QueryParam("seriesId") String seriesId,
+//          @QueryParam("seriesTitle") String seriesTitle,
           @QueryParam("q") String text, @QueryParam("sort") String sort,
           @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
           throws Exception {
@@ -365,17 +366,19 @@ public class WorkflowsEndpoint {
               .build();
     }
     q.withMediaPackage(mediapackageId);
-    for (String contributor : mpContributors) {
-      if (StringUtils.isBlank(contributor)) {
-        continue;
-      }
-      q.withCurrentOperation(contributor);
-    }
-    q.withMediaPackageLanguage(mpLanguage);
-    q.withMediaPackageTitle(mpTitle);
-    q.withMediaPackageSubject(mpSubject);
+    // TODO: Make it possible to query for these fields
+    //  Probably by posing another query to the event index
+//    for (String contributor : mpContributors) {
+//      if (StringUtils.isBlank(contributor)) {
+//        continue;
+//      }
+//      q.withCurrentOperation(contributor);
+//    }
+//    q.withMediaPackageLanguage(mpLanguage);
+//    q.withMediaPackageTitle(mpTitle);
+//    q.withMediaPackageSubject(mpSubject);
     q.withSeriesId(seriesId);
-    q.withSeriesTitle(seriesTitle);
+//    q.withSeriesTitle(seriesTitle);
 
     if (optSort.isSome()) {
       Set<SortCriterion> sortCriteria = RestUtils.parseSortQueryParameter(optSort.get());
@@ -394,13 +397,7 @@ public class WorkflowsEndpoint {
           case WorkflowIndexSchema.DATE_CREATED:
           case WorkflowIndexSchema.DATE_COMPLETED:
           case WorkflowIndexSchema.MEDIAPACKAGE:
-          case WorkflowIndexSchema.MP_CONTRIBUTORS:
-          case WorkflowIndexSchema.MP_LANGUAGE:
-          case WorkflowIndexSchema.MP_LICENSE:
-          case WorkflowIndexSchema.MP_TITLE:
-          case WorkflowIndexSchema.MP_SUBJECT:
           case WorkflowIndexSchema.SERIES:
-          case WorkflowIndexSchema.SERIES_TITLE:
             q.sortBy(criterion.getFieldName(), criterion.getOrder());
             break;
           default:
@@ -504,7 +501,11 @@ public class WorkflowsEndpoint {
           throws Exception {
     // CHECKSTYLE:ON
     return getWorkflowsAsXml(states, template, title, description, creator, currentOperations, dateCreated, dateCompleted,
-            mediapackageId, mpContributors, mpLanguage, mpLicense, mpTitle, mpSubject, seriesId, seriesTitle, text,
+            mediapackageId,
+//            mpContributors, mpLanguage, mpLicense, mpTitle, mpSubject,
+            seriesId,
+//            seriesTitle,
+            text,
             sort, offset, limit, compact);
   }
 

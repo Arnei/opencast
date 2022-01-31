@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.util.Date;
-import java.util.List;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -41,7 +40,6 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
@@ -50,8 +48,7 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlType(name = "workflow", namespace = IndexObject.INDEX_XML_NAMESPACE, propOrder = { "identifier", "state",
         "template", "title", "description", "parentId", "creator", "organizationId", "currentOperation", "dateCreated",
-        "dateCompleted", "mediaPackage", "mpContributors", "mpLanguage", "mpLicense", "mpTitle", "mpSubject",
-        "seriesId", "seriesTitle"})
+        "dateCompleted", "mediaPackage", "seriesId"})
 @XmlRootElement(name = "workflow", namespace = IndexObject.INDEX_XML_NAMESPACE)
 @XmlAccessorType(XmlAccessType.NONE)
 public class Workflow implements IndexObject {
@@ -94,37 +91,12 @@ public class Workflow implements IndexObject {
 
   @XmlElement
   protected Date dateCompleted = null;
-//  protected long count;
-//  protected long startPage;
-//  protected long startIndex;
-//  protected String text;
-//  protected String workflowDefinitionId;
+
   @XmlElement
   protected String mediaPackage;
 
-  @XmlElementWrapper(name = "contributors")
-  @XmlElement(name = "contributor")
-  private List<String> mpContributors = null;
-
-  @XmlElement
-  protected String mpLanguage;
-
-  @XmlElement
-  protected String mpLicense;
-
-  @XmlElement
-  protected String mpTitle;
-
-  @XmlElement
-  protected String mpSubject;
-
   @XmlElement
   protected String seriesId;
-
-  @XmlElement
-  protected String seriesTitle;
-  //  protected WorkflowSearchQuery.Sort sort = Sort.DATE_CREATED;
-  //  protected boolean sortAscending = true;
 
   /** Context for serializing and deserializing */
   private static JAXBContext context = null;
@@ -182,32 +154,8 @@ public class Workflow implements IndexObject {
     return mediaPackage;
   }
 
-  public List<String> getMpContributors() {
-    return mpContributors;
-  }
-
-  public String getMpLanguage() {
-    return mpLanguage;
-  }
-
-  public String getMpLicense() {
-    return mpLicense;
-  }
-
-  public String getMpTitle() {
-    return mpTitle;
-  }
-
-  public String getMpSubject() {
-    return mpSubject;
-  }
-
   public String getSeriesId() {
     return seriesId;
-  }
-
-  public String getSeriesTitle() {
-    return seriesTitle;
   }
 
   public void setIdentifier(long identifier) {
@@ -258,32 +206,8 @@ public class Workflow implements IndexObject {
     this.mediaPackage = mediaPackage;
   }
 
-  public void setMpContributors(List<String> mpContributors) {
-    this.mpContributors = mpContributors;
-  }
-
-  public void setMpLanguage(String mpLanguage) {
-    this.mpLanguage = mpLanguage;
-  }
-
-  public void setMpLicense(String mpLicense) {
-    this.mpLicense = mpLicense;
-  }
-
-  public void setMpTitle(String mpTitle) {
-    this.mpTitle = mpTitle;
-  }
-
-  public void setMpSubject(String mpSubject) {
-    this.mpSubject = mpSubject;
-  }
-
   public void setSeriesId(String seriesId) {
     this.seriesId = seriesId;
-  }
-
-  public void setSeriesTitle(String seriesTitle) {
-    this.seriesTitle = seriesTitle;
   }
 
   /**

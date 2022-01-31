@@ -110,22 +110,6 @@ public final class WorkflowIndexUtils {
     if (StringUtils.trimToNull(workflow.getMediaPackage()) != null) {
       metadata.addField(WorkflowIndexSchema.MEDIAPACKAGE, workflow.getMediaPackage(), true);
     }
-    if (workflow.getMpContributors() != null) {
-      metadata.addField(WorkflowIndexSchema.MP_CONTRIBUTORS, workflow.getMpContributors().toArray(), true);
-    }
-    if (StringUtils.trimToNull(workflow.getMpLanguage()) != null) {
-      metadata.addField(WorkflowIndexSchema.MP_LANGUAGE, workflow.getMpLanguage(), true);
-    }
-    if (StringUtils.trimToNull(workflow.getMpLicense()) != null) {
-      metadata.addField(WorkflowIndexSchema.MP_LICENSE, workflow.getMpLicense(), true);
-    }
-    if (StringUtils.trimToNull(workflow.getMpTitle()) != null) {
-      metadata.addField(WorkflowIndexSchema.MP_TITLE, workflow.getMpTitle(), true);
-    }
-    if (StringUtils.trimToNull(workflow.getMpSubject()) != null) {
-      metadata.addField(WorkflowIndexSchema.MP_SUBJECT, workflow.getMpSubject(), true);
-    }
-
 //    if (StringUtils.trimToNull(workflow.getAccessPolicy()) != null) {
 //      metadata.addField(WorkflowIndexSchema.ACCESS_POLICY, workflow.getAccessPolicy(), false);
 //      addAuthorization(metadata, workflow.getAccessPolicy());
@@ -133,9 +117,6 @@ public final class WorkflowIndexUtils {
 
     if (StringUtils.trimToNull(workflow.getSeriesId()) != null) {
       metadata.addField(WorkflowIndexSchema.SERIES, workflow.getSeriesId(), false);
-    }
-    if (StringUtils.trimToNull(workflow.getSeriesTitle()) != null) {
-      metadata.addField(WorkflowIndexSchema.SERIES_TITLE, workflow.getSeriesTitle(), false);
     }
     return metadata;
   }

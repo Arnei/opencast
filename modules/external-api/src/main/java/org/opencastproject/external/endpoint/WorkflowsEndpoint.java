@@ -284,9 +284,9 @@ public class WorkflowsEndpoint {
           @RestParameter(name = "seriesId", isRequired = false, description = "Filter results by series identifier", type = STRING),
 //          @RestParameter(name = "seriesTitle", isRequired = false, description = "Filter results by series title", type = STRING),
           @RestParameter(name = "q", isRequired = false, description = "Filter results by free text query", type = STRING),
-          @RestParameter(name = "sort", isRequired = false, description = "The sort order.  May include any "
-                  + "of the following: DATE_CREATED, TITLE, SERIES_TITLE, SERIES_ID, MEDIA_PACKAGE_ID, WORKFLOW_DEFINITION_ID, CREATOR, "
-                  + "CONTRIBUTOR, LANGUAGE, LICENSE, SUBJECT.  Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).", type = STRING),
+          @RestParameter(name = "sort", isRequired = false, description = "Sort the results based upon a list of comma seperated sorting criteria."
+                  + "In the comma seperated list each type of sorting is specified as a pair such as: :ASC or :DESC."
+                  + "Adding the suffix ASC or DESC sets the order as ascending or descending order and is mandatory.", type = STRING),
           @RestParameter(name = "offset", isRequired = false, description = "Return results after this offset", type = INTEGER),
           @RestParameter(name = "limit", isRequired = false, description = "The number of results to return. Default is " + DEFAULT_LIMIT, type = INTEGER),
           @RestParameter(name = "compact", isRequired = false, description = "Whether to return a compact version of "
@@ -422,6 +422,7 @@ public class WorkflowsEndpoint {
 
     // Marshalling of a full workflow takes a long time. Therefore, we strip everything that's not needed.
     if (compact) {
+      WorkflowSetImpl compactSet = new WorkflowSetImpl();
       for (WorkflowInstance instance : workflowSet.getItems()) {
 
         // Remove all operations but the current one
@@ -443,7 +444,11 @@ public class WorkflowsEndpoint {
           mediaPackage.remove(element);
         }
         mediaPackage.setDuration(duration);
+        instance.setMediaPackage(mediaPackage);
+
+        compactSet.addItem(instance);
       }
+      return Response.ok(compactSet).build();
     }
 
     return Response.ok(workflowSet).build();
@@ -472,9 +477,9 @@ public class WorkflowsEndpoint {
           @RestParameter(name = "seriesId", isRequired = false, description = "Filter results by series identifier", type = STRING),
           @RestParameter(name = "seriesTitle", isRequired = false, description = "Filter results by series title", type = STRING),
           @RestParameter(name = "q", isRequired = false, description = "Filter results by free text query", type = STRING),
-          @RestParameter(name = "sort", isRequired = false, description = "The sort order.  May include any "
-                  + "of the following: DATE_CREATED, TITLE, SERIES_TITLE, SERIES_ID, MEDIA_PACKAGE_ID, WORKFLOW_DEFINITION_ID, CREATOR, "
-                  + "CONTRIBUTOR, LANGUAGE, LICENSE, SUBJECT.  Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).", type = STRING),
+          @RestParameter(name = "sort", isRequired = false, description = "Sort the results based upon a list of comma seperated sorting criteria."
+                  + "In the comma seperated list each type of sorting is specified as a pair such as: :ASC or :DESC."
+                  + "Adding the suffix ASC or DESC sets the order as ascending or descending order and is mandatory.", type = STRING),
           @RestParameter(name = "offset", isRequired = false, description = "Return results after this offset", type = INTEGER),
           @RestParameter(name = "limit", isRequired = false, description = "The number of results to return. Default is " + DEFAULT_LIMIT, type = INTEGER),
           @RestParameter(name = "compact", isRequired = false, description = "Whether to return a compact version of "

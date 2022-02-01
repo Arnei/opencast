@@ -48,7 +48,7 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlType(name = "workflow", namespace = IndexObject.INDEX_XML_NAMESPACE, propOrder = { "identifier", "state",
         "template", "title", "description", "parentId", "creator", "organizationId", "currentOperation", "dateCreated",
-        "dateCompleted", "mediaPackage", "seriesId"})
+        "dateCompleted", "mediaPackage", "seriesId", "accessPolicy"})
 @XmlRootElement(name = "workflow", namespace = IndexObject.INDEX_XML_NAMESPACE)
 @XmlAccessorType(XmlAccessType.NONE)
 public class Workflow implements IndexObject {
@@ -97,6 +97,10 @@ public class Workflow implements IndexObject {
 
   @XmlElement
   protected String seriesId;
+
+  /** The access policy of the event of the workflow*/
+  @XmlElement(name = "access_policy")
+  private String accessPolicy = null;
 
   /** Context for serializing and deserializing */
   private static JAXBContext context = null;
@@ -158,6 +162,10 @@ public class Workflow implements IndexObject {
     return seriesId;
   }
 
+  public String getAccessPolicy() {
+    return accessPolicy;
+  }
+
   public void setIdentifier(long identifier) {
     this.identifier = identifier;
   }
@@ -208,6 +216,10 @@ public class Workflow implements IndexObject {
 
   public void setSeriesId(String seriesId) {
     this.seriesId = seriesId;
+  }
+
+  public void setAccessPolicy(String accessPolicy) {
+    this.accessPolicy = accessPolicy;
   }
 
   /**

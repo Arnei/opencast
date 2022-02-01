@@ -46,5 +46,14 @@
     "text": { "type" : "text", "analyzer": "lowercasespaceanalyzer" },
     "text_fuzzy": { "type" : "text", "analyzer": "lowercasespaceanalyzer" }
 
-  }
+  },
+  "dynamic_templates" : [
+    {
+      "permission_template" : {
+        "match" : "acl_permission_*",
+        "match_mapping_type" : "string",
+        "mapping" : { "type" : "keyword" }
+      }
+    }
+  ]
 }

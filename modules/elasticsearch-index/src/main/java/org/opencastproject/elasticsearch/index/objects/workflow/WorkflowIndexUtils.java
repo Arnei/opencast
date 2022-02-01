@@ -23,6 +23,10 @@ package org.opencastproject.elasticsearch.index.objects.workflow;
 
 import org.opencastproject.elasticsearch.api.SearchMetadata;
 import org.opencastproject.elasticsearch.impl.SearchMetadataCollection;
+import org.opencastproject.security.api.AccessControlEntry;
+import org.opencastproject.security.api.AccessControlList;
+import org.opencastproject.security.api.AccessControlParser;
+import org.opencastproject.security.api.Permissions;
 import org.opencastproject.util.DateTimeSupport;
 
 import org.apache.commons.io.IOUtils;
@@ -32,6 +36,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.xml.bind.Unmarshaller;
@@ -110,10 +117,10 @@ public final class WorkflowIndexUtils {
     if (StringUtils.trimToNull(workflow.getMediaPackage()) != null) {
       metadata.addField(WorkflowIndexSchema.MEDIAPACKAGE, workflow.getMediaPackage(), true);
     }
-//    if (StringUtils.trimToNull(workflow.getAccessPolicy()) != null) {
-//      metadata.addField(WorkflowIndexSchema.ACCESS_POLICY, workflow.getAccessPolicy(), false);
-//      addAuthorization(metadata, workflow.getAccessPolicy());
-//    }
+    if (StringUtils.trimToNull(workflow.getAccessPolicy()) != null) {
+      metadata.addField(WorkflowIndexSchema.ACCESS_POLICY, workflow.getAccessPolicy(), false);
+      addAuthorization(metadata, workflow.getAccessPolicy());
+    }
 
     if (StringUtils.trimToNull(workflow.getSeriesId()) != null) {
       metadata.addField(WorkflowIndexSchema.SERIES, workflow.getSeriesId(), false);
@@ -121,40 +128,40 @@ public final class WorkflowIndexUtils {
     return metadata;
   }
 
-//  /**
-//   * Adds authorization fields to the input document.
-//   *
-//   * @param doc
-//   *          the input document
-//   * @param aclString
-//   *          the access control list string
-//   */
-//  private static void addAuthorization(SearchMetadataCollection doc, String aclString) {
-//    Map<String, List<String>> permissions = new HashMap<String, List<String>>();
-//
-//    // Define containers for common permissions
-//    for (Permissions.Action action : Permissions.Action.values()) {
-//      permissions.put(action.toString(), new ArrayList<String>());
-//    }
-//
-//    AccessControlList acl = AccessControlParser.parseAclSilent(aclString);
-//    for (AccessControlEntry entry : acl.getEntries()) {
-//      if (!entry.isAllow()) {
-//        logger.info("Workflow index does not support denial via ACL, ignoring {}", entry);
-//        continue;
-//      }
-//      List<String> actionPermissions = permissions.get(entry.getAction());
-//      if (actionPermissions == null) {
-//        actionPermissions = new ArrayList<String>();
-//        permissions.put(entry.getAction(), actionPermissions);
-//      }
-//      actionPermissions.add(entry.getRole());
-//    }
-//
-//    // Write the permissions to the input document
-//    for (Map.Entry<String, List<String>> entry : permissions.entrySet()) {
-//      String fieldName = WorkflowIndexSchema.ACL_PERMISSION_PREFIX.concat(entry.getKey());
-//      doc.addField(fieldName, entry.getValue(), false);
-//    }
-//  }
+  /**
+   * Adds authorization fields to the input document.
+   *
+   * @param doc
+   *          the input document
+   * @param aclString
+   *          the access control list string
+   */
+  private static void addAuthorization(SearchMetadataCollection doc, String aclString) {
+    Map<String, List<String>> permissions = new HashMap<String, List<String>>();
+
+    // Define containers for common permissions
+    for (Permissions.Action action : Permissions.Action.values()) {
+      permissions.put(action.toString(), new ArrayList<String>());
+    }
+
+    AccessControlList acl = AccessControlParser.parseAclSilent(aclString);
+    for (AccessControlEntry entry : acl.getEntries()) {
+      if (!entry.isAllow()) {
+        logger.info("Workflow index does not support denial via ACL, ignoring {}", entry);
+        continue;
+      }
+      List<String> actionPermissions = permissions.get(entry.getAction());
+      if (actionPermissions == null) {
+        actionPermissions = new ArrayList<String>();
+        permissions.put(entry.getAction(), actionPermissions);
+      }
+      actionPermissions.add(entry.getRole());
+    }
+
+    // Write the permissions to the input document
+    for (Map.Entry<String, List<String>> entry : permissions.entrySet()) {
+      String fieldName = WorkflowIndexSchema.ACL_PERMISSION_PREFIX.concat(entry.getKey());
+      doc.addField(fieldName, entry.getValue(), false);
+    }
+  }
 }

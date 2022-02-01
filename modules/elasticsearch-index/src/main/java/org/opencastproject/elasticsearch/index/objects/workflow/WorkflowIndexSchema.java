@@ -67,4 +67,10 @@ public interface WorkflowIndexSchema extends IndexSchema {
 
   /** The publisher of the workflow */
   String SERIES = "series";
+
+  /** The access policy */
+  String ACCESS_POLICY = "access_policy";
+
+  /** The key in the input documents representing the prefix to an access control entry */
+  String ACL_PERMISSION_PREFIX = "acl_permission_";
 }

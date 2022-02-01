@@ -22,6 +22,7 @@
 package org.opencastproject.elasticsearch.index.objects.workflow;
 
 import org.opencastproject.elasticsearch.impl.AbstractSearchQuery;
+import org.opencastproject.security.api.Permissions;
 import org.opencastproject.security.api.User;
 import org.opencastproject.util.requests.SortCriterion;
 import org.opencastproject.workflow.api.WorkflowInstance;
@@ -30,13 +31,15 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class WorkflowSearchQuery extends AbstractSearchQuery {
 
   protected List<String> identifiers = new ArrayList<String>();
   private User user = null;
-//  private Set<String> actions = new HashSet<String>();
+  private Set<String> actions = new HashSet<String>();
   private WorkflowInstance.WorkflowState state = null;
   private String template = null;
   private String title = null;
@@ -57,8 +60,9 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   private String mpSubject = null;
   private String seriesId = null;
   private String seriesTitle = null;
+  private String accessPolicy = null;
 
-//  /**
+  //  /**
 //   * The list of current operation terms that have been added to this query.
 //   */
 //  protected List<QueryTerm> currentOperationTerms = new ArrayList<QueryTerm>();
@@ -86,7 +90,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
 
     this.organizationId = organization;
     this.user = user;
-//    this.actions.add(Permissions.Action.READ.toString());
+    this.actions.add(Permissions.Action.READ.toString());
     if (!user.getOrganization().getId().equals(organization)) {
       throw new IllegalStateException("User's organization must match search organization");
     }
@@ -127,41 +131,41 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
     return user;
   }
 
-//  /**
-//   * Filter the workflow without any action checked.
-//   *
-//   * @return the enhanced search query
-//   */
-//  public WorkflowSearchQuery withoutActions() {
-//    this.actions.clear();
-//    return this;
-//  }
-//
-//  /**
-//   * Filter the workflow with the given action.
-//   * <p>
-//   * Note that this method may be called multiple times to support filtering by multiple actions.
-//   *
-//   * @param action
-//   *          the action
-//   * @return the enhanced search query
-//   */
-//  public WorkflowSearchQuery withAction(Permissions.Action action) {
-//    if (action == null) {
-//      throw new IllegalArgumentException("Action cannot be null");
-//    }
-//    this.actions.add(action.toString());
-//    return this;
-//  }
-//
-//  /**
-//   * Returns the list of actions or an empty array if no actions have been specified.
-//   *
-//   * @return the actions
-//   */
-//  public String[] getActions() {
-//    return actions.toArray(new String[actions.size()]);
-//  }
+  /**
+   * Filter the workflow without any action checked.
+   *
+   * @return the enhanced search query
+   */
+  public WorkflowSearchQuery withoutActions() {
+    this.actions.clear();
+    return this;
+  }
+
+  /**
+   * Filter the workflow with the given action.
+   * <p>
+   * Note that this method may be called multiple times to support filtering by multiple actions.
+   *
+   * @param action
+   *          the action
+   * @return the enhanced search query
+   */
+  public WorkflowSearchQuery withAction(Permissions.Action action) {
+    if (action == null) {
+      throw new IllegalArgumentException("Action cannot be null");
+    }
+    this.actions.add(action.toString());
+    return this;
+  }
+
+  /**
+   * Returns the list of actions or an empty array if no actions have been specified.
+   *
+   * @return the actions
+   */
+  public String[] getActions() {
+    return actions.toArray(new String[actions.size()]);
+  }
 
   /**
    * Limit results to workflow instances in a specific state.

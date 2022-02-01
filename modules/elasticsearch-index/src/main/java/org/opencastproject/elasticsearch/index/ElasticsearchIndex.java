@@ -257,7 +257,7 @@ public class ElasticsearchIndex extends AbstractElasticsearchIndex {
    */
   public Optional<Workflow> getWorkflow(String workflowId, String organization, User user)
           throws SearchIndexException {
-    WorkflowSearchQuery query = new WorkflowSearchQuery(organization, user).withIdentifier(workflowId);
+    WorkflowSearchQuery query = new WorkflowSearchQuery(organization, user).withoutActions().withIdentifier(workflowId);
     SearchResult<Workflow> searchResult = getByQuery(query);
     if (searchResult.getDocumentCount() == 0) {
       return Optional.empty();

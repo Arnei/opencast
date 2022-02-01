@@ -21,9 +21,13 @@
 
 package org.opencastproject.elasticsearch.index.objects.workflow;
 
+import static org.opencastproject.security.api.SecurityConstants.GLOBAL_ADMIN_ROLE;
+
 import org.opencastproject.elasticsearch.api.SearchTerms;
 import org.opencastproject.elasticsearch.impl.AbstractElasticsearchQueryBuilder;
 import org.opencastproject.elasticsearch.impl.IndexSchema;
+import org.opencastproject.security.api.Role;
+import org.opencastproject.security.api.User;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,17 +64,17 @@ public class WorkflowQueryBuilder extends AbstractElasticsearchQueryBuilder<Work
       and(WorkflowIndexSchema.ID, query.getIdentifiers());
     }
 
-//    // Action
-//    if (query.getActions() != null && query.getActions().length > 0) {
-//      User user = query.getUser();
-//      if (!user.hasRole(GLOBAL_ADMIN_ROLE) && !user.hasRole(user.getOrganization().getAdminRole())) {
-//        for (Role role : user.getRoles()) {
-//          for (String action : query.getActions()) {
-//            and(WorkflowIndexSchema.ACL_PERMISSION_PREFIX.concat(action), role.getName());
-//          }
-//        }
-//      }
-//    }
+    // Action
+    if (query.getActions() != null && query.getActions().length > 0) {
+      User user = query.getUser();
+      if (!user.hasRole(GLOBAL_ADMIN_ROLE) && !user.hasRole(user.getOrganization().getAdminRole())) {
+        for (Role role : user.getRoles()) {
+          for (String action : query.getActions()) {
+            and(WorkflowIndexSchema.ACL_PERMISSION_PREFIX.concat(action), role.getName());
+          }
+        }
+      }
+    }
 
     if (query.getState() != null) {
       and(WorkflowIndexSchema.STATE, query.getState());

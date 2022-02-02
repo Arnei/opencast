@@ -332,7 +332,7 @@ public class WorkflowServiceImplTest {
 
     // Create a child workflow with a wrong parent id
     try {
-      service.start(workingDefinition, mediapackage1, new Long(1876234678), Collections.emptyMap());
+      service.start(workingDefinition, mediapackage1, 1876234678L, Collections.emptyMap());
       Assert.fail("Workflows should not be started with bad parent IDs");
     } catch (NotFoundException e) {
     } // the exception is expected

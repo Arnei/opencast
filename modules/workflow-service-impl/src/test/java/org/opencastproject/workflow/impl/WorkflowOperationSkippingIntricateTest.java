@@ -31,16 +31,7 @@ import static org.opencastproject.workflow.impl.SecurityServiceStub.DEFAULT_ORG_
 import org.opencastproject.assetmanager.api.AssetManager;
 import org.opencastproject.assetmanager.api.Property;
 import org.opencastproject.assetmanager.api.PropertyId;
-import org.opencastproject.assetmanager.api.Snapshot;
 import org.opencastproject.assetmanager.api.Value;
-import org.opencastproject.assetmanager.api.Version;
-import org.opencastproject.assetmanager.api.query.AQueryBuilder;
-import org.opencastproject.assetmanager.api.query.ARecord;
-import org.opencastproject.assetmanager.api.query.AResult;
-import org.opencastproject.assetmanager.api.query.ASelectQuery;
-import org.opencastproject.assetmanager.api.query.Predicate;
-import org.opencastproject.assetmanager.api.query.Target;
-import org.opencastproject.assetmanager.api.query.VersionField;
 import org.opencastproject.elasticsearch.api.SearchResult;
 import org.opencastproject.elasticsearch.index.ElasticsearchIndex;
 import org.opencastproject.elasticsearch.index.objects.event.EventSearchQuery;
@@ -75,17 +66,14 @@ import org.opencastproject.workflow.api.WorkflowStateListener;
 import org.opencastproject.workflow.impl.WorkflowServiceImpl.HandlerRegistration;
 import org.opencastproject.workspace.api.Workspace;
 
-import com.entwinemedia.fn.Stream;
 import com.entwinemedia.fn.data.Opt;
 
-import org.apache.commons.io.FileUtils;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
@@ -107,19 +95,8 @@ public final class WorkflowOperationSkippingIntricateTest {
 
   private AccessControlList acl = new AccessControlList();
 
-  private static String getStorageRoot() {
-    return "." + File.separator + "target" + File.separator + System.currentTimeMillis();
-  }
-
   @Before
   public void setUp() throws Exception {
-    File sRoot = new File(getStorageRoot());
-    try {
-      FileUtils.forceMkdir(sRoot);
-    } catch (IOException e) {
-      Assert.fail(e.getMessage());
-    }
-
     // create operation handlers for our workflows
     SucceedingWorkflowOperationHandler succeedingOperationHandler = new SucceedingWorkflowOperationHandler(
             mediapackage1);
@@ -191,34 +168,6 @@ public final class WorkflowOperationSkippingIntricateTest {
       EasyMock.replay(assetManager);
       service.setAssetManager(assetManager);
     }
-
-    AssetManager assetManager = EasyMock.createNiceMock(AssetManager.class);
-    Version version = EasyMock.createNiceMock(Version.class);
-    Snapshot snapshot = EasyMock.createNiceMock(Snapshot.class);
-    // Just needs to return a mp, not checking which one
-    EasyMock.expect(snapshot.getMediaPackage()).andReturn(mediapackage1).anyTimes();
-    EasyMock.expect(snapshot.getOrganizationId()).andReturn(securityService.getOrganization().getId()).anyTimes();
-    EasyMock.expect(snapshot.getVersion()).andReturn(version).anyTimes();
-    ARecord aRec = EasyMock.createNiceMock(ARecord.class);
-    EasyMock.expect(aRec.getSnapshot()).andReturn(Opt.some(snapshot)).anyTimes();
-    Stream<ARecord> recStream = Stream.mk(aRec);
-    Predicate p = EasyMock.createNiceMock(Predicate.class);
-    EasyMock.expect(p.and(p)).andReturn(p).anyTimes();
-    AResult r = EasyMock.createNiceMock(AResult.class);
-    EasyMock.expect(r.getRecords()).andReturn(recStream).anyTimes();
-    Target t = EasyMock.createNiceMock(Target.class);
-    ASelectQuery selectQuery = EasyMock.createNiceMock(ASelectQuery.class);
-    EasyMock.expect(selectQuery.where(EasyMock.anyObject(Predicate.class))).andReturn(selectQuery).anyTimes();
-    EasyMock.expect(selectQuery.run()).andReturn(r).anyTimes();
-    AQueryBuilder query = EasyMock.createNiceMock(AQueryBuilder.class);
-    EasyMock.expect(query.snapshot()).andReturn(t).anyTimes();
-    EasyMock.expect(query.mediaPackageId(EasyMock.anyObject(String.class))).andReturn(p).anyTimes();
-    EasyMock.expect(query.select(EasyMock.anyObject(Target.class))).andReturn(selectQuery).anyTimes();
-    VersionField v = EasyMock.createNiceMock(VersionField.class);
-    EasyMock.expect(v.isLatest()).andReturn(p).anyTimes();
-    EasyMock.expect(query.version()).andReturn(v).anyTimes();
-    EasyMock.expect(assetManager.createQuery()).andReturn(query).anyTimes();
-    EasyMock.replay(assetManager, version, snapshot, p, r, t, selectQuery, query, v, aRec);
 
     WorkflowServiceDatabaseImpl workflowDb = new WorkflowServiceDatabaseImpl();
     workflowDb.setEntityManagerFactory(newTestEntityManagerFactory(WorkflowServiceDatabaseImpl.PERSISTENCE_UNIT));

@@ -173,8 +173,6 @@
               org.opencastproject.elasticsearch.index.objects.theme,
               org.opencastproject.elasticsearch.index.objects.workflow
             </Export-Package>
-            <Service-Component>
-            </Service-Component>
           </instructions>
         </configuration>
       </plugin>

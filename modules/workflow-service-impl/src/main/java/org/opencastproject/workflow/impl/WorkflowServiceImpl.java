@@ -22,7 +22,6 @@
 package org.opencastproject.workflow.impl;
 
 import static org.opencastproject.security.api.SecurityConstants.GLOBAL_ADMIN_ROLE;
-import static org.opencastproject.util.data.Collections.mkString;
 import static org.opencastproject.workflow.api.WorkflowInstance.WorkflowState.FAILED;
 import static org.opencastproject.workflow.api.WorkflowInstance.WorkflowState.FAILING;
 import static org.opencastproject.workflow.api.WorkflowInstance.WorkflowState.INSTANTIATED;
@@ -289,7 +288,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     final User currentUser = securityService.getUser();
     final Organization currentOrganization = securityService.getOrganization();
     for (final WorkflowListener listener : listeners) {
-      if (oldWorkflowInstance == null || oldWorkflowInstance.getState() != newWorkflowInstance.getState()) {
+      if (oldWorkflowInstance == null || !oldWorkflowInstance.getState().equals(newWorkflowInstance.getState())) {
         Runnable runnable = () -> {
           try {
             securityService.setUser(currentUser);
@@ -514,7 +513,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
       if (workflowDefinition == null)
         throw new IllegalArgumentException("workflow definition must not be null");
       for (List<String> errors : MediaPackageSupport.sanityCheck(sourceMediaPackage)) {
-        throw new IllegalArgumentException("Insane media package cannot be processed: " + mkString(errors, "; "));
+        throw new IllegalArgumentException("Insane media package cannot be processed: " + String.join("; ", errors));
       }
       if (parentWorkflowId != null) {
         try {
@@ -1119,6 +1118,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     try {
       workflowJob = serviceRegistry.getJob(workflowInstanceId);
       workflowJob.setStatus(Status.RUNNING);
+      persistence.updateInDatabase(workflowInstance);
       serviceRegistry.updateJob(workflowJob);
 
       Job operationJob = serviceRegistry.getJob(operationJobId);

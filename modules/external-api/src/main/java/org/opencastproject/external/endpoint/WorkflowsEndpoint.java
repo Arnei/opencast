@@ -42,6 +42,7 @@ import org.opencastproject.elasticsearch.api.SearchResult;
 import org.opencastproject.elasticsearch.api.SearchResultItem;
 import org.opencastproject.elasticsearch.index.ElasticsearchIndex;
 import org.opencastproject.elasticsearch.index.objects.event.Event;
+import org.opencastproject.elasticsearch.index.objects.event.EventSearchQuery;
 import org.opencastproject.elasticsearch.index.objects.workflow.Workflow;
 import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowIndexSchema;
 import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowSearchQuery;
@@ -293,13 +294,13 @@ public class WorkflowsEndpoint {
           @RestParameter(name = "dateCompletedFrom", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
           @RestParameter(name = "dateCompletedTo", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
           @RestParameter(name = "mp", isRequired = false, description = "Filter results by mediapackage identifier.", type = STRING),
-//          @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
-//          @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
-//          @RestParameter(name = "mpLicense", isRequired = false, description = "Filter results by mediapackage's license.", type = STRING),
-//          @RestParameter(name = "mpTitle", isRequired = false, description = "Filter results by mediapackage's title.", type = STRING),
-//          @RestParameter(name = "mpSubject", isRequired = false, description = "Filter results by mediapackage's subject.", type = STRING),
+          @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
+          @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
+          @RestParameter(name = "mpLicense", isRequired = false, description = "Filter results by mediapackage's license.", type = STRING),
+          @RestParameter(name = "mpTitle", isRequired = false, description = "Filter results by mediapackage's title.", type = STRING),
+          @RestParameter(name = "mpSubject", isRequired = false, description = "Filter results by mediapackage's subject.", type = STRING),
           @RestParameter(name = "seriesId", isRequired = false, description = "Filter results by series identifier", type = STRING),
-//          @RestParameter(name = "seriesTitle", isRequired = false, description = "Filter results by series title", type = STRING),
+          @RestParameter(name = "seriesTitle", isRequired = false, description = "Filter results by series title", type = STRING),
           @RestParameter(name = "q", isRequired = false, description = "Filter results by free text query", type = STRING),
           @RestParameter(name = "sort", isRequired = false, description = "Sort the results based upon a list of comma seperated sorting criteria."
                   + "In the comma seperated list each type of sorting is specified as a pair such as: :ASC or :DESC."
@@ -323,16 +324,60 @@ public class WorkflowsEndpoint {
           @QueryParam("dateCreatedFrom") String dateCreatedFrom, @QueryParam("dateCreatedTo") String dateCreatedTo,
           @QueryParam("dateCompletedFrom") String dateCompletedFrom, @QueryParam("dateCompletedTo") String dateCompletedTo,
           @QueryParam("mp") String mediapackageId,
-//          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
-//          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
-//          @QueryParam("mpSubject") String mpSubject,
+          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
+          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
+          @QueryParam("mpSubject") String mpSubject,
           @QueryParam("seriesId") String seriesId,
-//          @QueryParam("seriesTitle") String seriesTitle,
+          @QueryParam("seriesTitle") String seriesTitle,
           @QueryParam("q") String text, @QueryParam("sort") String sort,
           @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
           throws Exception {
     // CHECKSTYLE:ON
     Option<String> optSort = Option.option(trimToNull(sort));
+
+    // If there were any event parameters specified, get events before workflows
+    // The ids of the events can then be used in the workflow query
+    List<String> limitingMediaPackageIds = new ArrayList<>();
+    if (mpContributors != null || mpLanguage != null || mpLicense != null || mpTitle != null || mpSubject != null) {
+      EventSearchQuery eventQuery = new EventSearchQuery(securityService.getOrganization().getId(),
+              securityService.getUser());
+      for (String contributor : mpContributors) {
+        if (StringUtils.isNotEmpty(contributor)) {
+          eventQuery.withContributor(contributor);
+        }
+      }
+      if (StringUtils.isNotEmpty(mpLanguage)) {
+        eventQuery.withLanguage(mpLanguage);
+      }
+      if (StringUtils.isNotEmpty(mpTitle)) {
+        eventQuery.withTitle(mpTitle);
+      }
+      if (StringUtils.isNotEmpty(mpSubject)) {
+        eventQuery.withSubject(mpSubject);
+      }
+      if (StringUtils.isNotEmpty(seriesTitle)) {
+        eventQuery.withSeriesName(seriesTitle);
+      }
+
+      SearchResult<Event> results = null;
+      try {
+        results = elasticsearchIndex.getByQuery(eventQuery);
+      } catch (SearchIndexException e) {
+        logger.error("The External Search Index was not able to get the events list", e);
+        throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+      }
+
+      // No mediapackage means no workflows either
+      if (results.getHitCount() == 0) {
+        return Response.ok(new WorkflowSetImpl()).build();
+      }
+
+      // Prepare to add to the workflow query later
+      for (SearchResultItem<Event> resultItem : results.getItems()) {
+        final Event event = resultItem.getSource();
+        limitingMediaPackageIds.add(event.getIdentifier());
+      }
+    }
 
     WorkflowSearchQuery q = new WorkflowSearchQuery(securityService.getOrganization().getId(),
             securityService.getUser());
@@ -378,20 +423,11 @@ public class WorkflowsEndpoint {
 //              .entity("Invalid date format")
 //              .build();
 //    }
+    for (String limitingMediaPackage : limitingMediaPackageIds) {
+      q.withMediaPackage(limitingMediaPackage);
+    }
     q.withMediaPackage(mediapackageId);
-    // TODO: Make it possible to query for these fields
-    //  Probably by posing another query to the event index
-//    for (String contributor : mpContributors) {
-//      if (StringUtils.isBlank(contributor)) {
-//        continue;
-//      }
-//      q.withCurrentOperation(contributor);
-//    }
-//    q.withMediaPackageLanguage(mpLanguage);
-//    q.withMediaPackageTitle(mpTitle);
-//    q.withMediaPackageSubject(mpSubject);
     q.withSeriesId(seriesId);
-//    q.withSeriesTitle(seriesTitle);
 
     if (optSort.isSome()) {
       Set<SortCriterion> sortCriteria = RestUtils.parseSortQueryParameter(optSort.get());
@@ -513,7 +549,11 @@ public class WorkflowsEndpoint {
           @QueryParam("dateCreatedFrom") String dateCreatedFrom, @QueryParam("dateCreatedTo") String dateCreatedTo,
           @QueryParam("dateCompletedFrom") String dateCompletedFrom, @QueryParam("dateCompletedTo") String dateCompletedTo,
           @QueryParam("mp") String mediapackageId,
+          @QueryParam("mpContributors") List<String> mpContributors, @QueryParam("mpLanguage") String mpLanguage,
+          @QueryParam("mpLicense") String mpLicense, @QueryParam("mpTitle") String mpTitle,
+          @QueryParam("mpSubject") String mpSubject,
           @QueryParam("seriesId") String seriesId,
+          @QueryParam("seriesTitle") String seriesTitle,
           @QueryParam("q") String text, @QueryParam("sort") String sort,
           @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
           throws Exception {
@@ -521,9 +561,9 @@ public class WorkflowsEndpoint {
     return getWorkflowsAsXml(state, template, title, description, creator, currentOperation,
             dateCreatedFrom, dateCreatedTo, dateCompletedFrom, dateCompletedTo,
             mediapackageId,
-//            mpContributors, mpLanguage, mpLicense, mpTitle, mpSubject,
+            mpContributors, mpLanguage, mpLicense, mpTitle, mpSubject,
             seriesId,
-//            seriesTitle,
+            seriesTitle,
             text,
             sort, offset, limit, compact);
   }

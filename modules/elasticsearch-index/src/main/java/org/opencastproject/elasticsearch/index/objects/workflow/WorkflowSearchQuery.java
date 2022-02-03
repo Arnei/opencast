@@ -52,7 +52,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   private Date dateCreatedTo = null;
   private Date dateCompletedFrom = null;
   private Date dateCompletedTo = null;
-  private String mediaPackageId = null;
+  private List<String> mediaPackageIds = new ArrayList<>();
   private List<String> mpContributors = new ArrayList<>();
   private String mpLanguage = null;
   private String mpLicense = null;
@@ -398,7 +398,7 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    */
   public WorkflowSearchQuery withMediaPackage(String mediaPackageId) {
     if (StringUtils.isNotBlank(mediaPackageId)) {
-      this.mediaPackageId = mediaPackageId;
+      this.mediaPackageIds.add(mediaPackageId);
     }
     return this;
   }
@@ -571,8 +571,8 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    *
    * @return the media package identifier
    */
-  public String getMediaPackageId() {
-    return mediaPackageId;
+  public String[] getMediaPackageIds() {
+    return mediaPackageIds.toArray(new String[mediaPackageIds.size()]);
   }
 
   /**

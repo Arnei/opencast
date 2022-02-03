@@ -62,16 +62,6 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   private String seriesTitle = null;
   private String accessPolicy = null;
 
-  //  /**
-//   * The list of current operation terms that have been added to this query.
-//   */
-//  protected List<QueryTerm> currentOperationTerms = new ArrayList<QueryTerm>();
-//
-//  /**
-//   * The list of state terms that have been added to this query.
-//   */
-//  protected List<QueryTerm> stateTerms = new ArrayList<QueryTerm>();
-
   public WorkflowSearchQuery() {
   }
 
@@ -330,33 +320,9 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
     return this;
   }
 
-//  /**
-//   * Limit results to workflow instances to those that are not currently in the specified operation. This method
-//   * overrides and will be overridden by future calls to {@link #withCurrentOperation(String)}
-//   *
-//   * @param currentOperation
-//   *          the current operation
-//   * @return this query
-//   */
-//  public WorkflowSearchQuery withoutCurrentOperation(String currentOperation) {
-//    if (StringUtils.isNotBlank(currentOperation)) {
-//      currentOperationTerms.add(new QueryTerm(currentOperation, false));
-//    }
-//    return this;
-//  }
-
   public String getCurrentOperation() {
     return currentOperation;
   }
-
-//  /**
-//   * Returns the list of current operations that workflow instances need to match.
-//   *
-//   * @return the current operations
-//   */
-//  public List<QueryTerm> getCurrentOperations() {
-//    return currentOperationTerms;
-//  }
 
   /**
    * Limit the results to workflow instances with a creation date starting with <code>dateCreated</code>.
@@ -506,47 +472,6 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
     withSortOrder(field, order);
     return this;
   }
-
-//  /**
-//   * Returns the number of result items to return.
-//   *
-//   * @return the number of result items
-//   */
-//  public long getCount() {
-//    return count;
-//  }
-//
-//  /**
-//   * Returns the number of the first page within the full result set.
-//   *
-//   * @return the first page
-//   */
-//  public long getStartPage() {
-//    return startPage;
-//  }
-//
-//  /** Returns the start index within the full result set. */
-//  public long getStartIndex() {
-//    return startIndex;
-//  }
-//
-//  /**
-//   * Returns the text that workflow instances need to match by any metadata field (fulltext).
-//   *
-//   * @return the text
-//   */
-//  public String getText() {
-//    return text;
-//  }
-
-//  /**
-//   * Returns the list of states that workflow instances need to match.
-//   *
-//   * @return the states
-//   */
-//  public List<QueryTerm> getStates() {
-//    return stateTerms;
-//  }
 
   /**
    * Returns the media package series identifier that workflow instances need to match.

@@ -106,14 +106,11 @@ public class WorkflowQueryBuilder extends AbstractElasticsearchQueryBuilder<Work
     }
 
     if (query.getDateCreatedFrom() != null && query.getDateCreatedTo() != null) {
-//      and(WorkflowIndexSchema.DATE_CREATED, query.getDateCreated());
       and(WorkflowIndexSchema.DATE_CREATED, query.getDateCreatedFrom(), query.getDateCreatedTo());
     }
 
     if (query.getDateCompletedFrom() != null && query.getDateCompletedFrom() != null) {
-//      and(WorkflowIndexSchema.DATE_COMPLETED, query.getDateCompleted());
       and(WorkflowIndexSchema.DATE_COMPLETED, query.getDateCompletedFrom(), query.getDateCompletedFrom());
-
     }
 
     if (query.getMediaPackageIds().length > 0) {

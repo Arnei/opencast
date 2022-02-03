@@ -414,15 +414,6 @@ public class WorkflowsEndpoint {
       logger.warn("Unable to parse date parameter, {}", e);
       throw new IllegalArgumentException("Unable to parse date parameter");
     }
-//    try {
-//      q.withDateCreated(SolrUtils.parseDate(dateCreated));
-//      q.withDateCompleted(SolrUtils.parseDate(dateCompleted));
-//    } catch (java.text.ParseException e) {
-//      return Response
-//              .status(Response.Status.BAD_REQUEST)
-//              .entity("Invalid date format")
-//              .build();
-//    }
     for (String limitingMediaPackage : limitingMediaPackageIds) {
       q.withMediaPackage(limitingMediaPackage);
     }

@@ -282,14 +282,14 @@ public class WorkflowsEndpoint {
   @Produces(MediaType.TEXT_XML)
   @Path("instances.xml")
   @RestQuery(name = "workflowsasxml", description = "List all workflow instances matching the query parameters", returnDescription = "An XML representation of the set of workflows matching these query parameters", restParameters = {
-          @RestParameter(name = "state", isRequired = false, description = "Filter results by workflows' current state", type = STRING),
+          @RestParameter(name = "state", isRequired = false, description = "Filter results by workflows' current state. Possible states https://docs.opencast.org/develop/admin/#workflowoperationhandlers/#state-mappings", type = STRING),
           @RestParameter(name = "template", isRequired = false, description = "Filter results by workflows' template", type = STRING),
           @RestParameter(name = "creator", isRequired = false, description = "Filter results by workflows' creator", type = STRING),
           @RestParameter(name = "op", isRequired = false, description = "Filter results by workflows' current operation.", type = STRING),
-          @RestParameter(name = "dateCreatedFrom", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
-          @RestParameter(name = "dateCreatedTo", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
-          @RestParameter(name = "dateCompletedFrom", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
-          @RestParameter(name = "dateCompletedTo", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
+          @RestParameter(name = "dateCreatedFrom", isRequired = false, description = "Filter results by workflow started after this date. Format example: 2021-01-31T11:21:14Z", type = STRING),
+          @RestParameter(name = "dateCreatedTo", isRequired = false, description = "Filter results by workflow started after this date.", type = STRING),
+          @RestParameter(name = "dateCompletedFrom", isRequired = false, description = "Filter results by workflow ended after this date.", type = STRING),
+          @RestParameter(name = "dateCompletedTo", isRequired = false, description = "Filter results by workflow ended before this date.", type = STRING),
           @RestParameter(name = "mp", isRequired = false, description = "Filter results by mediapackage identifier.", type = STRING),
           @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
           @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
@@ -304,9 +304,10 @@ public class WorkflowsEndpoint {
                   + "Adding the suffix ASC or DESC sets the order as ascending or descending order and is mandatory.", type = STRING),
           @RestParameter(name = "offset", isRequired = false, description = "Return results after this offset", type = INTEGER),
           @RestParameter(name = "limit", isRequired = false, description = "The number of results to return. Default is " + DEFAULT_LIMIT, type = INTEGER),
-          @RestParameter(name = "compact", isRequired = false, description = "Whether to return a compact version of "
-                  + "the workflow instance, with mediapackage elements, workflow and workflow operation configurations and "
-                  + "non-current operations removed.", type = BOOLEAN)},
+//          @RestParameter(name = "compact", isRequired = false, description = "Whether to return a compact version of "
+//                  + "the workflow instance, with mediapackage elements, workflow and workflow operation configurations and "
+//                  + "non-current operations removed.", type = BOOLEAN)
+          },
           responses = {
                   @RestResponse(responseCode = SC_OK, description = "An XML representation of the workflow set."),
                   @RestResponse(responseCode = SC_BAD_REQUEST, description = "Invalid data was provided in the request.") })
@@ -326,7 +327,9 @@ public class WorkflowsEndpoint {
           @QueryParam("seriesId") String seriesId,
           @QueryParam("seriesTitle") String seriesTitle,
           @QueryParam("q") String text, @QueryParam("sort") String sort,
-          @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
+          @QueryParam("offset") int offset, @QueryParam("limit") int limit
+//          @QueryParam("compact") boolean compact
+                    )
           throws Exception {
     // CHECKSTYLE:ON
     Option<String> optSort = Option.option(trimToNull(sort));
@@ -514,14 +517,14 @@ public class WorkflowsEndpoint {
   @Produces(MediaType.APPLICATION_JSON)
   @Path("instances.json")
   @RestQuery(name = "workflowsasjson", description = "List all workflow instances matching the query parameters", returnDescription = "A JSON representation of the set of workflows matching these query parameters", restParameters = {
-          @RestParameter(name = "state", isRequired = false, description = "Filter results by workflows' current state", type = STRING),
+          @RestParameter(name = "state", isRequired = false, description = "Filter results by workflows' current state. Possible states https://docs.opencast.org/develop/admin/#workflowoperationhandlers/#state-mappings", type = STRING),
           @RestParameter(name = "template", isRequired = false, description = "Filter results by workflows' template", type = STRING),
           @RestParameter(name = "creator", isRequired = false, description = "Filter results by workflows' creator", type = STRING),
           @RestParameter(name = "op", isRequired = false, description = "Filter results by workflows' current operation.", type = STRING),
-          @RestParameter(name = "dateCreatedFrom", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
-          @RestParameter(name = "dateCreatedTo", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
-          @RestParameter(name = "dateCompletedFrom", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
-          @RestParameter(name = "dateCompletedTo", isRequired = false, description = "Filter results by workflow end date.", type = STRING),
+          @RestParameter(name = "dateCreatedFrom", isRequired = false, description = "Filter results by workflow started after this date. Format example: 2021-01-31T11:21:14Z", type = STRING),
+          @RestParameter(name = "dateCreatedTo", isRequired = false, description = "Filter results by workflow started after this date.", type = STRING),
+          @RestParameter(name = "dateCompletedFrom", isRequired = false, description = "Filter results by workflow ended after this date.", type = STRING),
+          @RestParameter(name = "dateCompletedTo", isRequired = false, description = "Filter results by workflow ended before this date.", type = STRING),
           @RestParameter(name = "mp", isRequired = false, description = "Filter results by mediapackage identifier.", type = STRING),
           @RestParameter(name = "mpContributors", isRequired = false, description = "Filter results by the mediapackage's contributor", type = STRING),
           @RestParameter(name = "mpLanguage", isRequired = false, description = "Filter results by mediapackage's language.", type = STRING),
@@ -536,9 +539,10 @@ public class WorkflowsEndpoint {
                   + "Adding the suffix ASC or DESC sets the order as ascending or descending order and is mandatory.", type = STRING),
           @RestParameter(name = "offset", isRequired = false, description = "Return results after this offset", type = INTEGER),
           @RestParameter(name = "limit", isRequired = false, description = "The number of results to return. Default is " + DEFAULT_LIMIT, type = INTEGER),
-          @RestParameter(name = "compact", isRequired = false, description = "Whether to return a compact version of "
-                  + "the workflow instance, with mediapackage elements, workflow and workflow operation configurations and "
-                  + "non-current operations removed.", type = BOOLEAN)},
+          //          @RestParameter(name = "compact", isRequired = false, description = "Whether to return a compact version of "
+          //                  + "the workflow instance, with mediapackage elements, workflow and workflow operation configurations and "
+          //                  + "non-current operations removed.", type = BOOLEAN)
+          },
           responses = {
                   @RestResponse(responseCode = SC_OK, description = "A JSON representation of the workflow set."),
                   @RestResponse(responseCode = SC_BAD_REQUEST, description = "Invalid data was provided in the request.") })
@@ -555,7 +559,9 @@ public class WorkflowsEndpoint {
           @QueryParam("seriesId") String seriesId,
           @QueryParam("seriesTitle") String seriesTitle,
           @QueryParam("q") String text, @QueryParam("sort") String sort,
-          @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
+          @QueryParam("offset") int offset, @QueryParam("limit") int limit
+//          @QueryParam("compact") boolean compact
+  )
           throws Exception {
     // CHECKSTYLE:ON
     return getWorkflowsAsXml(state, template, creator, currentOperation,
@@ -565,7 +571,7 @@ public class WorkflowsEndpoint {
             seriesId,
             seriesTitle,
             text,
-            sort, offset, limit, compact);
+            sort, offset, limit);
   }
 
   @GET

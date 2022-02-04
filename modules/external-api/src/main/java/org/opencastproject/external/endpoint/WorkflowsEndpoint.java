@@ -46,13 +46,13 @@ import org.opencastproject.elasticsearch.index.objects.event.EventSearchQuery;
 import org.opencastproject.elasticsearch.index.objects.workflow.Workflow;
 import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowIndexSchema;
 import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowSearchQuery;
+import org.opencastproject.elasticsearch.index.objects.workflow.WorkflowSetImpl;
 import org.opencastproject.external.common.ApiMediaType;
 import org.opencastproject.external.common.ApiResponses;
 import org.opencastproject.external.common.ApiVersion;
 import org.opencastproject.index.service.api.IndexService;
 import org.opencastproject.index.service.util.RestUtils;
 import org.opencastproject.mediapackage.MediaPackage;
-import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.rest.RestConstants;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
@@ -73,7 +73,6 @@ import org.opencastproject.workflow.api.WorkflowDefinition;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowService;
-import org.opencastproject.workflow.api.WorkflowSetImpl;
 import org.opencastproject.workflow.api.WorkflowStateException;
 
 import com.entwinemedia.fn.data.Opt;
@@ -369,7 +368,12 @@ public class WorkflowsEndpoint {
 
       // No mediapackage means no workflows either
       if (results.getHitCount() == 0) {
-        return Response.ok(new WorkflowSetImpl()).build();
+        WorkflowSetImpl workflowSet = new WorkflowSetImpl();
+        workflowSet.setTotalCount(results.getHitCount());
+        workflowSet.setLimit(results.getLimit());
+        workflowSet.setOffset(results.getOffset());
+        workflowSet.setSearchTime(results.getSearchTime());
+        return Response.ok(workflowSet).build();
       }
 
       // Prepare to add to the workflow query later
@@ -455,47 +459,60 @@ public class WorkflowsEndpoint {
       throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
     }
 
-    // TODO: Either return the documents from the ElasticsearchIndex
-    //  Or get the workflows from the workflowService and return those instead
     WorkflowSetImpl workflowSet = new WorkflowSetImpl();
     for (SearchResultItem<Workflow> resultItem : results.getItems()) {
       final Workflow workflow = resultItem.getSource();
-      workflowSet.addItem(workflowService.getWorkflowById(workflow.getIdentifier()));
+      workflowSet.addItem(workflow);
     }
-    // TODO: Fix search metadata in return value (e.g. limit, offset)
-
-    // Marshalling of a full workflow takes a long time. Therefore, we strip everything that's not needed.
-    if (compact) {
-      WorkflowSetImpl compactSet = new WorkflowSetImpl();
-      for (WorkflowInstance instance : workflowSet.getItems()) {
-
-        // Remove all operations but the current one
-        WorkflowOperationInstance currentOp = instance.getCurrentOperation();
-        List<WorkflowOperationInstance> operations = instance.getOperations();
-        operations.clear(); // instance.getOperations() is a copy
-        if (currentOp != null) {
-          for (String key : currentOp.getConfigurationKeys()) {
-            currentOp.removeConfiguration(key);
-          }
-          operations.add(currentOp);
-        }
-        instance.setOperations(operations);
-
-        // Remove all mediapackage elements (but keep the duration)
-        MediaPackage mediaPackage = instance.getMediaPackage();
-        Long duration = instance.getMediaPackage().getDuration();
-        for (MediaPackageElement element : mediaPackage.elements()) {
-          mediaPackage.remove(element);
-        }
-        mediaPackage.setDuration(duration);
-        instance.setMediaPackage(mediaPackage);
-
-        compactSet.addItem(instance);
-      }
-      return Response.ok(compactSet).build();
-    }
+    workflowSet.setTotalCount(results.getHitCount());
+    workflowSet.setLimit(results.getLimit());
+    workflowSet.setOffset(results.getOffset());
+    workflowSet.setSearchTime(results.getSearchTime());
 
     return Response.ok(workflowSet).build();
+
+
+//    // TODO: Either return the documents from the ElasticsearchIndex
+//    //  Or get the workflows from the workflowService and return those instead
+//    WorkflowSetImpl workflowSet = new WorkflowSetImpl();
+//    for (SearchResultItem<Workflow> resultItem : results.getItems()) {
+//      final Workflow workflow = resultItem.getSource();
+//      workflowSet.addItem(workflowService.getWorkflowById(workflow.getIdentifier()));
+//    }
+//    // TODO: Fix search metadata in return value (e.g. limit, offset)
+//
+//    // Marshalling of a full workflow takes a long time. Therefore, we strip everything that's not needed.
+//    if (compact) {
+//      WorkflowSetImpl compactSet = new WorkflowSetImpl();
+//      for (WorkflowInstance instance : workflowSet.getItems()) {
+//
+//        // Remove all operations but the current one
+//        WorkflowOperationInstance currentOp = instance.getCurrentOperation();
+//        List<WorkflowOperationInstance> operations = instance.getOperations();
+//        operations.clear(); // instance.getOperations() is a copy
+//        if (currentOp != null) {
+//          for (String key : currentOp.getConfigurationKeys()) {
+//            currentOp.removeConfiguration(key);
+//          }
+//          operations.add(currentOp);
+//        }
+//        instance.setOperations(operations);
+//
+//        // Remove all mediapackage elements (but keep the duration)
+//        MediaPackage mediaPackage = instance.getMediaPackage();
+//        Long duration = instance.getMediaPackage().getDuration();
+//        for (MediaPackageElement element : mediaPackage.elements()) {
+//          mediaPackage.remove(element);
+//        }
+//        mediaPackage.setDuration(duration);
+//        instance.setMediaPackage(mediaPackage);
+//
+//        compactSet.addItem(instance);
+//      }
+//      return Response.ok(compactSet).build();
+//    }
+//
+//    return Response.ok(workflowSet).build();
   }
 
   @GET

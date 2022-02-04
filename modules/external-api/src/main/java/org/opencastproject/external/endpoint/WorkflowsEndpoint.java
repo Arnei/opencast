@@ -284,8 +284,6 @@ public class WorkflowsEndpoint {
   @RestQuery(name = "workflowsasxml", description = "List all workflow instances matching the query parameters", returnDescription = "An XML representation of the set of workflows matching these query parameters", restParameters = {
           @RestParameter(name = "state", isRequired = false, description = "Filter results by workflows' current state", type = STRING),
           @RestParameter(name = "template", isRequired = false, description = "Filter results by workflows' template", type = STRING),
-          @RestParameter(name = "title", isRequired = false, description = "Filter results by workflows' title", type = STRING),
-          @RestParameter(name = "description", isRequired = false, description = "Filter results by workflows' description", type = STRING),
           @RestParameter(name = "creator", isRequired = false, description = "Filter results by workflows' creator", type = STRING),
           @RestParameter(name = "op", isRequired = false, description = "Filter results by workflows' current operation.", type = STRING),
           @RestParameter(name = "dateCreatedFrom", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
@@ -317,8 +315,7 @@ public class WorkflowsEndpoint {
   // parameters. CXF provides a bean approach to accepting many parameters, but it is not part of the JAX-RS spec.
   // So for now, we disable checkstyle here.
   public Response getWorkflowsAsXml(@QueryParam("state") String state,
-          @QueryParam("template") String template, @QueryParam("title") String title,
-          @QueryParam("description") String description, @QueryParam("creator") String creator,
+          @QueryParam("template") String template, @QueryParam("creator") String creator,
           @QueryParam("op") String currentOperation,
           @QueryParam("dateCreatedFrom") String dateCreatedFrom, @QueryParam("dateCreatedTo") String dateCreatedTo,
           @QueryParam("dateCompletedFrom") String dateCompletedFrom, @QueryParam("dateCompletedTo") String dateCompletedTo,
@@ -401,8 +398,6 @@ public class WorkflowsEndpoint {
       throw new WebApplicationException(Response.Status.BAD_REQUEST);
     }
     q.withTemplate(template);
-    q.withTitle(title);
-    q.withDescription(description);
     q.withCreator(creator);
     q.withCurrentOperation(currentOperation);
     try {
@@ -521,8 +516,6 @@ public class WorkflowsEndpoint {
   @RestQuery(name = "workflowsasjson", description = "List all workflow instances matching the query parameters", returnDescription = "A JSON representation of the set of workflows matching these query parameters", restParameters = {
           @RestParameter(name = "state", isRequired = false, description = "Filter results by workflows' current state", type = STRING),
           @RestParameter(name = "template", isRequired = false, description = "Filter results by workflows' template", type = STRING),
-          @RestParameter(name = "title", isRequired = false, description = "Filter results by workflows' title", type = STRING),
-          @RestParameter(name = "description", isRequired = false, description = "Filter results by workflows' description", type = STRING),
           @RestParameter(name = "creator", isRequired = false, description = "Filter results by workflows' creator", type = STRING),
           @RestParameter(name = "op", isRequired = false, description = "Filter results by workflows' current operation.", type = STRING),
           @RestParameter(name = "dateCreatedFrom", isRequired = false, description = "Filter results by workflow start date.", type = STRING),
@@ -551,8 +544,7 @@ public class WorkflowsEndpoint {
                   @RestResponse(responseCode = SC_BAD_REQUEST, description = "Invalid data was provided in the request.") })
   // CHECKSTYLE:OFF
   public Response getWorkflowsAsJson(@QueryParam("state") String state,
-          @QueryParam("template") String template, @QueryParam("title") String title,
-          @QueryParam("description") String description, @QueryParam("creator") String creator,
+          @QueryParam("template") String template, @QueryParam("creator") String creator,
           @QueryParam("op") String currentOperation,
           @QueryParam("dateCreatedFrom") String dateCreatedFrom, @QueryParam("dateCreatedTo") String dateCreatedTo,
           @QueryParam("dateCompletedFrom") String dateCompletedFrom, @QueryParam("dateCompletedTo") String dateCompletedTo,
@@ -566,7 +558,7 @@ public class WorkflowsEndpoint {
           @QueryParam("offset") int offset, @QueryParam("limit") int limit, @QueryParam("compact") boolean compact)
           throws Exception {
     // CHECKSTYLE:ON
-    return getWorkflowsAsXml(state, template, title, description, creator, currentOperation,
+    return getWorkflowsAsXml(state, template, creator, currentOperation,
             dateCreatedFrom, dateCreatedTo, dateCompletedFrom, dateCompletedTo,
             mediapackageId,
             mpContributors, mpLanguage, mpLicense, mpTitle, mpSubject,

@@ -42,8 +42,6 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
   private Set<String> actions = new HashSet<String>();
   private WorkflowInstance.WorkflowState state = null;
   private String template = null;
-  private String title = null;
-  private String description = null;
   private Long parentId = null;
   private String creator = null;
   private String organizationId = null;
@@ -195,50 +193,6 @@ public class WorkflowSearchQuery extends AbstractSearchQuery {
    */
   public String getTemplate() {
     return template;
-  }
-
-  /**
-   * Limit results to workflow instances with a specific title.
-   *
-   * @param title
-   *          the mediapackage title
-   */
-  public WorkflowSearchQuery withTitle(String title) {
-    if (StringUtils.isNotBlank(title)) {
-      this.title = title;
-    }
-    return this;
-  }
-
-  /**
-   * Returns the media package title that workflow instances need to match.
-   *
-   * @return the media package title
-   */
-  public String getTitle() {
-    return title;
-  }
-
-  /**
-   * Limit results to workflow instances with a specific description.
-   *
-   * @param description
-   *          the mediapackage description
-   */
-  public WorkflowSearchQuery withDescription(String description) {
-    if (StringUtils.isNotBlank(description)) {
-      this.description = description;
-    }
-    return this;
-  }
-
-  /**
-   * Returns the media package title that workflow instances need to match.
-   *
-   * @return the media package title
-   */
-  public String getDescription() {
-    return description;
   }
 
   /**

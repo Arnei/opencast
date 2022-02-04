@@ -84,15 +84,6 @@ public class WorkflowQueryBuilder extends AbstractElasticsearchQueryBuilder<Work
       and(WorkflowIndexSchema.TEMPLATE, query.getTemplate());
     }
 
-    // Title
-    if (query.getTitle() != null) {
-      and(WorkflowIndexSchema.TITLE, query.getTitle());
-    }
-
-    if (query.getDescription() != null) {
-      and(WorkflowIndexSchema.DESCRIPTION, query.getDescription());
-    }
-
     if (query.getParentId() != null) {
       and(WorkflowIndexSchema.PARENT_ID, query.getParentId());
     }

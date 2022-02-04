@@ -404,17 +404,32 @@ public class WorkflowsEndpoint {
     q.withCreator(creator);
     q.withCurrentOperation(currentOperation);
     try {
+      if (StringUtils.isNotEmpty(dateCreatedFrom) && StringUtils.isEmpty(dateCreatedTo)) {
+        throw new IllegalArgumentException("Both createdTo '" + dateCreatedTo + "' and createdFrom '" + dateCreatedFrom
+                + "' have to be specified or neither of them");
+      }
+      if (StringUtils.isEmpty(dateCreatedFrom) && StringUtils.isNotEmpty(dateCreatedTo)) {
+        throw new IllegalArgumentException("Both createdTo '" + dateCreatedTo + "' and createdFrom '" + dateCreatedFrom
+                + "' have to be specified or neither of them");
+      }
       if (StringUtils.isNotEmpty(dateCreatedFrom) && StringUtils.isNotEmpty(dateCreatedTo)) {
         q.withDateCreatedFrom(new Date(DateTimeSupport.fromUTC(dateCreatedFrom)));
         q.withDateCreatedTo(new Date(DateTimeSupport.fromUTC(dateCreatedTo)));
       }
-      if (StringUtils.isNotEmpty(dateCompletedFrom) && StringUtils.isNotEmpty(dateCreatedTo)) {
+      if (StringUtils.isNotEmpty(dateCompletedFrom) && StringUtils.isEmpty(dateCompletedTo)) {
+        throw new IllegalArgumentException("Both createdTo '" + dateCompletedTo + "' and createdFrom '" + dateCompletedFrom
+                + "' have to be specified or neither of them");
+      }
+      if (StringUtils.isEmpty(dateCompletedFrom) && StringUtils.isNotEmpty(dateCompletedTo)) {
+        throw new IllegalArgumentException("Both createdTo '" + dateCompletedTo + "' and createdFrom '" + dateCompletedFrom
+                + "' have to be specified or neither of them");
+      }
+      if (StringUtils.isNotEmpty(dateCompletedFrom) && StringUtils.isNotEmpty(dateCompletedTo)) {
         q.withDateCompletedFrom(new Date(DateTimeSupport.fromUTC(dateCompletedFrom)));
         q.withDateCompletedTo(new Date(DateTimeSupport.fromUTC(dateCompletedTo)));
       }
-    } catch (Exception e) {
-      logger.warn("Unable to parse date parameter, {}", e);
-      throw new IllegalArgumentException("Unable to parse date parameter");
+    } catch (IllegalArgumentException e) {
+      return RestUtil.R.badRequest(e.getMessage());
     }
     for (String limitingMediaPackage : limitingMediaPackageIds) {
       q.withMediaPackage(limitingMediaPackage);

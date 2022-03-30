@@ -22,7 +22,7 @@
     <commons-compress.version>1.21</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
     <commons-fileupload.version>1.4</commons-fileupload.version>
-    <commons-io.version>2.11.0</commons-io.version>
+    <commons-io.version>2.8.0</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
     <commons-text.version>1.9</commons-text.version>
     <cxf.version>3.4.3</cxf.version>
@@ -34,7 +34,7 @@
     <guava.version>30.1.1-jre</guava.version>
     <httpcomponents-httpclient.version>4.5.13</httpcomponents-httpclient.version>
     <httpcomponents-httpcore.version>4.4.15</httpcomponents-httpcore.version>
-    <jackson.version>2.12.3</jackson.version>
+    <jackson.version>2.13.1</jackson.version>
     <jakarta.mail.version>1.6.7</jakarta.mail.version>
     <java.release>11</java.release>
     <javadoc-plugin.version>3.3.1</javadoc-plugin.version>
@@ -118,6 +118,7 @@
     <module>modules/email-template-service-impl</module>
     <module>modules/event-comment</module>
     <module>modules/engage-paella-player</module>
+    <module>modules/engage-paella-player-7</module>
     <module>modules/engage-theodul-api</module>
     <module>modules/engage-theodul-core</module>
     <module>modules/engage-theodul-plugin-archetype</module>
@@ -187,6 +188,7 @@
     <module>modules/publication-service-oaipmh-remote</module>
     <module>modules/publication-service-youtube-remote</module>
     <module>modules/publication-service-youtube-v3</module>
+    <module>modules/rename-files-workflowoperation</module>
     <module>modules/rest-test-environment</module>
     <module>modules/runtime-info</module>
     <module>modules/runtime-info-ui</module>
@@ -1100,7 +1102,7 @@
         <groupId>org.easymock</groupId>
         <artifactId>easymock</artifactId>
         <scope>test</scope>
-        <version>4.2</version>
+        <version>4.3</version>
       </dependency>
       <dependency>
         <groupId>org.easymock</groupId>
@@ -1123,12 +1125,12 @@
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>1.7.26</version>
+        <version>1.7.33</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-log4j12</artifactId>
-        <version>1.7.26</version>
+        <version>1.7.33</version>
       </dependency>
       <!-- apache commons syncing -->
       <dependency>
@@ -1279,16 +1281,6 @@
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
         <version>${gson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.mariadb.jdbc</groupId>
-        <artifactId>mariadb-java-client</artifactId>
-        <version>2.7.2</version>
-      </dependency>
-      <dependency>
-        <groupId>org.postgresql</groupId>
-        <artifactId>postgresql</artifactId>
-        <version>42.2.19.jre7</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>

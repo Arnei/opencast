@@ -21,10 +21,7 @@
 package org.opencastproject.liveschedule.message;
 
 import org.opencastproject.liveschedule.api.LiveScheduleService;
-import org.opencastproject.mediapackage.Publication;
 import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem;
-import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem.DeleteEpisode;
-import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem.TakeSnapshot;
 import org.opencastproject.message.broker.api.update.AssetManagerUpdateHandler;
 import org.opencastproject.scheduler.api.SchedulerService;
 
@@ -54,48 +51,48 @@ public class AssetManagerEventUpdateHandler extends UpdateHandler implements Ass
 
   @Override
   public void execute(AssetManagerItem item) {
-    String mpId = item.getId();
-
-    try {
-      logger.debug("Asset Manager message handler START for mp {} event type {} in thread {}", mpId, item.getType(),
-              Thread.currentThread().getId());
-
-      switch (item.getType()) {
-        case Update:
-          if (item instanceof TakeSnapshot) { // Check class just in case
-            TakeSnapshot snapshotItem = (TakeSnapshot) item;
-            // If no episopde dc, there's nothing to do.
-            if (snapshotItem.getEpisodeDublincore().isNone()) {
-              break;
-            }
-            // Does media package have a live publication channel? This is to ignore non-live
-            // and past events.
-            // Note: we never create live events when getting asset manager
-            // notifications, only when getting scheduler notifications
-            for (Publication pub : snapshotItem.getMediapackage().getPublications()) {
-              if (LiveScheduleService.CHANNEL_ID.equals(pub.getChannel())) {
-                liveScheduleService.createOrUpdateLiveEvent(mpId, schedulerService.getTechnicalMetadata(mpId));
-              }
-            }
-          }
-          break;
-        case Delete:
-          if (item instanceof DeleteEpisode) {
-            // Episode is being deleted
-            liveScheduleService.deleteLiveEvent(mpId);
-          }
-
-          // No action needed when a snapshot is deleted
-          break;
-        default:
-          throw new IllegalArgumentException("Unhandled type of AssetManagerItem");
-      }
-    } catch (Exception e) {
-      logger.warn("Exception occurred for mp {}, event type {}", mpId, item.getType(), e);
-    } finally {
-      logger.debug("Asset Manager message handler END for mp {} event type {} in thread {}", mpId, item.getType(),
-              Thread.currentThread().getId());
-    }
+//    String mpId = item.getId();
+//
+//    try {
+//      logger.debug("Asset Manager message handler START for mp {} event type {} in thread {}", mpId, item.getType(),
+//              Thread.currentThread().getId());
+//
+//      switch (item.getType()) {
+//        case Update:
+//          if (item instanceof TakeSnapshot) { // Check class just in case
+//            TakeSnapshot snapshotItem = (TakeSnapshot) item;
+//            // If no episopde dc, there's nothing to do.
+//            if (snapshotItem.getEpisodeDublincore().isNone()) {
+//              break;
+//            }
+//            // Does media package have a live publication channel? This is to ignore non-live
+//            // and past events.
+//            // Note: we never create live events when getting asset manager
+//            // notifications, only when getting scheduler notifications
+//            for (Publication pub : snapshotItem.getMediapackage().getPublications()) {
+//              if (LiveScheduleService.CHANNEL_ID.equals(pub.getChannel())) {
+//                liveScheduleService.createOrUpdateLiveEvent(mpId, schedulerService.getTechnicalMetadata(mpId));
+//              }
+//            }
+//          }
+//          break;
+//        case Delete:
+//          if (item instanceof DeleteEpisode) {
+//            // Episode is being deleted
+//            liveScheduleService.deleteLiveEvent(mpId);
+//          }
+//
+//          // No action needed when a snapshot is deleted
+//          break;
+//        default:
+//          throw new IllegalArgumentException("Unhandled type of AssetManagerItem");
+//      }
+//    } catch (Exception e) {
+//      logger.warn("Exception occurred for mp {}, event type {}", mpId, item.getType(), e);
+//    } finally {
+//      logger.debug("Asset Manager message handler END for mp {} event type {} in thread {}", mpId, item.getType(),
+//              Thread.currentThread().getId());
+//    }
   }
 
   @Reference

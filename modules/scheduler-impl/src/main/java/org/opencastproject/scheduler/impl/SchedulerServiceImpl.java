@@ -336,9 +336,13 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
       } catch (InterruptedException e) { /* swallow this, nothing to do */ }
     }
     String mpid = list.getId();
-    for (SchedulerItem item : list.getItems()) {
+    SchedulerItem[] items = list.getItems();
+    // if we have a catalog update we can skip other updates like start, end, agentId
+    boolean updateCatalog = Arrays.stream(items).anyMatch(item -> item.getType().equals(
+            SchedulerItem.Type.UpdateCatalog));
+    for (SchedulerItem item : items) {
       for (SchedulerUpdateHandler handler : this.schedulerUpdateHandlers) {
-        handler.execute(mpid, item);
+        handler.execute(mpid, item, updateCatalog);
       }
     }
   }

@@ -20,13 +20,13 @@
  */
 package org.opencastproject.liveschedule.api;
 
-import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
+import org.opencastproject.scheduler.api.TechnicalMetadata;
 import org.opencastproject.security.api.AccessControlList;
 
 public interface LiveScheduleService {
   String CHANNEL_ID = "engage-live";
 
-  boolean createOrUpdateLiveEvent(String mpId, DublinCoreCatalog episodeDc) throws LiveScheduleException;
+  boolean createOrUpdateLiveEvent(String mpId, TechnicalMetadata schedulerData) throws LiveScheduleException;
 
   boolean deleteLiveEvent(String mpId) throws LiveScheduleException;
 

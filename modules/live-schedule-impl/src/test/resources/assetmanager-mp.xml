@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <mediapackage xmlns="http://mediapackage.opencastproject.org"
-  id="c3d913f6-9af7-403a-91a9-33b73ee18193" start="2017-10-12T18:10:59Z">
+  id="c3d913f6-9af7-403a-91a9-33b73ee18193" start="2017-10-12T19:00:00Z">
   <title>Live Test</title>
   <series>20170119999</series>
   <seriestitle>Test Fall 2017</seriestitle>

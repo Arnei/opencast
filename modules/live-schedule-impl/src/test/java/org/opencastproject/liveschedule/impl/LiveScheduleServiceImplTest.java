@@ -46,11 +46,11 @@ import org.opencastproject.mediapackage.Track;
 import org.opencastproject.mediapackage.VideoStream;
 import org.opencastproject.mediapackage.identifier.IdImpl;
 import org.opencastproject.mediapackage.track.TrackImpl;
-import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalogService;
-import org.opencastproject.metadata.dublincore.DublinCoreValue;
 import org.opencastproject.metadata.dublincore.DublinCores;
+import org.opencastproject.scheduler.api.TechnicalMetadata;
+import org.opencastproject.scheduler.api.TechnicalMetadataImpl;
 import org.opencastproject.search.api.SearchQuery;
 import org.opencastproject.search.api.SearchResult;
 import org.opencastproject.search.api.SearchResultImpl;
@@ -67,6 +67,8 @@ import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.util.SecurityUtil;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
+import org.opencastproject.util.Checksum;
+import org.opencastproject.util.ChecksumType;
 import org.opencastproject.util.DateTimeSupport;
 import org.opencastproject.util.MimeType;
 import org.opencastproject.util.MimeTypes;
@@ -87,7 +89,10 @@ import org.osgi.service.component.ComponentContext;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Dictionary;
 import java.util.HashMap;
@@ -116,6 +121,7 @@ public class LiveScheduleServiceImplTest {
   private Organization org;
   private Snapshot snapshot;
   private Version version;
+  private TechnicalMetadataImpl technicalMetadata;
 
   private ComponentContext cc;
   private SearchService searchService;
@@ -176,6 +182,12 @@ public class LiveScheduleServiceImplTest {
     EasyMock.expect(cc.getBundleContext()).andReturn(bc);
     EasyMock.expect(cc.getProperties()).andReturn(props);
     EasyMock.replay(bc, cc);
+
+    LocalDateTime startDate = LocalDateTime.parse("2017-10-12T19:00:00");
+    LocalDateTime endDate = LocalDateTime.parse("2017-10-12T19:01:00");
+    technicalMetadata = new TechnicalMetadataImpl(MP_ID,"fake-ca",
+            Date.from(startDate.toInstant(ZoneOffset.UTC)),  Date.from(endDate.toInstant(ZoneOffset.UTC)),
+            null, null, null, null);
 
     service = new LiveScheduleServiceImpl();
     service.setJobPollingInterval(1L);
@@ -297,9 +309,8 @@ public class LiveScheduleServiceImplTest {
 
     MediaPackage mp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew();
     mp.setIdentifier(new IdImpl(MP_ID));
-    mp.setDuration(DURATION);
 
-    service.addLiveTracks(mp, CAPTURE_AGENT_NAME);
+    service.addLiveTracks(mp, service.generateLiveTracks(MP_ID, CAPTURE_AGENT_NAME, ORG_ID, DURATION).values());
     assertExpectedLiveTracks(mp.getTracks(), DURATION, CAPTURE_AGENT_NAME, "_suffix", false);
   }
 
@@ -317,9 +328,8 @@ public class LiveScheduleServiceImplTest {
 
     MediaPackage mp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew();
     mp.setIdentifier(new IdImpl(MP_ID));
-    mp.setDuration(DURATION);
 
-    service.addLiveTracks(mp, "another-capture-agent");
+    service.addLiveTracks(mp, service.generateLiveTracks(MP_ID, "another-capture-agent", ORG_ID, DURATION).values());
     assertExpectedLiveTracks(mp.getTracks(), DURATION, "another-capture-agent", "_suffix_from_ca", false);
   }
 
@@ -354,12 +364,9 @@ public class LiveScheduleServiceImplTest {
 
     replayServices();
 
-    Snapshot s = EasyMock.createNiceMock(Snapshot.class);
-    EasyMock.expect(s.getMediaPackage()).andReturn(mp);
-    EasyMock.replay(s);
     service.setDownloadDistributionService(downloadDistributionService);
 
-    MediaPackage mp1 = service.addAndDistributeElements(s);
+    MediaPackage mp1 = service.addAndDistributeElements(mp);
 
     Catalog[] catalogs = mp1.getCatalogs(MediaPackageElements.EPISODE);
     Assert.assertNotNull(catalogs);
@@ -458,7 +465,7 @@ public class LiveScheduleServiceImplTest {
     Assert.assertNotNull(mp1);
     Assert.assertEquals(MP_ID, mp1.getIdentifier().toString());
     Assert.assertEquals("Live Test", mp1.getTitle());
-    Assert.assertEquals("2017-10-12T18:10:59Z", DateTimeSupport.toUTC(mp1.getDate().getTime()));
+    Assert.assertEquals("2017-10-12T19:00:00Z", DateTimeSupport.toUTC(mp1.getDate().getTime()));
     Assert.assertEquals("20170119999", mp1.getSeries());
     Assert.assertEquals("Test Fall 2017", mp1.getSeriesTitle());
   }
@@ -495,13 +502,12 @@ public class LiveScheduleServiceImplTest {
     replayServices();
 
     MediaPackage mp1 = (MediaPackage) service.getSnapshot(MP_ID).getMediaPackage().clone();
-    mp1.setDuration(DURATION);
-    service.addLiveTracks(mp1, CAPTURE_AGENT_NAME);
+    Collection<Track> tracks = service.generateLiveTracks(MP_ID, CAPTURE_AGENT_NAME, ORG_ID, DURATION).values();
+    service.addLiveTracks(mp1, tracks);
     MediaPackage mp2 = (MediaPackage) service.getSnapshot(MP_ID).getMediaPackage().clone();
-    mp2.setDuration(DURATION);
-    service.addLiveTracks(mp2, CAPTURE_AGENT_NAME);
+    service.addLiveTracks(mp2, tracks);
 
-    Assert.assertTrue(service.isSameMediaPackage(mp1, mp2));
+    Assert.assertTrue(service.isSameMetadata(mp1, mp2, tracks, mp1.getDate()));
   }
 
   @Test
@@ -512,70 +518,41 @@ public class LiveScheduleServiceImplTest {
     setUpAssetManager(mp);
     replayServices();
 
+    Collection<Track> tracks = service.generateLiveTracks(MP_ID, CAPTURE_AGENT_NAME, ORG_ID, DURATION).values();
     MediaPackage mp1 = (MediaPackage) service.getSnapshot(MP_ID).getMediaPackage().clone();
-    mp1.setDuration(DURATION);
-    service.addLiveTracks(mp1, CAPTURE_AGENT_NAME);
+    service.addLiveTracks(mp1, tracks);
     MediaPackage mp2 = (MediaPackage) service.getSnapshot(MP_ID).getMediaPackage().clone();
-    mp2.setDuration(DURATION);
-    service.addLiveTracks(mp2, CAPTURE_AGENT_NAME);
+    service.addLiveTracks(mp2, tracks);
 
-    // Change title
-    String previous = mp2.getTitle();
-    mp2.setTitle("Changed");
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.setTitle(previous);
-    // Change language
-    previous = mp2.getLanguage();
-    mp2.setLanguage("Changed");
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.setLanguage(previous);
-    // Change series
-    previous = mp2.getSeries();
-    mp2.setSeries("Changed");
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.setSeries(previous);
-    // Change series title
-    previous = mp2.getSeriesTitle();
-    mp2.setSeriesTitle("Changed");
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.setSeriesTitle(previous);
-    // Change date
-    Date dt = mp2.getDate();
-    mp2.setDate(new Date());
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.setDate(dt);
-    // Change creators
-    mp2.addCreator("New object");
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.removeCreator("New object");
-    // Change contributors
-    mp2.addContributor("New object");
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.removeContributor("New object");
-    // Change subjects
-    mp2.addSubject("New object");
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.removeSubject("New object");
-    // Change track uri
-    Track track = mp2.getTracks()[0];
-    URI previousURI = track.getURI();
-    track.setURI(new URI("http://new.url.com"));
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    track.setURI(previousURI);
+    // Change CA
+    Collection<Track> newTracks = service.generateLiveTracks(MP_ID, "changed", ORG_ID, DURATION).values();
+    Assert.assertFalse(service.isSameMetadata(mp1, mp2, newTracks, mp1.getDate()));
+
     // Change duration
-    long duration = mp2.getDuration();
-    for (Track t : mp2.getTracks()) {
-      ((TrackImpl) t).setDuration(1L);
-    }
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    for (Track t : mp2.getTracks()) {
-      ((TrackImpl) t).setDuration(duration);
-    }
+    technicalMetadata.setStartDate(Date.from(LocalDateTime.parse("2017-10-12T18:00:00").toInstant(ZoneOffset.UTC)));
+    newTracks = service.generateLiveTracks(MP_ID, CAPTURE_AGENT_NAME, ORG_ID,
+            service.getDuration(technicalMetadata)).values();
+    Assert.assertFalse(service.isSameMetadata(mp1, mp2, newTracks, mp1.getDate()));
+
+    // Change startDate
+    newTracks = service.generateLiveTracks(MP_ID, CAPTURE_AGENT_NAME, ORG_ID, DURATION).values();
+    Assert.assertFalse(service.isSameMetadata(mp1, mp2, newTracks, new Date()));
+
+    // Change DublinCore
+    Catalog c1 = mp1.getCatalog("9ad6ebcb-b414-4b15-ab62-5e5ddede447e");
+    c1.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, "123456abcd"));
+    Assert.assertFalse(service.isSameMetadata(mp1, mp2, tracks, mp1.getDate()));
+
+    // Change track uri
+    Map<String, Track> trackMap = service.generateLiveTracks(MP_ID, CAPTURE_AGENT_NAME, ORG_ID, DURATION);
+    TrackImpl track = (TrackImpl) trackMap.get("presenter/delivery:960x270");
+    track.setURI(new URI("http://new.url.com"));
+    Assert.assertFalse(service.isSameMetadata(mp1, mp2, trackMap.values(), mp1.getDate()));
+
     // Change number of tracks
-    track = (Track) mp2.getTracks()[0].clone();
-    mp2.remove(track);
-    Assert.assertFalse(service.isSameMediaPackage(mp1, mp2));
-    mp2.add(track);
+    trackMap = service.generateLiveTracks(MP_ID, CAPTURE_AGENT_NAME, ORG_ID, DURATION);
+    trackMap.remove("presenter/delivery:960x270");
+    Assert.assertFalse(service.isSameMetadata(mp1, mp2, trackMap.values(), mp1.getDate()));
   }
 
   @Test
@@ -724,7 +701,7 @@ public class LiveScheduleServiceImplTest {
     replayServices();
     service.setDownloadDistributionService(downloadDistributionService);
 
-    service.createLiveEvent(MP_ID, episodeDC);
+    service.createLiveEvent(MP_ID, technicalMetadata);
 
     // Check published live media package
     MediaPackage searchMp = capturedMp.getValue();
@@ -739,28 +716,6 @@ public class LiveScheduleServiceImplTest {
     Assert.assertEquals(1, archivedMp.getPublications().length);
     Assert.assertEquals(LiveScheduleService.CHANNEL_ID, archivedMp.getPublications()[0].getChannel());
     // Check that version got into local cache
-    Assert.assertEquals(v, service.getSnapshotVersionCache().getIfPresent(MP_ID));
-  }
-
-  @Test
-  public void testUpdateLiveEventNoChange() throws Exception {
-    URI mpURI = LiveScheduleServiceImplTest.class.getResource("/assetmanager-mp-with-live.xml").toURI();
-    MediaPackage mp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder()
-            .loadFromXml(mpURI.toURL().openStream());
-    setUpAssetManager(mp);
-
-    mpURI = LiveScheduleServiceImplTest.class.getResource("/live-mp.xml").toURI();
-    MediaPackage previousMp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder()
-            .loadFromXml(mpURI.toURL().openStream());
-
-    URI catalogURI = LiveScheduleServiceImplTest.class.getResource("/episode.xml").toURI();
-    DublinCoreCatalog episodeDC = DublinCores.read(catalogURI.toURL().openStream());
-
-    replayServices();
-
-    service.getSnapshotVersionCache().put(MP_ID, version);
-
-    Assert.assertFalse(service.updateLiveEvent(previousMp, episodeDC));
   }
 
   @Test
@@ -772,20 +727,17 @@ public class LiveScheduleServiceImplTest {
 
     URI catalogURI = LiveScheduleServiceImplTest.class.getResource("/episode.xml").toURI();
     DublinCoreCatalog episodeDC = DublinCores.read(catalogURI.toURL().openStream());
-    Assert.assertFalse(service.createOrUpdateLiveEvent(MP_ID, episodeDC));
+    Assert.assertFalse(service.createOrUpdateLiveEvent(MP_ID, technicalMetadata));
   }
 
   @Test
   public void testCreateOuUpdateLiveEventAlreadyPublished() throws Exception {
-    URI catalogURI = LiveScheduleServiceImplTest.class.getResource("/episode.xml").toURI();
-    DublinCoreCatalog episodeDC = DublinCores.read(catalogURI.toURL().openStream());
-
     URI searchResultURI = LiveScheduleServiceImplTest.class.getResource("/no-live-search-result.xml").toURI();
     SearchResult searchResult = SearchResultImpl.valueOf(searchResultURI.toURL().openStream());
     EasyMock.expect(searchService.getForAdministrativeRead((SearchQuery) EasyMock.anyObject())).andReturn(searchResult);
     replayServices();
 
-    Assert.assertFalse(service.createOrUpdateLiveEvent(MP_ID, episodeDC));
+    Assert.assertFalse(service.createOrUpdateLiveEvent(MP_ID, technicalMetadata));
   }
 
   @Test
@@ -793,16 +745,17 @@ public class LiveScheduleServiceImplTest {
     URI mpURI = LiveScheduleServiceImplTest.class.getResource("/assetmanager-mp-with-live.xml").toURI();
     MediaPackage mp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder()
             .loadFromXml(mpURI.toURL().openStream());
+    InputStream dcFile = getClass().getResourceAsStream("/episode.xml");
+    EasyMock.expect(workspace.read(
+            new URI("http://10.10.10.50/assets/assets/c3d913f6-9af7-403a-91a9-33b73ee18193/9ad6ebcb-"
+                    + "b414-4b15-ab62-5e5ddede447e/1/dublincore.xml"))).andReturn(dcFile);
     setUpAssetManager(mp);
 
     mpURI = LiveScheduleServiceImplTest.class.getResource("/live-mp.xml").toURI();
     MediaPackage previousMp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder()
             .loadFromXml(mpURI.toURL().openStream());
 
-    URI catalogURI = LiveScheduleServiceImplTest.class.getResource("/episode.xml").toURI();
-    DublinCoreCatalog episodeDC = DublinCores.read(catalogURI.toURL().openStream());
-
-    catalogURI = LiveScheduleServiceImplTest.class.getResource("/series.xml").toURI();
+    URI catalogURI = LiveScheduleServiceImplTest.class.getResource("/series.xml").toURI();
     DublinCoreCatalog seriesDC = DublinCores.read(catalogURI.toURL().openStream());
     EasyMock.expect(seriesService.getSeries(SERIES_ID)).andReturn(seriesDC).anyTimes();
 
@@ -835,16 +788,23 @@ public class LiveScheduleServiceImplTest {
             EasyMock.anyObject(Set.class))).andReturn(jobRetract);
     EasyMock.expect(serviceRegistry.getJob(3L)).andReturn(jobRetract).anyTimes();
 
+    Capture<MediaPackage> capturedSnapshotMp = Capture.newInstance();
+    Version v = EasyMock.createNiceMock(Version.class);
+    Snapshot s = EasyMock.createNiceMock(Snapshot.class);
+    EasyMock.expect(s.getMediaPackage()).andReturn(mp);
+    EasyMock.expect(s.getVersion()).andReturn(v);
+    EasyMock.replay(s, v);
+    EasyMock.expect(assetManager.takeSnapshot(EasyMock.capture(capturedSnapshotMp))).andReturn(s);
+
     replayServices();
     service.setDownloadDistributionService(downloadDistributionService);
 
-    // Capture agent change
-    episodeDC.set(DublinCore.PROPERTY_SPATIAL, DublinCoreValue.mk("another_ca"));
-    // Duration change
-    episodeDC.set(DublinCore.PROPERTY_TEMPORAL,
-            DublinCoreValue.mk("start=2017-10-12T19:00:00Z;end=2017-10-12T19:02:00Z; scheme=W3C-DTF;"));
-
-    Assert.assertTrue(service.updateLiveEvent(previousMp, episodeDC));
+    LocalDateTime startDate = LocalDateTime.parse("2017-10-12T19:00:00");
+    LocalDateTime endDate = LocalDateTime.parse("2017-10-12T19:02:00");
+    TechnicalMetadata newData = new TechnicalMetadataImpl(MP_ID,"another_ca",
+            Date.from(startDate.toInstant(ZoneOffset.UTC)),  Date.from(endDate.toInstant(ZoneOffset.UTC)),
+            null, null, null, null);
+    Assert.assertTrue(service.updateLiveEvent(previousMp, newData));
 
     // Check published live media package
     MediaPackage searchMp = capturedMp.getValue();

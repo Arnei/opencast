@@ -23,7 +23,6 @@ package org.opencastproject.liveschedule.message;
 import org.opencastproject.liveschedule.api.LiveScheduleService;
 import org.opencastproject.message.broker.api.scheduler.SchedulerItem;
 import org.opencastproject.message.broker.api.update.SchedulerUpdateHandler;
-import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.scheduler.api.RecordingState;
 import org.opencastproject.scheduler.api.SchedulerException;
 import org.opencastproject.scheduler.api.SchedulerService;
@@ -51,15 +50,13 @@ public class SchedulerEventUpdateHandler extends UpdateHandler implements Schedu
 
   private static final Logger logger = LoggerFactory.getLogger(SchedulerEventUpdateHandler.class);
 
-  protected SchedulerService schedulerService;
-
   @Activate
   @Override
   public void activate(ComponentContext cc) {
     super.activate(cc);
   }
 
-  public void execute(final String mpId, final SchedulerItem schedulerItem) {
+  public void execute(final String mpId, final SchedulerItem schedulerItem, boolean updateCatalog) {
     try {
       logger.debug("Scheduler message handler START for mp {} event type {} in thread {}", mpId,
               schedulerItem.getType(), Thread.currentThread().getId());
@@ -67,7 +64,7 @@ public class SchedulerEventUpdateHandler extends UpdateHandler implements Schedu
       switch (schedulerItem.getType()) {
         case UpdateCatalog:
           if (isLive(mpId)) {
-            liveScheduleService.createOrUpdateLiveEvent(mpId, schedulerItem.getEvent());
+            liveScheduleService.createOrUpdateLiveEvent(mpId, schedulerService.getTechnicalMetadata(mpId));
           }
           break;
         case UpdateAcl:
@@ -77,13 +74,14 @@ public class SchedulerEventUpdateHandler extends UpdateHandler implements Schedu
           break;
         case UpdateProperties:
           // Workflow properties may have been updated (publishLive configuration)
-          String publishLive = schedulerItem.getProperties().get(PUBLISH_LIVE_PROPERTY);
+          String publishLive = schedulerItem.getProperties().get(FULL_PUBLISH_LIVE_PROPERTY);
           if (publishLive == null) {
             // Not specified so we do nothing. We don't want to delete if we got incomplete props.
             return;
           } else if (BooleanUtils.toBoolean(publishLive)) {
-            DublinCoreCatalog episodeDC = schedulerService.getDublinCore(mpId);
-            liveScheduleService.createOrUpdateLiveEvent(mpId, episodeDC);
+            if (!updateCatalog) {
+              liveScheduleService.createOrUpdateLiveEvent(mpId, schedulerService.getTechnicalMetadata(mpId));
+            }
           } else {
             liveScheduleService.deleteLiveEvent(mpId);
           }
@@ -97,9 +95,8 @@ public class SchedulerEventUpdateHandler extends UpdateHandler implements Schedu
         case UpdateAgentId:
         case UpdateStart:
         case UpdateEnd:
-          if (isLive(mpId)) {
-            DublinCoreCatalog episodeDC = schedulerService.getDublinCore(mpId);
-            liveScheduleService.createOrUpdateLiveEvent(mpId, episodeDC);
+          if (isLive(mpId) && !updateCatalog) {
+            liveScheduleService.createOrUpdateLiveEvent(mpId, schedulerService.getTechnicalMetadata(mpId));
           }
           break;
         case UpdateRecordingStatus:
@@ -137,8 +134,9 @@ public class SchedulerEventUpdateHandler extends UpdateHandler implements Schedu
 
   // === Set by OSGI begin
   @Reference
+  @Override
   public void setSchedulerService(SchedulerService service) {
-    this.schedulerService = service;
+    super.setSchedulerService(service);
   }
 
   @Reference

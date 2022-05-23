@@ -24,5 +24,5 @@ package org.opencastproject.message.broker.api.update;
 import org.opencastproject.message.broker.api.scheduler.SchedulerItem;
 
 public interface SchedulerUpdateHandler {
-  void execute(String mpId, SchedulerItem schedulerItem);
+  void execute(String mpId, SchedulerItem schedulerItem, boolean updateCatalog);
 }

@@ -22,7 +22,6 @@ package org.opencastproject.liveschedule.impl;
 
 import org.opencastproject.assetmanager.api.AssetManager;
 import org.opencastproject.assetmanager.api.Snapshot;
-import org.opencastproject.assetmanager.api.Version;
 import org.opencastproject.assetmanager.api.query.AQueryBuilder;
 import org.opencastproject.assetmanager.api.query.ARecord;
 import org.opencastproject.assetmanager.api.query.AResult;
@@ -34,6 +33,7 @@ import org.opencastproject.job.api.JobBarrier;
 import org.opencastproject.liveschedule.api.LiveScheduleException;
 import org.opencastproject.liveschedule.api.LiveScheduleService;
 import org.opencastproject.mediapackage.Attachment;
+import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementBuilder;
@@ -50,7 +50,11 @@ import org.opencastproject.metadata.dublincore.DCMIPeriod;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalogService;
+import org.opencastproject.metadata.dublincore.DublinCoreUtil;
+import org.opencastproject.metadata.dublincore.DublinCoreValue;
 import org.opencastproject.metadata.dublincore.EncodingSchemeUtils;
+import org.opencastproject.metadata.dublincore.Precision;
+import org.opencastproject.scheduler.api.TechnicalMetadata;
 import org.opencastproject.search.api.SearchQuery;
 import org.opencastproject.search.api.SearchResult;
 import org.opencastproject.search.api.SearchService;
@@ -71,8 +75,6 @@ import org.opencastproject.util.UrlSupport;
 import org.opencastproject.workspace.api.Workspace;
 
 import com.entwinemedia.fn.data.Opt;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
@@ -86,10 +88,14 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
 import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -97,12 +103,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -161,8 +165,6 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
   private MediaPackageElementFlavor[] liveFlavors;
   private String distributionServiceType = DEFAULT_LIVE_DISTRIBUTION_SERVICE;
   private String serverUrl;
-  private Cache<String, Version> snapshotVersionCache
-      = CacheBuilder.newBuilder().expireAfterWrite(5, TimeUnit.MINUTES).build();
   /** Which streaming formats should be published automatically */
   private List<String> publishedStreamingFormats = null;
   private String systemUserName;
@@ -200,8 +202,7 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     }
     systemUserName = bundleContext.getProperty(SecurityUtil.PROPERTY_KEY_SYS_USER);
 
-    @SuppressWarnings("rawtypes")
-    Dictionary properties = context.getProperties();
+    @SuppressWarnings("rawtypes") Dictionary properties = context.getProperties();
     if (!StringUtils.isBlank((String) properties.get(LIVE_STREAMING_URL))) {
       liveStreamingUrl = StringUtils.trimToEmpty((String) properties.get(LIVE_STREAMING_URL));
       logger.info("Live streaming server url is {}", liveStreamingUrl);
@@ -246,8 +247,10 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     if (!StringUtils.isBlank((String) properties.get(LIVE_DISTRIBUTION_SERVICE))) {
       distributionServiceType = StringUtils.trimToEmpty((String) properties.get(LIVE_DISTRIBUTION_SERVICE));
     }
-    publishedStreamingFormats = Arrays.asList(Optional.ofNullable(StringUtils.split(
-            (String)properties.get(LIVE_PUBLISH_STREAMING), ",")).orElse(new String[0]));
+    publishedStreamingFormats = Arrays
+            .asList(Optional.ofNullable(StringUtils.split((String) properties.get(LIVE_PUBLISH_STREAMING), ","))
+                    .orElse(new String[0]));
+
 
     logger.info(
         "Configured live stream name: {}, mime type: {}, resolution: {}, target flavors: {}, distribution service: {}",
@@ -255,18 +258,17 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
   }
 
   @Override
-  public boolean createOrUpdateLiveEvent(String mpId, DublinCoreCatalog episodeDC) throws LiveScheduleException {
+  public boolean createOrUpdateLiveEvent(String mpId, TechnicalMetadata schedulerData) throws LiveScheduleException {
     MediaPackage mp = getMediaPackageFromSearch(mpId);
     if (mp == null) {
       // Check if capture not over. We have to check because we may get a notification for past events if
       // the admin ui index is rebuilt
-      DCMIPeriod period = EncodingSchemeUtils.decodeMandatoryPeriod(episodeDC.getFirst(DublinCore.PROPERTY_TEMPORAL));
-      if (period.getEnd().getTime() <= System.currentTimeMillis()) {
+      if (schedulerData.getEndDate().getTime() <= System.currentTimeMillis()) {
         logger.info("Live media package {} not created in search index because event is already past (end date: {})",
-                mpId, period.getEnd());
+                mpId, schedulerData.getEndDate());
         return false;
       }
-      return createLiveEvent(mpId, episodeDC);
+      return createLiveEvent(mpId, schedulerData);
     } else {
       // Check if the media package found in the search index is live. We have to check because we may get a
       // notification for past events if the admin ui index is rebuilt
@@ -274,7 +276,7 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
         logger.info("Media package {} is in search index but not live so not updating it.", mpId);
         return false;
       }
-      return updateLiveEvent(mp, episodeDC);
+      return updateLiveEvent(mp, schedulerData);
     }
   }
 
@@ -313,23 +315,17 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     return false;
   }
 
-  boolean createLiveEvent(String mpId, DublinCoreCatalog episodeDC) throws LiveScheduleException {
+  boolean createLiveEvent(String mpId, TechnicalMetadata schedulerData) throws LiveScheduleException {
     try {
       logger.info("Creating live media package {}", mpId);
       // Get latest mp from the asset manager
       Snapshot snapshot = getSnapshot(mpId);
-      // Temporary mp
-      MediaPackage tempMp = (MediaPackage) snapshot.getMediaPackage().clone();
-      // Set duration (used by live tracks)
-      setDuration(tempMp, episodeDC);
-      // Add live tracks to media package
-      Map<String, Track> generatedTracks = addLiveTracks(tempMp, episodeDC.getFirst(DublinCore.PROPERTY_SPATIAL));
       // Add and distribute catalogs/acl, this creates a new mp object
-      MediaPackage mp = addAndDistributeElements(snapshot);
+      MediaPackage mp = addAndDistributeElements((MediaPackage) snapshot.getMediaPackage().clone());
       // Add tracks from tempMp
-      for (Track t : tempMp.getTracks()) {
-        mp.add(t);
-      }
+      Map<String, Track> generatedTracks = generateLiveTracks(mpId, schedulerData.getAgentId(),
+              snapshot.getOrganizationId(), getDuration(schedulerData));
+      addLiveTracks(mp, generatedTracks.values());
       // Publish mp to engage search index
       publish(mp);
       // Add engage-live publication channel to archived mp
@@ -341,54 +337,49 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
       }
       MediaPackage archivedMp = snapshot.getMediaPackage();
       addLivePublicationChannel(currentOrg, archivedMp, generatedTracks);
-      // Take a snapshot with the publication added and put its version in our local cache
-      // so that we ignore notifications for this snapshot version.
-      snapshotVersionCache.put(mpId, assetManager.takeSnapshot(archivedMp).getVersion());
+      assetManager.takeSnapshot(archivedMp);
       return true;
     } catch (Exception e) {
       throw new LiveScheduleException(e);
     }
   }
 
-  boolean updateLiveEvent(MediaPackage previousMp, DublinCoreCatalog episodeDC) throws LiveScheduleException {
+  boolean updateLiveEvent(MediaPackage previousMp, TechnicalMetadata schedulerData) throws LiveScheduleException {
     // Get latest mp from the asset manager
-    Snapshot snapshot = getSnapshot(previousMp.getIdentifier().toString());
-    // If the snapshot version is in our local cache, it means that this snapshot was created by us so
-    // nothing to do. Note that this is just to save time; if the entry has already been deleted, the mp
-    // will be compared below.
-    if (snapshot.getVersion().equals(snapshotVersionCache.getIfPresent(previousMp.getIdentifier().toString()))) {
-      logger.debug("Snapshot version {} was created by us so this change is ignored.", snapshot.getVersion());
+    String mpId = previousMp.getIdentifier().toString();
+    Snapshot snapshot = getSnapshot(mpId);
+    MediaPackage archivedMp = (MediaPackage) snapshot.getMediaPackage().clone();
+    Map<String, Track> generatedTracks = generateLiveTracks(mpId, schedulerData.getAgentId(),
+            snapshot.getOrganizationId(), getDuration(schedulerData));
+    if (isSameMetadata(previousMp, archivedMp, generatedTracks.values(), schedulerData.getStartDate())) {
+      logger.debug("Skipping Mediapackage mp {}", mpId);
       return false;
     }
-    // Temporary mp
-    MediaPackage tempMp = (MediaPackage) snapshot.getMediaPackage().clone();
-    // Set duration (used by live tracks)
-    setDuration(tempMp, episodeDC);
-    // Add live tracks to media package
-    Map<String, Track> generatedTracks = addLiveTracks(tempMp, episodeDC.getFirst(DublinCore.PROPERTY_SPATIAL));
-    // Update tracks in the publication
-    createOrUpdatePublicationTracks(tempMp, generatedTracks);
-    // If same mp, no need to do anything
-    if (isSameMediaPackage(previousMp, tempMp)) {
-      logger.debug("Live media package {} seems to be the same. Not updating.", previousMp);
-      return false;
+    logger.info("Updating live media package {} with asset version {}", mpId , snapshot.getVersion());
+    // If there are different tracks we have to update the publication in the asset manager
+    if (!tracksAreEqual(previousMp, generatedTracks.values())
+            || !archivedMp.getDate().equals(schedulerData.getStartDate())) {
+      createOrUpdatePublicationTracks(archivedMp, generatedTracks);
+      archivedMp.setDate(schedulerData.getStartDate());
+      snapshot = updateChangesInAssetManger(archivedMp, schedulerData);
     }
-    logger.info("Updating live media package {}", previousMp);
     // Add and distribute catalogs/acl, this creates a new mp
-    MediaPackage mp = addAndDistributeElements(snapshot);
+    MediaPackage mp = addAndDistributeElements((MediaPackage) snapshot.getMediaPackage().clone());
     // Add tracks from tempMp
-    for (Track t : tempMp.getTracks()) {
-      mp.add(t);
-    }
+    addLiveTracks(mp, generatedTracks.values());
     // Remove publication element that came with the snapshot mp
     removeLivePublicationChannel(mp);
     // Publish mp to engage search index
     publish(mp);
-    // Publication channel already there so no need to add
     // Don't leave garbage there!
     retractPreviousElements(previousMp, mp);
     return true;
   }
+
+  private boolean tracksAreEqual(MediaPackage previousMp, Collection<Track> values) {
+    return isSameTrackArray(previousMp.getTracks(), values.toArray(new Track[0]));
+  }
+
 
   private void createOrUpdatePublicationTracks(Publication publication, Map<String, Track> generatedTracks) {
     if (publication.getTracks().length > 0) {
@@ -424,7 +415,7 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
       logger.debug("Removed live pub channel from archived media package {}", mp);
       // Take a snapshot with the publication removed and put its version in our local cache
       // so that we ignore notifications for this snapshot version.
-      snapshotVersionCache.put(mpId, assetManager.takeSnapshot(archivedMp).getVersion());
+      assetManager.takeSnapshot(archivedMp);
     } catch (LiveScheduleException e) {
       // It was not found in asset manager. This is ok.
     }
@@ -507,17 +498,19 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     }
   }
 
-  void setDuration(MediaPackage mp, DublinCoreCatalog dc) {
-    DCMIPeriod period = EncodingSchemeUtils.decodeMandatoryPeriod(dc.getFirst(DublinCore.PROPERTY_TEMPORAL));
-    long duration = period.getEnd().getTime() - period.getStart().getTime();
-    mp.setDuration(duration);
-    logger.debug("Live media package {} has start {} and duration {}", mp.getIdentifier(), mp.getDate(),
-            mp.getDuration());
+  long getDuration(TechnicalMetadata schedulerData) {
+    return schedulerData.getEndDate().getTime() - schedulerData.getStartDate().getTime();
   }
 
-  Map<String, Track> addLiveTracks(MediaPackage mp, String caName) throws LiveScheduleException {
+  void addLiveTracks(MediaPackage mp, Collection<Track> tracks) {
+    for (Track track : tracks) {
+      mp.add(track);
+    }
+  }
+
+  Map<String, Track> generateLiveTracks(String mpId, String caName, String orgId, long duration)
+          throws LiveScheduleException {
     HashMap<String, Track> generatedTracks = new HashMap<String, Track>();
-    String mpId = mp.getIdentifier().toString();
     try {
       // If capture agent registered the properties:
       // capture.device.live.resolution.WIDTHxHEIGHT=COMPLETE_STREAMING_URL, use them!
@@ -533,7 +526,8 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
               // Note: only one flavor is supported in this format (the default: presenter/delivery)
               MediaPackageElementFlavor flavor = MediaPackageElementFlavor.parseFlavor(DEFAULT_LIVE_TARGET_FLAVORS);
               String replacedUrl = replaceVariables(mpId, caName, url, flavor, resolution);
-              mp.add(buildStreamingTrack(replacedUrl, flavor, streamMimeType, resolution, mp.getDuration()));
+              Track track = buildStreamingTrack(replacedUrl, flavor, streamMimeType, resolution, duration);
+              generatedTracks.put(flavor + ":" + resolution, track);
             }
           }
         }
@@ -545,7 +539,7 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
 
       // Capture agent did not pass any CA_PROPERTY_RESOLUTION_URL_PREFIX property when registering
       // so use the service configuration
-      if (mp.getTracks().length == 0) {
+      if (generatedTracks.size() == 0) {
         if (liveStreamingUrl == null) {
           throw new LiveScheduleException(
                   "Cannot build live tracks because '" + LIVE_STREAMING_URL + "' configuration was not set.");
@@ -555,8 +549,7 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
           for (int i = 0; i < streamResolution.length; i++) {
             String uri = replaceVariables(mpId, caName, UrlSupport.concat(liveStreamingUrl.toString(), streamName),
                     flavor, streamResolution[i]);
-            Track track = buildStreamingTrack(uri, flavor, streamMimeType, streamResolution[i], mp.getDuration());
-            mp.add(track);
+            Track track = buildStreamingTrack(uri, flavor, streamMimeType, streamResolution[i], duration);
             generatedTracks.put(flavor + ":" + streamResolution[i], track);
           }
         }
@@ -661,10 +654,8 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     return record.get().getSnapshot().get();
   }
 
-  MediaPackage addAndDistributeElements(Snapshot snapshot) throws LiveScheduleException {
+  MediaPackage addAndDistributeElements(MediaPackage mp) throws LiveScheduleException {
     try {
-      MediaPackage mp = (MediaPackage) snapshot.getMediaPackage().clone();
-
       Set<String> elementIds = new HashSet<String>();
       // Then, add series catalog if needed
       if (StringUtils.isNotEmpty(mp.getSeries())) {
@@ -754,11 +745,8 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     }
   }
 
-  void addLivePublicationChannel(
-      Organization currentOrg,
-      MediaPackage mp,
-      Map<String, Track> generatedTracks
-  ) throws LiveScheduleException {
+  void addLivePublicationChannel(Organization currentOrg, MediaPackage mp, Map<String, Track> generatedTracks)
+          throws LiveScheduleException {
     logger.debug("Adding live channel publication element to media package {}", mp);
     String engageUrlString = null;
     if (currentOrg != null) {
@@ -774,8 +762,8 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     try {
       // Create new distribution element
       URI engageUri = URIUtils.resolve(new URI(engageUrlString), PLAYER_PATH + mp.getIdentifier().toString());
-      Publication publicationElement = PublicationImpl.publication(UUID.randomUUID().toString(), CHANNEL_ID, engageUri,
-              MimeTypes.parseMimeType("text/html"));
+      Publication publicationElement = PublicationImpl
+              .publication(UUID.randomUUID().toString(), CHANNEL_ID, engageUri, MimeTypes.parseMimeType("text/html"));
       mp.add(publicationElement);
       createOrUpdatePublicationTracks(publicationElement, generatedTracks);
     } catch (URISyntaxException e) {
@@ -793,12 +781,6 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
         }
       }
     }
-  }
-
-  private boolean isSameArray(String[] previous, String[] current) {
-    Set<String> previousSet = new HashSet<String>(Arrays.asList(previous));
-    Set<String> currentSet = new HashSet<String>(Arrays.asList(current));
-    return previousSet.equals(currentSet);
   }
 
   private boolean isSameTrackArray(Track[] previous, Track[] current) {
@@ -824,18 +806,69 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     return true;
   }
 
-  boolean isSameMediaPackage(MediaPackage previous, MediaPackage current) throws LiveScheduleException {
-    return Objects.equals(previous.getTitle(), current.getTitle())
-            && Objects.equals(previous.getLanguage(), current.getLanguage())
-            && Objects.equals(previous.getSeries(), current.getSeries())
-            && Objects.equals(previous.getSeriesTitle(), current.getSeriesTitle())
-            && Objects.equals(previous.getDuration(), current.getDuration())
-            && Objects.equals(previous.getDate(), current.getDate())
-            && isSameArray(previous.getCreators(), current.getCreators())
-            && isSameArray(previous.getContributors(), current.getContributors())
-            && isSameArray(previous.getSubjects(), current.getSubjects())
-            && isSameTrackArray(previous.getTracks(), current.getTracks());
+  /**
+   * Updates the Dublin core catalog with technical metadata
+   */
+  private Snapshot updateChangesInAssetManger(MediaPackage mediaPackage, TechnicalMetadata schedulerData)
+          throws LiveScheduleException {
+    logger.debug("Updating Snapshot for mp {} because tracks or technical metadata have changed",
+            mediaPackage.getIdentifier());
+    for (Catalog episodeCatalog : mediaPackage.getCatalogs(MediaPackageElements.EPISODE)) {
+      DublinCoreCatalog dublinCore = DublinCoreUtil.loadDublinCore(workspace, episodeCatalog);
+      DublinCoreValue eventTime = EncodingSchemeUtils.encodePeriod(new DCMIPeriod(schedulerData.getStartDate(),
+              schedulerData.getEndDate()), Precision.Second);
+      dublinCore.set(DublinCore.PROPERTY_TEMPORAL, eventTime);
+      dublinCore.set(DublinCore.PROPERTY_SPATIAL, schedulerData.getAgentId());
+      try (InputStream in = dublinCoreService.serialize(dublinCore)) {
+        URI uri = workspace.put(mediaPackage.getIdentifier().toString(), episodeCatalog.getIdentifier(),
+                "dublincore.xml", in);
+        episodeCatalog.setURI(uri);
+        // setting the URI to a new source so the checksum will most like be invalid
+        episodeCatalog.setChecksum(null);
+      } catch (IOException e) {
+        throw new LiveScheduleException(e);
+      }
+    }
+    return assetManager.takeSnapshot(mediaPackage);
   }
+
+  /**
+   * Check if the Metadata of the last update we received is the same as in the current update
+   *
+   * @param previous mediaPackage as stored in the SearchService
+   * @param current mediaPackage as stored in the AssetManager
+   * @param tracks tracks generated with the technical Metadata
+   * @param startDate technical metadata start date
+   * @return true if all compared fields are equal
+   */
+  boolean isSameMetadata(MediaPackage previous, MediaPackage current, Collection<Track> tracks, Date startDate) {
+    // the tracks contain the duration and CA name implicitly, so we just have to compare the startDate with the
+    // technical metadata all other metadata fields are compared through the checksum of the dublincore catalog
+    return tracksAreEqual(previous, tracks)
+            && previous.getDate().equals(startDate)
+            && isSameDublinCore(previous.getElementsByFlavor(MediaPackageElements.EPISODE),
+            current.getElementsByFlavor(MediaPackageElements.EPISODE));
+  }
+
+  private boolean isSameDublinCore(MediaPackageElement[] previousDcArray, MediaPackageElement[] currentDcArray) {
+    if (previousDcArray == null && currentDcArray == null) {
+      return true;
+    }
+    MediaPackageElement previousDc = null;
+    if (previousDcArray != null && previousDcArray.length > 0) {
+      previousDc = previousDcArray[0];
+    }
+    MediaPackageElement currentDc = null;
+    if (currentDcArray != null && currentDcArray.length > 0) {
+      currentDc = currentDcArray[0];
+    }
+    if (currentDc != null && previousDc != null) {
+      return previousDc.getChecksum().equals(currentDc.getChecksum());
+    } else {
+      return false;
+    }
+  }
+
 
   void retractPreviousElements(MediaPackage previousMp, MediaPackage newMp) throws LiveScheduleException {
     try {
@@ -949,8 +982,5 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
     this.jobPollingInterval = jobPollingInterval;
   }
 
-  Cache<String, Version> getSnapshotVersionCache() {
-    return this.snapshotVersionCache;
-  }
   // === Used by unit tests - end
 }

@@ -22,8 +22,9 @@
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
-      <artifactId>opencast-dublincore</artifactId>
+      <artifactId>opencast-scheduler-api</artifactId>
       <version>${project.version}</version>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
   <build>

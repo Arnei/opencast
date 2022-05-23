@@ -26,6 +26,7 @@ import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem;
 import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem.DeleteEpisode;
 import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem.TakeSnapshot;
 import org.opencastproject.message.broker.api.update.AssetManagerUpdateHandler;
+import org.opencastproject.scheduler.api.SchedulerService;
 
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -73,7 +74,7 @@ public class AssetManagerEventUpdateHandler extends UpdateHandler implements Ass
             // notifications, only when getting scheduler notifications
             for (Publication pub : snapshotItem.getMediapackage().getPublications()) {
               if (LiveScheduleService.CHANNEL_ID.equals(pub.getChannel())) {
-                liveScheduleService.createOrUpdateLiveEvent(mpId, snapshotItem.getEpisodeDublincore().get());
+                liveScheduleService.createOrUpdateLiveEvent(mpId, schedulerService.getTechnicalMetadata(mpId));
               }
             }
           }
@@ -95,6 +96,12 @@ public class AssetManagerEventUpdateHandler extends UpdateHandler implements Ass
       logger.debug("Asset Manager message handler END for mp {} event type {} in thread {}", mpId, item.getType(),
               Thread.currentThread().getId());
     }
+  }
+
+  @Reference
+  @Override
+  public void setSchedulerService(SchedulerService service) {
+    super.setSchedulerService(service);
   }
 
   @Reference

@@ -211,10 +211,27 @@ public class EventQueryBuilder extends AbstractElasticsearchQueryBuilder<EventSe
       and(EventIndexSchema.HAS_OPEN_COMMENTS, query.getHasOpenComments());
     }
 
-    // Publications
+    // Comments
     if (query.getComments() != null) {
-      for (String comment : query.getComments()) {
-        and(EventIndexSchema.COMMENTS, comment);
+      for (Comment comment : query.getComments()) {
+        String nestedPath = EventIndexSchema.COMMENTS;
+
+        if (comment.getId() != null) {
+          addNestedQueries(nestedPath, nestedPath + "." + CommentIndexSchema.ID, comment.getId());
+        }
+        if (comment.getReason() != null) {
+          addNestedQueries(nestedPath, nestedPath + "." + CommentIndexSchema.REASON, comment.getReason());
+        }
+        if (comment.getText() != null) {
+          addNestedQueries(nestedPath, nestedPath + "." + CommentIndexSchema.TEXT, comment.getText());
+        }
+        if (comment.isResolvedStatus() != null) {
+          addNestedQueries(
+                  nestedPath,
+                  nestedPath + "." + CommentIndexSchema.RESOLVED_STATUS,
+                  comment.isResolvedStatus()
+          );
+        }
       }
     }
 

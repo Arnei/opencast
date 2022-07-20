@@ -29,11 +29,13 @@ import org.opencastproject.util.DateTimeSupport;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.join.ScoreMode;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MatchAllQueryBuilder;
 import org.elasticsearch.index.query.MoreLikeThisQueryBuilder;
+import org.elasticsearch.index.query.NestedQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryRewriteContext;
@@ -66,6 +68,9 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
 
   /** Fields that query a date range */
   private Set<DateRange> dateRanges = null;
+
+  /** query comments */
+  private List<NestedQueryBuilder> nestedQueries = new ArrayList<>();
 
   /** Filter expression */
   protected String filter = null;
@@ -149,6 +154,11 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
       this.queryBuilder = booleanQuery;
     }
 
+    // Comments
+    for (NestedQueryBuilder nestedQuery : nestedQueries) {
+      booleanQuery.must(nestedQuery);
+    }
+
     List<QueryBuilder> filters = new ArrayList<>();
 
     // Add filtering for AND terms
@@ -194,6 +204,35 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
     // insert value
     searchTerms.computeIfAbsent(fieldName, k -> new HashSet<>())
             .addAll(Arrays.asList(fieldValues));
+  }
+
+  /**
+   * Adds a query for a key nested one level deep
+   * For example "comments" in the events index
+   *
+   * @param nestedPath
+   *          the name of the nested object
+   * @param key
+   *          field name in the object
+   * @param value
+   *          field value in the object
+   */
+  protected void addNestedQueries(String nestedPath, String key, Object value) {
+    BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+    boolQueryBuilder.must(new TermsQueryBuilder(
+            key,
+            value
+    ));
+
+    NestedQueryBuilder nestedQuery = QueryBuilders
+            .nestedQuery(
+                    nestedPath,
+                    boolQueryBuilder,
+                    ScoreMode.None
+            );
+
+
+    nestedQueries.add(nestedQuery);
   }
 
   /**

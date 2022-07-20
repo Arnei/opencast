@@ -72,6 +72,7 @@ import org.opencastproject.elasticsearch.api.SearchIndexException;
 import org.opencastproject.elasticsearch.api.SearchResult;
 import org.opencastproject.elasticsearch.api.SearchResultItem;
 import org.opencastproject.elasticsearch.index.ElasticsearchIndex;
+import org.opencastproject.elasticsearch.index.objects.event.Comment;
 import org.opencastproject.elasticsearch.index.objects.event.Event;
 import org.opencastproject.elasticsearch.index.objects.event.EventIndexSchema;
 import org.opencastproject.elasticsearch.index.objects.event.EventSearchQuery;
@@ -2521,6 +2522,9 @@ public abstract class AbstractEventEndpoint {
           case RESOLVED:
             query.withComments(true);
             query.withOpenComments(false);
+            break;
+          case SILENT:
+            query.withComments(new Comment(null, null, "silent", null));
             break;
           default:
             logger.info("Unknown comment {}", filters.get(name));

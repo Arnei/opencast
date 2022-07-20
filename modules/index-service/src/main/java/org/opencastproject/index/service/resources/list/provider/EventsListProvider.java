@@ -61,7 +61,7 @@ public class EventsListProvider implements ResourceListProvider {
   public static final String PUBLISHER = PROVIDER_PREFIX + ".PUBLISHER";
 
   public enum Comments {
-    NONE, OPEN, RESOLVED;
+    NONE, OPEN, RESOLVED, SILENT;
   }
 
   private static final String[] NAMES = { PROVIDER_PREFIX, CONTRIBUTORS, PRESENTERS_BIBLIOGRAPHIC, PRESENTERS_TECHNICAL,

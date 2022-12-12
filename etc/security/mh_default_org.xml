@@ -85,9 +85,11 @@
     <sec:intercept-url pattern="/admin-ng/series/series.json" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_VIEW" />
     <sec:intercept-url pattern="/admin-ng/series/new/metadata" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_DETAILS_METADATA_VIEW" />
     <sec:intercept-url pattern="/admin-ng/series/new/themes" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_DETAILS_THEMES_EDIT" />
+    <sec:intercept-url pattern="/admin-ng/series/new/tobira/page" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_DETAILS_TOBIRA_EDIT" />
     <sec:intercept-url pattern="/admin-ng/series/*/access.json" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_DETAILS_ACL_VIEW" />
     <sec:intercept-url pattern="/admin-ng/series/*/metadata.json" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_DETAILS_METADATA_VIEW" />
     <sec:intercept-url pattern="/admin-ng/series/*/theme.json" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_DETAILS_THEMES_VIEW" />
+    <sec:intercept-url pattern="/admin-ng/series/*/tobira/pages" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_DETAILS_TOBIRA_VIEW" />
     <sec:intercept-url pattern="/admin-ng/server/servers.json" method="GET" access="ROLE_ADMIN, ROLE_UI_SERVERS_VIEW" />
     <sec:intercept-url pattern="/admin-ng/series/*/hasEvents.json" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_VIEW" />
     <sec:intercept-url pattern="/admin-ng/series/configuration.json" method="GET" access="ROLE_ADMIN, ROLE_UI_SERIES_VIEW" />
@@ -219,6 +221,7 @@
     <sec:intercept-url pattern="/api/events/*/metadata" method="PUT" access="ROLE_ADMIN, ROLE_API_EVENTS_METADATA_EDIT"/>
     <sec:intercept-url pattern="/api/events/*/metadata/*" method="PUT" access="ROLE_ADMIN, ROLE_API_EVENTS_METADATA_EDIT"/>
     <sec:intercept-url pattern="/api/events/*/scheduling" method="PUT" access="ROLE_ADMIN, ROLE_API_EVENTS_SCHEDULING_EDIT"/>
+    <sec:intercept-url pattern="/api/events/*/track" method="POST" access="ROLE_ADMIN, ROLE_API_EVENTS_TRACK_EDIT"/>
     <sec:intercept-url pattern="/api/groups/*" method="PUT" access="ROLE_ADMIN, ROLE_API_GROUPS_EDIT"/>
     <sec:intercept-url pattern="/api/series/*" method="PUT" access="ROLE_ADMIN, ROLE_API_SERIES_EDIT"/>
     <sec:intercept-url pattern="/api/series/*/acl" method="PUT" access="ROLE_ADMIN, ROLE_API_SERIES_ACL_EDIT"/>
@@ -297,7 +300,11 @@
 
     <!-- Enable access to Opencast Editor -->
     <sec:intercept-url pattern="/editor/**" access="ROLE_ADMIN, ROLE_USER" />
-    <sec:intercept-url pattern="/editor-ui/**" access="ROLE_USER" />
+    <sec:intercept-url pattern="/editor-ui/**" access="ROLE_ADMIN, ROLE_USER" />
+
+    <!-- Enable access to the Tobira module -->
+    <sec:intercept-url pattern="/tobira/**" access="ROLE_ADMIN" />
+    <sec:intercept-url pattern="/tobira/version" access="ROLE_ANONYMOUS" />
 
     <!-- Enable anonymous access to the annotation and the series endpoints -->
     <sec:intercept-url pattern="/series/**" method="GET" access="ROLE_ANONYMOUS, ROLE_CAPTURE_AGENT" />
@@ -479,12 +486,20 @@
     <!-- CAS Auth:  Uncomment this if using CAS authentication -->
     <!-- <property name="userEntryPoint" ref="casEntryPoint" /> -->
     <property name="digestAuthenticationEntryPoint" ref="digestEntryPoint" />
+    <property name="basicAuthenticationEntryPoint" ref="basicEntryPoint" />
   </bean>
 
   <!-- Redirects unauthenticated requests to the login form -->
   <bean id="userEntryPoint" class="org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint">
     <property name="loginFormUrl" value="/admin-ng/login.html" />
   </bean>
+
+  <!-- Redirect unauthenticated requests to custom login url with configurable redirect query parameter
+       Example: http://localhost/Shibboleth.sso/Login?target=<RELATIVE_REQUEST_URL> -->
+  <!--bean id="userEntryPoint" class="org.opencastproject.kernel.security.RedirectQueryParamAuthenticationEntryPoint">
+    <constructor-arg index="0" value="/Shibboleth.sso/Login" />
+    <constructor-arg index="1" value="target" />
+  </bean-->
 
   <!-- Returns a 401 request for authentication via digest auth -->
   <bean id="digestEntryPoint" class="org.springframework.security.web.authentication.www.DigestAuthenticationEntryPoint">
@@ -769,6 +784,12 @@
   -->
 
   <!--
+  <bean id="userDetailsMapper" class="org.opencastproject.security.ldap.OpencastUserDetailsMapper">
+    <constructor-arg ref="userDetailsService" />
+  </bean>
+  -->
+
+  <!--
   <bean id="ldapAuthProvider"
     class="org.springframework.security.ldap.authentication.LdapAuthenticationProvider">
     <constructor-arg>
@@ -796,8 +817,11 @@
         - - >
       </bean>
     </constructor-arg>
+    < ! - - Retrieve user and attributes from opencasts user details service - - >
+    <property name="userDetailsContextMapper" ref="userDetailsMapper"/>
     < ! - - Defines how the user attributes are converted to authorities (roles) - - >
-    <constructor-arg ref="authoritiesPopulator" />
+    < ! - - Output is ignored if used together with userDetailsMapper - - >
+    < ! - - constructor-arg ref="authoritiesPopulator" /- - >
   </bean>
   -->
 
@@ -819,7 +843,7 @@
   <osgi:reference id="userDirectoryService" cardinality="1..1"
                   interface="org.opencastproject.security.api.UserDirectoryService" />
 
-  <!-- Uncomment this to enable LDAP -->
+  <!-- Uncomment this as an alternative to the userDetailsMapper -->
   <!-- Make sure you provide the same instanceId you used in org.opencastproject.userdirectory.ldap-….cfg -->
   <!--
   <osgi:reference id="authoritiesPopulator" cardinality="1..1"

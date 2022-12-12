@@ -41,6 +41,7 @@ import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
@@ -91,6 +92,11 @@ public final class OaiPmhServer extends HttpServlet implements OaiPmhServerInfo 
   private ServiceRegistration<?> serviceRegistration;
 
   /** OSGi DI. */
+  @Reference(
+      cardinality = ReferenceCardinality.MULTIPLE,
+      policy = ReferencePolicy.DYNAMIC,
+      unbind = "unsetRepository"
+  )
   public void setRepository(final OaiPmhRepository r) {
     synchronized (repositories) {
       final String rId = r.getRepositoryId();
@@ -105,11 +111,6 @@ public final class OaiPmhServer extends HttpServlet implements OaiPmhServerInfo 
   }
 
   /** OSGi DI. */
-  @Reference(
-      cardinality = ReferenceCardinality.MULTIPLE,
-      policy = ReferencePolicy.DYNAMIC,
-      unbind = "unsetRepository"
-  )
   public void unsetRepository(OaiPmhRepository r) {
     synchronized (repositories) {
       repositories.remove(r.getRepositoryId());
@@ -141,6 +142,11 @@ public final class OaiPmhServer extends HttpServlet implements OaiPmhServerInfo 
   public void modified(ComponentContext cc) throws ConfigurationException {
     logger.info("Updated");
     updated(cc.getProperties());
+  }
+
+  @Deactivate
+  public void deactivate() {
+    tryUnregisterServlet();
   }
 
   /** Called by the ConfigurationAdmin service. This method actually sets up the server. */
@@ -231,12 +237,6 @@ public final class OaiPmhServer extends HttpServlet implements OaiPmhServerInfo 
     res.setCharacterEncoding("UTF-8");
     res.setContentType("text/xml;charset=UTF-8");
     oai.generate(res.getOutputStream());
-  }
-
-  @Override
-  public void destroy() {
-    super.destroy();
-    tryUnregisterServlet();
   }
 
   private synchronized void tryUnregisterServlet() {

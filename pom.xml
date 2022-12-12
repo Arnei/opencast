@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.opencastproject</groupId>
   <artifactId>base</artifactId>
-  <version>12-SNAPSHOT</version>
+  <version>14-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>opencast</name>
   <description>Opencast is a media capture, processing, management and distribution system</description>
@@ -24,9 +24,9 @@
     <commons-fileupload.version>1.4</commons-fileupload.version>
     <commons-io.version>2.8.0</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
-    <commons-text.version>1.9</commons-text.version>
-    <cxf.version>3.4.3</cxf.version>
-    <eclipselink.version>2.7.5</eclipselink.version>
+    <commons-text.version>1.10.0</commons-text.version>
+    <cxf.version>3.4.6</cxf.version>
+    <eclipselink.version>2.7.8</eclipselink.version>
     <failureaccess.version>1.0.1</failureaccess.version>
     <freemarker.version>2.3.31</freemarker.version>
     <functional.version>1.4.2</functional.version>
@@ -39,10 +39,10 @@
     <java.release>11</java.release>
     <javadoc-plugin.version>3.3.1</javadoc-plugin.version>
     <jersey.version>2.29.1</jersey.version>
-    <jettison.version>1.4.1</jettison.version>
+    <jettison.version>1.5.1</jettison.version>
     <joda-time.version>2.10.10</joda-time.version>
     <json-simple.version>1.1.1</json-simple.version>
-    <karaf.version>4.2.9</karaf.version>
+    <karaf.version>4.2.16</karaf.version>
     <node.version>v16.13.0</node.version>
     <osgi.compendium.version>6.0.0</osgi.compendium.version>
     <osgi.core.version>6.0.0</osgi.core.version>
@@ -118,19 +118,6 @@
     <module>modules/email-template-service-impl</module>
     <module>modules/engage-paella-player-7</module>
     <module>modules/engage-paella-player</module>
-    <module>modules/engage-theodul-api</module>
-    <module>modules/engage-theodul-core</module>
-    <module>modules/engage-theodul-plugin-archetype</module>
-    <module>modules/engage-theodul-plugin-controls</module>
-    <module>modules/engage-theodul-plugin-custom-matomo</module>
-    <module>modules/engage-theodul-plugin-custom-mhConnection</module>
-    <module>modules/engage-theodul-plugin-custom-notifications</module>
-    <module>modules/engage-theodul-plugin-description</module>
-    <module>modules/engage-theodul-plugin-tab-description</module>
-    <module>modules/engage-theodul-plugin-tab-downloads</module>
-    <module>modules/engage-theodul-plugin-tab-shortcuts</module>
-    <module>modules/engage-theodul-plugin-tab-slidetext</module>
-    <module>modules/engage-theodul-plugin-video-videojs</module>
     <module>modules/engage-ui</module>
     <module>modules/event-comment</module>
     <module>modules/execute-api</module>
@@ -165,7 +152,6 @@
     <module>modules/lti</module>
     <module>modules/mattermost-notification-workflowoperation</module>
     <module>modules/message-broker-api</module>
-    <module>modules/message-broker-impl</module>
     <module>modules/metadata-api</module>
     <module>modules/metadata-to-acl-workflowoperation</module>
     <module>modules/metadata</module>
@@ -176,6 +162,7 @@
     <module>modules/oaipmh-persistence</module>
     <module>modules/oaipmh-remote</module>
     <module>modules/oaipmh</module>
+    <module>modules/plugin-manager</module>
     <module>modules/presets</module>
     <module>modules/publication-service-api</module>
     <module>modules/publication-service-configurable-remote</module>
@@ -250,10 +237,12 @@
     <module>modules/timelinepreviews-ffmpeg</module>
     <module>modules/timelinepreviews-remote</module>
     <module>modules/timelinepreviews-workflowoperation</module>
+    <module>modules/tobira</module>
     <module>modules/transcription-service-amberscript</module>
     <module>modules/transcription-service-api</module>
     <module>modules/transcription-service-google-speech-impl</module>
     <module>modules/transcription-service-ibm-watson-impl</module>
+    <module>modules/transcription-service-microsoft-azure</module>
     <module>modules/transcription-service-persistence</module>
     <module>modules/transcription-service-workflowoperation</module>
     <module>modules/urlsigning-common</module>
@@ -293,7 +282,6 @@
     <module>modules/workflow-workflowoperation</module>
     <module>modules/working-file-repository-service-api</module>
     <module>modules/working-file-repository-service-impl</module>
-    <module>modules/working-file-repository-service-remote</module>
     <module>modules/workspace-api</module>
     <module>modules/workspace-impl</module>
     <module>assemblies</module>
@@ -702,7 +690,7 @@
             <dependency>
               <groupId>org.ow2.asm</groupId>
               <artifactId>asm</artifactId>
-              <version>7.3.1</version>
+              <version>9.3</version>
             </dependency>
             <dependency>
               <groupId>org.apache.maven.shared</groupId>
@@ -710,6 +698,20 @@
               <version>1.11.1</version>
             </dependency>
           </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.karaf.tooling</groupId>
+          <artifactId>karaf-services-maven-plugin</artifactId>
+          <version>${karaf.version}</version>
+          <executions>
+            <execution>
+              <id>service-metadata-generate</id>
+              <phase>process-classes</phase>
+              <goals>
+                <goal>service-metadata-generate</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -812,11 +814,6 @@
         <groupId>javax.servlet</groupId>
         <artifactId>javax.servlet-api</artifactId>
         <version>3.1.0</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.activemq</groupId>
-        <artifactId>activemq-client</artifactId>
-        <version>5.16.2</version>
       </dependency>
       <dependency>
         <groupId>org.apache.geronimo.specs</groupId>
@@ -1066,7 +1063,7 @@
       <dependency>
         <groupId>org.owasp.esapi</groupId>
         <artifactId>esapi</artifactId>
-        <version>2.1.0.1</version>
+        <version>2.3.0.0</version>
       </dependency>
       <dependency>
         <groupId>org.opensaml</groupId>
@@ -1875,6 +1872,12 @@
       <id>mvn.opencast.org</id>
       <name>Opencast 3rd-Party Repository</name>
       <url>https://mvn.opencast.org/</url>
+    </repository>
+    <!-- Used by the Microsoft Azure Transcription Service-->
+    <repository>
+      <id>maven-cognitiveservices-speech</id>
+      <name>Microsoft Cognitive Services Speech Maven Repository</name>
+      <url>https://csspeechstorage.blob.core.windows.net/maven/</url>
     </repository>
   </repositories>
   <distributionManagement>

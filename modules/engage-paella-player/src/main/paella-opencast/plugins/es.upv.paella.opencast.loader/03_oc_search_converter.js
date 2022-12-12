@@ -32,7 +32,7 @@ class OpencastToPaellaConverter {
     var streams = this._config.streams || [];
     streams.some(function(curretStream){
       return curretStream.filter.system.some(function(currentFilter) {
-        if ((currentFilter == '*') || base.userAgent.system[currentFilter] ) {
+        if ((currentFilter == '*') || paella.utils.userAgent.system[currentFilter] ) {
           filterStream = curretStream;
           return true;
         }
@@ -83,7 +83,7 @@ class OpencastToPaellaConverter {
           sourceType = 'rtmp';
           break;
         default:
-          paella.debug.log(`OpencastToPaellaConverter: MimeType (${track.mimetype}) not supported!`);
+          paella.log.debug(`OpencastToPaellaConverter: MimeType (${track.mimetype}) not supported!`);
           break;
         }
         break;
@@ -108,12 +108,12 @@ class OpencastToPaellaConverter {
           sourceType = 'audio';
           break;
         default:
-          paella.debug.log(`OpencastToPaellaConverter: MimeType (${track.mimetype}) not supported!`);
+          paella.log.debug(`OpencastToPaellaConverter: MimeType (${track.mimetype}) not supported!`);
           break;
         }
         break;
       default:
-        paella.debug.log(`OpencastToPaellaConverter: Protocol (${protocol[1]}) not supported!`);
+        paella.log.debug(`OpencastToPaellaConverter: Protocol (${protocol[1]}) not supported!`);
         break;
       }
     }
@@ -125,7 +125,7 @@ class OpencastToPaellaConverter {
     var res = new Array(0,0);
     // HLS-VOD
     if (track.video instanceof Object) {
-      if (!track.master) {
+      if (track.video.resolution) {
         res = track.video.resolution.split('x');
       }
       // HLS-VOD- parse sub-video data from the adaptive "master" tagged track
@@ -222,7 +222,7 @@ class OpencastToPaellaConverter {
         let smask = atc[0].split('/');
 
         if (((smask[0] == '*') || (smask[0] == sflavor[0])) && ((smask[1] == '*') || (smask[1] == sflavor[1]))) {
-          audioTag = (atc[1] == '*') ? base.dictionary.currentLanguage() : atc[1];
+          audioTag = (atc[1] == '*') ? paella.utils.dictionary.currentLanguage() : atc[1];
           return true;
         }
       });
@@ -274,6 +274,10 @@ class OpencastToPaellaConverter {
           if (videoCanvas) {
             currentStream.canvas = [videoCanvas];
           }
+        } else {
+          // Explicitly set the type, else Paella will assume this track to be 'video' type (Causing an exception
+          // if it is actually not)
+          currentStream.type = 'noType';
         }
       }
     });
@@ -379,54 +383,59 @@ class OpencastToPaellaConverter {
     return paellaStreams;
   }
 
-  getCaptions(episode) {
-    var captions = [];
-
-    var attachments = episode.mediapackage.attachments.attachment;
-    var catalogs = episode.mediapackage.metadata.catalog;
-    if (!(attachments instanceof Array)) { attachments = attachments ? [attachments] : []; }
-    if (!(catalogs instanceof Array)) { catalogs = catalogs ? [catalogs] : []; }
-
-
-    // Read the attachments
-    attachments.forEach((currentAttachment) => {
+  readCaptions(potentialNewCaptions, captions) {
+    potentialNewCaptions.forEach((potentialCaption) => {
       try {
         let captions_regex = /^captions\/([^+]+)(\+(.+))?/g;
-        let captions_match = captions_regex.exec(currentAttachment.type);
+        let captions_match = captions_regex.exec(potentialCaption.type);
 
         if (captions_match) {
-          let captions_format = captions_match[1];
           let captions_lang = captions_match[3];
 
           // TODO: read the lang from the dfxp file
           //if (captions_format == "dfxp") {}
 
-          if (!captions_lang && currentAttachment.tags && currentAttachment.tags.tag) {
-            if (!(currentAttachment.tags.tag instanceof Array)) {
-              currentAttachment.tags.tag = [currentAttachment.tags.tag];
+          if (!captions_lang && potentialCaption.tags && potentialCaption.tags.tag) {
+            if (!(potentialCaption.tags.tag instanceof Array)) {
+              potentialCaption.tags.tag = [potentialCaption.tags.tag];
             }
-            currentAttachment.tags.tag.forEach((tag)=>{
+            potentialCaption.tags.tag.forEach((tag)=>{
               if (tag.startsWith('lang:')){
-                let split = tag.split(':');
-                captions_lang = split[1];
+                captions_lang = tag.substring('lang:'.length);
               }
             });
           }
 
-          let captions_label = captions_lang || 'unknown language';
-          //base.dictionary.translate("CAPTIONS_" + captions_lang);
+          let captions_format = potentialCaption.url.split('.').pop();
 
           captions.push({
-            id: currentAttachment.id,
+            id: potentialCaption.id,
             lang: captions_lang,
-            text: captions_label,
-            url: currentAttachment.url,
+            text: captions_lang || 'unknown language',
+            url: potentialCaption.url,
             format: captions_format
           });
         }
       }
       catch (err) {/**/}
     });
+  }
+
+  getCaptions(episode) {
+    var captions = [];
+
+    var attachments = episode.mediapackage.attachments.attachment;
+    var catalogs = episode.mediapackage.metadata.catalog;
+    var tracks = episode.mediapackage.media.track;
+    if (!(attachments instanceof Array)) { attachments = attachments ? [attachments] : []; }
+    if (!(catalogs instanceof Array)) { catalogs = catalogs ? [catalogs] : []; }
+    if (!(tracks instanceof Array)) { tracks = tracks ? [tracks] : []; }
+
+    // Read the attachments
+    this.readCaptions(attachments, captions);
+
+    // Read the tracks
+    this.readCaptions(tracks, captions);
 
     // Read the catalogs
     catalogs.forEach((currentCatalog) => {
@@ -442,8 +451,7 @@ class OpencastToPaellaConverter {
             }
             currentCatalog.tags.tag.forEach((tag)=>{
               if (tag.startsWith('lang:')){
-                let split = tag.split(':');
-                captions_lang = split[1];
+                captions_lang = tag.substring('lang:'.length);
               }
             });
           }

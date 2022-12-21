@@ -21,6 +21,7 @@
 
 package org.opencastproject.event.handler;
 
+import org.opencastproject.event.handler.persistence.UpdateHandlerDatabase;
 import org.opencastproject.message.broker.api.series.SeriesItem;
 import org.opencastproject.message.broker.api.update.SeriesUpdateHandler;
 
@@ -52,6 +53,11 @@ public class ConductingSeriesUpdatedEventHandler implements SeriesUpdateHandler 
   private AssetManagerUpdatedEventHandler assetManagerUpdatedEventHandler;
   private SeriesUpdatedEventHandler seriesUpdatedEventHandler;
 
+  /** Resource lock */
+  private static final Object lock = new Object();
+  /** Persistent storage */
+  private UpdateHandlerDatabase persistence;
+
 
   @Activate
   public void activate(ComponentContext cc) {
@@ -70,8 +76,24 @@ public class ConductingSeriesUpdatedEventHandler implements SeriesUpdateHandler 
     } else if (SeriesItem.Type.UpdateCatalog.equals(seriesItem.getType())
                  || SeriesItem.Type.UpdateAcl.equals(seriesItem.getType())
                  || SeriesItem.Type.Delete.equals(seriesItem.getType())) {
-      seriesUpdatedEventHandler.handleEvent(seriesItem);
-      assetManagerUpdatedEventHandler.handleEvent(seriesItem);
+
+//      synchronized (lock) {
+      try {
+        boolean locked = persistence.getSeriesUpdateHandlerLocked();
+        if (locked) {
+
+        }
+        persistence.setSeriesUpdateHandlerLocked(true);
+
+        seriesUpdatedEventHandler.handleEvent(seriesItem);
+        assetManagerUpdatedEventHandler.handleEvent(seriesItem);
+
+        persistence.setSeriesUpdateHandlerLocked(false);
+      } catch (Exception e) {
+        logger.error(e.getMessage());
+      }
+
+//      }
     }
   }
 
@@ -85,5 +107,11 @@ public class ConductingSeriesUpdatedEventHandler implements SeriesUpdateHandler 
   @Reference
   public void setSeriesUpdatedEventHandler(SeriesUpdatedEventHandler h) {
     this.seriesUpdatedEventHandler = h;
+  }
+
+  /** OSGi callback for setting persistance. */
+  @Reference
+  public void setPersistence(UpdateHandlerDatabase persistence) {
+    this.persistence = persistence;
   }
 }

@@ -39,7 +39,7 @@
     <java.release>11</java.release>
     <javadoc-plugin.version>3.3.1</javadoc-plugin.version>
     <jersey.version>2.29.1</jersey.version>
-    <jettison.version>1.5.1</jettison.version>
+    <jettison.version>1.5.2</jettison.version>
     <joda-time.version>2.10.10</joda-time.version>
     <json-simple.version>1.1.1</json-simple.version>
     <karaf.version>4.2.16</karaf.version>
@@ -212,6 +212,7 @@
     <module>modules/speech-to-text-impl</module>
     <module>modules/speech-to-text-remote</module>
     <module>modules/speech-to-text-workflowoperation</module>
+    <module>modules/subtitle-parser</module>
     <module>modules/static-file-service-api</module>
     <module>modules/static-file-service-impl</module>
     <module>modules/static</module>
@@ -257,6 +258,7 @@
     <module>modules/userdirectory-ldap</module>
     <module>modules/userdirectory-moodle</module>
     <module>modules/userdirectory-sakai</module>
+    <module>modules/userdirectory-studip</module>
     <module>modules/userdirectory</module>
     <module>modules/usertracking-api</module>
     <module>modules/usertracking-impl</module>

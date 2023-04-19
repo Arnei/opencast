@@ -12,6 +12,7 @@
     "i18next": "^22.0.4",
     "i18next-browser-languagedetector": "^7.0.0",
     "iframe-resizer": "^4.3.2",
+    "paginationjs": "^2.1.4",
     "query-string": "^7.1.1",
     "react": "^18.1.0",
     "react-bootstrap": "^2.5.0",
@@ -27,6 +28,7 @@
   },
   "scripts": {
     "i18n": "./copy-translations.sh",
+    "i18ndeeplinking": "./i18n.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

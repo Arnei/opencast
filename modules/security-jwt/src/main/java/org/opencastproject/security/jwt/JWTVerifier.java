@@ -118,7 +118,7 @@ public final class JWTVerifier {
   public static DecodedJWT verify(DecodedJWT jwt, List<String> claimConstraints, Algorithm... algorithms)
           throws JWTVerificationException {
     Assert.notNull(jwt, "A decoded JWT must be set");
-    Assert.notEmpty(claimConstraints, "Claim constraints must be set");
+//    Assert.notEmpty(claimConstraints, "Claim constraints must be set");
     Assert.notEmpty(algorithms, "Algorithms must be set");
     Assert.isTrue(algorithmsMatch(algorithms), "Algorithms must be of same class");
 

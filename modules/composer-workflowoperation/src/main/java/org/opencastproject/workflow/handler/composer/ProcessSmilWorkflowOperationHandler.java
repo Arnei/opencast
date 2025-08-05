@@ -24,7 +24,6 @@ package org.opencastproject.workflow.handler.composer;
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncoderException;
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.AdaptivePlaylist;
@@ -92,6 +91,8 @@ import java.util.stream.Collectors;
 )
 public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperationHandler {
   static final String SEPARATOR = ";";
+  static final String ADAPTIVE_TYPE_SUFFIX = "adaptive.type"; // HLS only
+
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(ProcessSmilWorkflowOperationHandler.class);
 
@@ -102,7 +103,7 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
   /** The local workspace */
   private Workspace workspace = null;
 
-  private Predicate<EncodingProfile> isManifestEP = p -> p.getOutputType() == EncodingProfile.MediaType.Manifest;
+  private Predicate<EncodingProfile> isManifestEP = p ->"HLS".equalsIgnoreCase(p.getExtension(ADAPTIVE_TYPE_SUFFIX));
 
   /**
    * A convenience structure to hold info for each paramgroup in the Smil which will produce one trim/concat/encode job
@@ -436,7 +437,6 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
     Set<EncodingProfile> profiles = new HashSet<EncodingProfile>();
     Set<String> profileNames = new HashSet<String>();
     // Find all the encoding profiles
-    // Check that the profiles support the media source types
     for (TrackSection ts : smilgroups)
       for (Track track : ts.getSourceTracks()) {
         // Check that the profile is supported
@@ -444,21 +444,6 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
           EncodingProfile profile = composerService.getProfile(profileName);
           if (profile == null)
             throw new WorkflowOperationException("Encoding profile '" + profileName + "' was not found");
-          MediaType outputType = profile.getOutputType();
-          // Check if the track supports the output type of the profile MediaType outputType = profile.getOutputType();
-          // Omit if needed
-          if (outputType.equals(MediaType.Audio) && !track.hasAudio()) {
-            logger.info("Skipping encoding of '{}' with " + profileName + ", since the track lacks an audio stream",
-                    track);
-            continue;
-          } else if (outputType.equals(MediaType.Visual) && !track.hasVideo()) {
-            logger.info("Skipping encoding of '{}' " + profileName + ", since the track lacks a video stream", track);
-            continue;
-          } else if (outputType.equals(MediaType.AudioVisual) && !track.hasAudio() && !track.hasVideo()) {
-            logger.info("Skipping encoding of '{}' (audiovisual)" + profileName
-                    + ", since it lacks a audio or video stream", track);
-            continue;
-          }
           profiles.add(profile); // Include this profiles for encoding
           profileNames.add(profileName);
         }

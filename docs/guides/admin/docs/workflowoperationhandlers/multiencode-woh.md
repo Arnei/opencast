@@ -172,8 +172,6 @@ some or all of the following encoding profiles in your Opencast. Copy and pastin
 # TODO: When ffmpeg is fixed - add profile:v baseline
 # A very low bitrate stream with 15 fps to support mobile - (under 192kb/s)
 profile.hls-quarter-15fps-presenter-mp4.name = hls-quarter-15fps-presenter-mp4
-profile.hls-quarter-15fps-presenter-mp4.input = visual
-profile.hls-quarter-15fps-presenter-mp4.output = visual
 profile.hls-quarter-15fps-presenter-mp4.suffix = -presenter-mobile-15fps.mp4
 profile.hls-quarter-15fps-presenter-mp4.mimetype = video/mp4
 profile.hls-quarter-15fps-presenter-mp4.ffmpeg.command = -i #{in.video.path} -r:v 15 \
@@ -188,8 +186,6 @@ profile.hls-quarter-15fps-presenter-mp4.jobload=4.0
 
 # maximum of width = 320 or 1/8 original width, keeping aspect ratio
 profile.hls-quarter-res-presenter-mp4.name = hls-quarter-res-presenter-mp4
-profile.hls-quarter-res-presenter-mp4.input = visual
-profile.hls-quarter-res-presenter-mp4.output = visual
 profile.hls-quarter-res-presenter-mp4.suffix = -presenter-verylow-30fps.mp4
 profile.hls-quarter-res-presenter-mp4.mimetype = video/mp4
 profile.hls-quarter-res-presenter-mp4.ffmpeg.command = -i #{in.video.path} -r:v 30 \
@@ -205,8 +201,6 @@ profile.hls-quarter-res-presenter-mp4.jobload=4.0
 
 # 16x9 or 4X3 presenter (camera) - scale to max of w=640 or half - preserves aspect ratio
 profile.hls-half-res-presenter-mp4.name = hls-half-res-presenter-mp4
-profile.hls-half-res-presenter-mp4.input = visual
-profile.hls-half-res-presenter-mp4.output = visual
 profile.hls-half-res-presenter-mp4.suffix = -presenter-low-30fps.mp4
 profile.hls-half-res-presenter-mp4.mimetype = video/mp4
 profile.hls-half-res-presenter-mp4.ffmpeg.command = -i #{in.video.path} -r:v 30 \
@@ -221,8 +215,6 @@ profile.hls-half-res-presenter-mp4.jobload=4.0
 
 # 16x9 or 4X3 presenter (screen) and presenter (camera) - scale to max of 960 or three quarters - preserves original aspect ratio
 profile.hls-threequarters-res-presenter-mp4.name = hls-threequarters-res-presenter-mp4
-profile.hls-threequarters-res-presenter-mp4.input = visual
-profile.hls-threequarters-res-presenter-mp4.output = visual
 profile.hls-threequarters-res-presenter-mp4.suffix = -presenter-med-30fps.mp4
 profile.hls-threequarters-res-presenter-mp4.mimetype = video/mp4
 profile.hls-threequarters-res-presenter-mp4.ffmpeg.command = -i #{in.video.path} -r:v 30 \
@@ -238,8 +230,6 @@ profile.hls-threequarters-res-presenter-mp4.jobload=4.0
 # -bf:v 3 -b_strategy:v 2 -refs:v 5 \
 # scale to 1920
 profile.hls-full-res-presenter-mp4.name = hls-full-res-presenter-mp4
-profile.hls-full-res-presenter-mp4.input = visual
-profile.hls-full-res-presenter-mp4.output = visual
 profile.hls-full-res-presenter-mp4.suffix = -presenter-high-30fps.mp4
 profile.hls-full-res-presenter-mp4.mimetype = video/mp4
 profile.hls-full-res-presenter-mp4.ffmpeg.command = -i #{in.video.path} -r:v 30 \
@@ -255,8 +245,6 @@ profile.hls-full-res-presenter-mp4.jobload=4.0
 
 # scale to w=1/4 original, maximum of 480, keeping aspect ratio, 15 fps at 2s keyframe
 profile.hls-quarter-15fps-presentation-mp4.name = hls-quarter-15fps-presentation-mp4
-profile.hls-quarter-15fps-presentation-mp4.input = visual
-profile.hls-quarter-15fps-presentation-mp4.output = visual
 profile.hls-quarter-15fps-presentation-mp4.suffix = -presentation-mobile-15fps.mp4
 profile.hls-quarter-15fps-presentation-mp4.mimetype = video/mp4
 profile.hls-quarter-15fps-presentation-mp4.ffmpeg.command = -i #{in.video.path} -r:v 15 \
@@ -271,8 +259,6 @@ profile.hls-quarter-15fps-presentation-mp4.jobload=4.0
 
 # scale to w=1/4 original, maximum of 480, keeping aspect ratio
 profile.hls-quarter-res-presentation-mp4.name = hls-quarter-res-presentation-mp4
-profile.hls-quarter-res-presentation-mp4.input = visual
-profile.hls-quarter-res-presentation-mp4.output = visual
 profile.hls-quarter-res-presentation-mp4.suffix = -presentation-verylow-30fps.mp4
 profile.hls-quarter-res-presentation-mp4.mimetype = video/mp4
 profile.hls-quarter-res-presentation-mp4.ffmpeg.command = -i #{in.video.path} -r:v 30 \
@@ -287,8 +273,6 @@ profile.hls-quarter-res-presentation-mp4.jobload=4.0
 
 # 16x9 or 4X3 presentation (screen) (camera) - scale to half - preserves original aspect ratio
 profile.hls-half-res-presentation-mp4.name = hls-half-res-presentation-mp4
-profile.hls-half-res-presentation-mp4.input = visual
-profile.hls-half-res-presentation-mp4.output = visual
 profile.hls-half-res-presentation-mp4.suffix = -presentation-low-30fps.mp4
 profile.hls-half-res-presentation-mp4.mimetype = video/mp4
 profile.hls-half-res-presentation-mp4.ffmpeg.command = -i #{in.video.path} -r:v 30 \
@@ -303,8 +287,6 @@ profile.hls-half-res-presentation-mp4.jobload=4.0
 
 # 16x9 or 4X3 presentation (screen) (camera) - scale to threee quarters - preserves original aspect ratio
 profile.hls-threequarters-res-presentation-mp4.name = hls-threequarters-res-presentation-mp4
-profile.hls-threequarters-res-presentation-mp4.input = visual
-profile.hls-threequarters-res-presentation-mp4.output = visual
 profile.hls-threequarters-res-presentation-mp4.suffix = -presentation-med-30fps.mp4
 profile.hls-threequarters-res-presentation-mp4.mimetype = video/mp4
 profile.hls-threequarters-res-presentation-mp4.ffmpeg.command = -i #{in.video.path} -r:v 30 \
@@ -320,8 +302,6 @@ profile.hls-threequarters-res-presentation-mp4.jobload=4.0
 
 # 16x9 or 4X3 presentation (screen) - no scaling - preserves original aspect ratio and size
 profile.hls-full-res-presentation-mp4.name = hls-full-res-presentation-mp4
-profile.hls-full-res-presentation-mp4.input = visual
-profile.hls-full-res-presentation-mp4.output = visual
 profile.hls-full-res-presentation-mp4.suffix = -presentation-high-30fps.mp4
 profile.hls-full-res-presentation-mp4.mimetype = video/mp4
 profile.hls-full-res-presentation-mp4.ffmpeg.command = -i #{in.video.path} -r:v 30 \
@@ -347,9 +327,6 @@ profile.hls-full-res-presentation-mp4.jobload=4.0
 profile.multiencode-hls.name = multiencode-hls
 # adaptive type - only used in a group to supplement encoding only HLS is supported
 profile.multiencode-hls.adaptive.type = HLS
-profile.multiencode-hls.input = visual
-# manifest type means that it is a supplement
-profile.multiencode-hls.output = manifest
 # Only master playlist has the suffix and can be tagged with profile name in process-smil or multi-encode
 profile.multiencode-hls.suffix = -master.m3u8
 profile.multiencode-hls.mimetype = application/x-mpegURL
@@ -371,9 +348,6 @@ profile.multiencode-hls.jobload=1.0
 profile.multiencode-hls-4s.name = multiencode-hls-4s
 # adaptive type - only used in a group to supplement encoding only HLS is supported
 profile.multiencode-hls-4s.adaptive.type = HLS
-profile.multiencode-hls-4s.input = visual
-# manifest type means that it is a supplement
-profile.multiencode-hls-4s.output = manifest
 # Only master playlist has the suffix and can be tagged with profile name in process-smil or multi-encode
 profile.multiencode-hls-4s.suffix = -master.m3u8
 profile.multiencode-hls-4s.mimetype = application/x-mpegURL

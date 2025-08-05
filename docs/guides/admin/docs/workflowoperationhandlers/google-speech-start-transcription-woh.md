@@ -59,8 +59,6 @@ Example
 
 ```properties
 profile.audio-flac.name = audio-flac
-profile.audio-flac.input = stream
-profile.audio-flac.output = audio
 profile.audio-flac.suffix = -audio.flac
 profile.audio-flac.mimetype = audio/flac
 profile.audio-flac.ffmpeg.command = -i /#{in.video.path} -ac 1 #{out.dir}/#{out.name}#{out.suffix}

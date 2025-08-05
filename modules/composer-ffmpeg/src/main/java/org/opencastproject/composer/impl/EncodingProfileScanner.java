@@ -24,7 +24,6 @@ package org.opencastproject.composer.impl;
 import static org.opencastproject.util.ReadinessIndicator.ARTIFACT;
 
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
 import org.opencastproject.composer.api.EncodingProfileImpl;
 import org.opencastproject.util.ConfigurationException;
 import org.opencastproject.util.ReadinessIndicator;
@@ -70,8 +69,6 @@ public class EncodingProfileScanner implements ArtifactInstaller {
 
   /* Property names */
   private static final String PROP_NAME = ".name";
-  private static final String PROP_APPLICABLE = ".input";
-  private static final String PROP_OUTPUT = ".output";
   private static final String PROP_SUFFIX = ".suffix";
   private static final String PROP_JOBLOAD = ".jobload";
 
@@ -181,17 +178,6 @@ public class EncodingProfileScanner implements ArtifactInstaller {
 
     EncodingProfileImpl df = new EncodingProfileImpl(profile, name, artifact);
 
-    // Output Type
-    String type = getDefaultProperty(profile, PROP_OUTPUT, properties, defaultProperties);
-    if (StringUtils.isBlank(type))
-      throw new ConfigurationException("Output type (" + PROP_OUTPUT + ") of profile '" + profile + "' is missing");
-    try {
-      df.setOutputType(MediaType.parseString(StringUtils.trimToEmpty(type)));
-    } catch (IllegalArgumentException e) {
-      throw new ConfigurationException("Output type (" + PROP_OUTPUT + ") '" + type + "' of profile '" + profile
-              + "' is unknown");
-    }
-
     //Suffixes with tags?
     List<String> tags = getTags(profile, properties, defaultProperties);
     if (tags.size() > 0) {
@@ -207,12 +193,6 @@ public class EncodingProfileScanner implements ArtifactInstaller {
         throw new ConfigurationException("Suffix (" + PROP_SUFFIX + ") of profile '" + profile + "' is missing");
       df.setSuffix(StringUtils.trim(suffixObj));
     }
-
-    // Applicable to the following track categories
-    String applicableObj = getDefaultProperty(profile, PROP_APPLICABLE, properties, defaultProperties);
-    if (StringUtils.isBlank(applicableObj))
-      throw new ConfigurationException("Input type (" + PROP_APPLICABLE + ") of profile '" + profile + "' is missing");
-    df.setApplicableType(MediaType.parseString(StringUtils.trimToEmpty(applicableObj)));
 
     String jobLoad = getDefaultProperty(profile, PROP_JOBLOAD, properties, defaultProperties);
     if (!StringUtils.isBlank(jobLoad)) {

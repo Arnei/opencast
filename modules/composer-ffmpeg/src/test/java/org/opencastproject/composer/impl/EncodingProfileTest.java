@@ -27,11 +27,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
-import org.opencastproject.composer.api.EncodingProfileImpl;
 
 import org.easymock.EasyMock;
 import org.junit.Before;
@@ -101,26 +98,6 @@ public class EncodingProfileTest {
    * Test method for {@link org.opencastproject.composer.api.EncodingProfileImpl}.
    */
   @Test
-  public void testMediaTypes() {
-    assertNotNull(EncodingProfile.MediaType.parseString("audio"));
-    assertNotNull(EncodingProfile.MediaType.parseString("visual"));
-    assertNotNull(EncodingProfile.MediaType.parseString("audiovisual"));
-    assertNotNull(EncodingProfile.MediaType.parseString("enhancedaudio"));
-    assertNotNull(EncodingProfile.MediaType.parseString("image"));
-    assertNotNull(EncodingProfile.MediaType.parseString("imagesequence"));
-    assertNotNull(EncodingProfile.MediaType.parseString("cover"));
-    try {
-      EncodingProfile.MediaType.parseString("foo");
-      fail("Test should have failed for media type 'foo'");
-    } catch (IllegalArgumentException e) {
-      // Expected
-    }
-  }
-
-  /**
-   * Test method for {@link org.opencastproject.composer.api.EncodingProfileImpl}.
-   */
-  @Test
   public void testInitializationFromProperties() {
     assertNotNull(profiles);
     assertEquals(12, profiles.size());
@@ -145,42 +122,12 @@ public class EncodingProfileTest {
   }
 
   /**
-   * Test method for {@link org.opencastproject.composer.api.EncodingProfileImpl#getOutputType()}.
-   */
-  @Test
-  public void testGetType() {
-    EncodingProfile profile = profiles.get(h264ProfileId);
-    assertEquals(MediaType.Visual, profile.getOutputType());
-  }
-
-  /**
    * Test method for {@link org.opencastproject.composer.api.EncodingProfileImpl#getSuffix()}.
    */
   @Test
   public void testGetSuffix() {
     EncodingProfile profile = profiles.get(h264ProfileId);
     assertEquals("-dm.m4v", profile.getSuffix());
-  }
-
-  /**
-   * Test method for {@link EncodingProfileImpl#getApplicableMediaType()}
-   */
-  @Test
-  public void testGetApplicableMediaTypes() {
-    EncodingProfile profile = profiles.get(h264ProfileId);
-    MediaType type = profile.getApplicableMediaType();
-    assertNotNull(type);
-    assertEquals(MediaType.Visual, type);
-  }
-
-  /**
-   * Test method for {@link EncodingProfileImpl#getApplicableMediaType()}
-   */
-  @Test
-  public void testApplicableTo() {
-    EncodingProfile profile = profiles.get(h264ProfileId);
-    assertTrue(profile.isApplicableTo(MediaType.Visual));
-    assertFalse(profile.isApplicableTo(MediaType.Audio));
   }
 
   /**
@@ -203,7 +150,6 @@ public class EncodingProfileTest {
   @Test
   public void testGetExtensions() {
     EncodingProfile profile = profiles.get(h264ProfileId);
-    profile.isApplicableTo(MediaType.Visual);
     assertEquals(Collections.emptyMap(), profile.getExtensions());
 
     // Test profile with existing extension

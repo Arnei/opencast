@@ -138,8 +138,6 @@ The audio track to transcript must be extracted from the media file and converte
 # Microsoft Azure Speech Services accept limited audio formats
 # See https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/batch-transcription-audio-data#supported-audio-formats
 profile.transcription-azure.audio.name = extract audio stream for transcription
-profile.transcription-azure.audio.input = visual
-profile.transcription-azure.audio.output = audio
 profile.transcription-azure.audio.jobload = 0.5
 profile.transcription-azure.audio.suffix = .ogg
 profile.transcription-azure.audio.mimetype = audio/ogg

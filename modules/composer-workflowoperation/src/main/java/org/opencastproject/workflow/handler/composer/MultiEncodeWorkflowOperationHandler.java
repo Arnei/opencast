@@ -78,6 +78,8 @@ import java.util.stream.Collectors;
 )
 public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperationHandler {
 
+  static final String ADAPTIVE_TYPE_SUFFIX = "adaptive.type"; // HLS only
+
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(MultiEncodeWorkflowOperationHandler.class);
 
@@ -118,7 +120,7 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
     this.workspace = workspace;
   }
 
-  private Predicate<EncodingProfile> isManifestEP = p ->  p.getOutputType() == EncodingProfile.MediaType.Manifest;
+  private Predicate<EncodingProfile> isManifestEP = p ->"HLS".equalsIgnoreCase(p.getExtension(ADAPTIVE_TYPE_SUFFIX));
 
   /**
    * {@inheritDoc}

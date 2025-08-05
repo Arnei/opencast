@@ -68,8 +68,6 @@ For example:
 All profiles should have the following properties:
 
     .name
-    .input  = [audio|visual|stream|image]
-    .output = [audio|visual|stream|image]
     .suffix
     .ffmpeg.command
 
@@ -77,8 +75,6 @@ For example:
 
     // My audio/video encoding profile
     profile.my-av-profile.http.name           = my audio/video encoding profile
-    profile.my-av-profile.http.input          = visual
-    profile.my-av-profile.http.output         = visual
     profile.my-av-profile.http.suffix         = -encoded.enc
     profile.my-av-profile.http.ffmpeg.command = -i #{in.video.path} -c:v venc -c:a aenc #{out.dir}/#{out.name}#{out.suffix}
 

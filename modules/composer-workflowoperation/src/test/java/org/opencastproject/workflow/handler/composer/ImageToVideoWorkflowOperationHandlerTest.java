@@ -24,7 +24,6 @@ package org.opencastproject.workflow.handler.composer;
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncoderException;
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.mediapackage.Attachment;
 import org.opencastproject.mediapackage.MediaPackage;
@@ -160,8 +159,6 @@ public class ImageToVideoWorkflowOperationHandlerTest {
     // set up mock profile
     profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(PROFILE_ID);
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(MediaType.Image);
-    EasyMock.expect(profile.getOutputType()).andReturn(MediaType.AudioVisual);
     EasyMock.replay(profile);
 
     // set up mock composer service

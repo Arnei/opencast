@@ -52,8 +52,6 @@ running `speechtotext` in your workflow and an encoder profile:
 ```
 # Audio-only encoding format used for whispercpp
 profile.audio-whispercpp.name = whispercpp wav
-profile.audio-whispercpp.input = stream
-profile.audio-whispercpp.output = stream
 profile.audio-whispercpp.suffix = -stt.wav
 profile.audio-whispercpp.ffmpeg.command = -i #{in.video.path} -vn -ar 16000 -ac 1 -c:a pcm_s16le #{out.dir}/#{out.name}#{out.suffix}
 profile.audio-whispercpp.jobload = 1.0

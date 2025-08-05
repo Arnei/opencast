@@ -24,7 +24,6 @@ package org.opencastproject.workflow.handler.composer;
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncoderException;
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
@@ -201,17 +200,6 @@ public class EncodeWorkflowOperationHandler extends AbstractWorkflowOperationHan
 
       // Encode the track with all profiles
       for (EncodingProfile profile : profiles) {
-
-        // Check if the track supports the input type of the profile
-        MediaType inputType = profile.getApplicableMediaType();
-        if (inputType.equals(MediaType.Audio) && !track.hasAudio()) {
-          logger.info("Skipping encoding of '{}', since it lacks an audio stream", track);
-          continue;
-        } else if (inputType.equals(MediaType.Visual) && !track.hasVideo()) {
-          logger.info("Skipping encoding of '{}', since it lacks a video stream", track);
-          continue;
-        }
-
         logger.info("Encoding track {} using encoding profile '{}'", track, profile);
 
         // Start encoding and wait for the result

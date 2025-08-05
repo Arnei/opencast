@@ -23,7 +23,6 @@ package org.opencastproject.workflow.handler.composer;
 
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
@@ -120,8 +119,6 @@ public class DemuxWorkflowOperationHandlerTest {
     // set up mock profile
     profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(PROFILE_ID);
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(MediaType.Stream);
-    EasyMock.expect(profile.getOutputType()).andReturn(MediaType.AudioVisual);
     profileList = new EncodingProfile[] { profile };
     EasyMock.replay(profile);
 
@@ -161,8 +158,6 @@ public class DemuxWorkflowOperationHandlerTest {
     // set up mock profile
     profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(PROFILE_ID);
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(MediaType.Stream);
-    EasyMock.expect(profile.getOutputType()).andReturn(MediaType.Stream);
     profileList = new EncodingProfile[] { profile };
     EasyMock.replay(profile);
 

@@ -73,8 +73,6 @@ media package element will contain a tag with the value `medium-quality`; and so
 ```properties
 # Distribution format definition for low quality presenter download
 profile.parallel.http.name = parallel video encoding
-profile.parallel.http.input = visual
-profile.parallel.http.output = visual
 profile.parallel.http.suffix.low-quality = -low.mp4
 profile.parallel.http.suffix.medium-quality = -medium.mp4
 profile.parallel.http.suffix.high-quality = -high.mp4

@@ -79,8 +79,6 @@ Although not necessary, it is recommended to use a concat encoding profile that 
 # Source files must be of the same dimension and codecs and they will be used in the target
 # It uses ffmpeg concat demuxer
 profile.concat-samecodec.work.name = concat-samecodec
-profile.concat-samecodec.work.input = visual
-profile.concat-samecodec.work.output = visual
 profile.concat-samecodec.work.suffix = -concatenated.#{in.video.suffix}
 profile.concat-samecodec.work.ffmpeg.command = #{concatCommand} -c copy #{out.dir}/#{out.name}#{out.suffix}
 ```

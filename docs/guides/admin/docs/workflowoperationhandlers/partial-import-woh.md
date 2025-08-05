@@ -272,22 +272,16 @@ a `.properties` file in the `etc/encoding` folder of your installation.
 ```
 # Generate silent audio tracks for filling gaps for partial import operation
 profile.import.silent.name = Generate silent audio tracks for filling gaps
-profile.import.silent.input = nothing
-profile.import.silent.output = audio
 profile.import.silent.suffix = -silent-audio.mp4
 profile.import.silent.ffmpeg.command = -strict -2 -filter_complex aevalsrc=0:d=#{time} -c:a aac -b:a 8k -ar 44100 #{out.dir}/#{out.name}#{out.suffix}
 
 # Extract last image for partial import operation
 profile.import.image-frame.name = Extract last image
-profile.import.image-frame.input = visual
-profile.import.image-frame.output = image
 profile.import.image-frame.suffix = -image.jpg
 profile.import.image-frame.ffmpeg.command = -sseof -3 -i #{in.video.path} -update 1 -q:v 1 #{out.dir}/#{out.name}#{out.suffix}
 
 # Extract image for partial import operation
 profile.import.preview.name = Extract an image
-profile.import.preview.input = visual
-profile.import.preview.output = image
 profile.import.preview.suffix = -image.jpg
 profile.import.preview.ffmpeg.command = -ss #{time} -i #{in.video.path} -r 1 -frames:v 1 #{out.dir}/#{out.name}#{out.suffix}
 
@@ -295,15 +289,11 @@ profile.import.preview.ffmpeg.command = -ss #{time} -i #{in.video.path} -r 1 -fr
 #   This command will trim and input stream. Trimming will be fast, as no
 #   re-encoding takes place. It will, however, not be frame accurate.
 profile.trim.work.name = trim track
-profile.trim.work.input = stream
-profile.trim.work.output = visual
 profile.trim.work.suffix = -trimmed.#{in.video.suffix}
 profile.trim.work.ffmpeg.command = -ss #{trim.start} -i #{in.video.path} -t #{trim.duration} -c copy #{out.dir}/#{out.name}#{out.suffix}
 
 # Used by Partial Import operation to encode tracks into equal formats
 profile.encode.partial-import.name = editor
-profile.encode.partial-import.input = audiovisual
-profile.encode.partial-import.output = audiovisual
 profile.encode.partial-import.suffix = -editor.mp4
 profile.encode.partial-import.mimetype = video/mp4
 profile.encode.partial-import.ffmpeg.command = -i #{in.video.path} \
@@ -316,8 +306,6 @@ profile.encode.partial-import.ffmpeg.command = -i #{in.video.path} \
 #   demuxer.
 #   MUST specify the same framerate as image-movie.work
 profile.partial-import-preencode.name = partial-import-preencode
-profile.partial-import-preencode.input = audiovisual
-profile.partial-import-preencode.output = audiovisual
 profile.partial-import-preencode.suffix = -preencoded.mp4
 profile.partial-import-preencode.mimetype = video/mp4
 profile.partial-import-preencode.ffmpeg.command = -i #{in.video.path} \

@@ -220,8 +220,6 @@ This example encoding profile uses all of those variables:
 
 ```properties
 profile.composite.http.name = composite
-profile.composite.http.input = visual
-profile.composite.http.output = visual
 profile.composite.http.suffix = -compound.mkv
 profile.composite.http.ffmpeg.command.if-single-stream = -filter:v [in]scale=#{scaleLower},pad=#{padLower}
 profile.composite.http.ffmpeg.command.if-dual-stream = -i #{upperFile} -filter_complex \

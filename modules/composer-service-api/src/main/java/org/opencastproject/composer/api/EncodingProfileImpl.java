@@ -63,10 +63,6 @@ public class EncodingProfileImpl implements EncodingProfile {
   @XmlTransient
   protected Object source;
 
-  /** Format type */
-  @XmlElement(name = "outputmediatype")
-  protected MediaType outputType = null;
-
   /** Suffix
   @XmlElement(name = "suffix")
   protected String suffix = null;
@@ -75,10 +71,6 @@ public class EncodingProfileImpl implements EncodingProfile {
   /** Mime type */
   @XmlElement(name = "mimetype")
   protected String mimeType = null;
-
-  /** The track type that this profile may be applied to */
-  @XmlElement(name = "inputmediatype")
-  protected MediaType applicableType = null;
 
   /** Installation-specific properties */
   @XmlElement(name = "extension")
@@ -162,26 +154,6 @@ public class EncodingProfileImpl implements EncodingProfile {
   /**
    * {@inheritDoc}
    *
-   * @see org.opencastproject.composer.api.EncodingProfile#getOutputType()
-   */
-  @Override
-  public MediaType getOutputType() {
-    return outputType;
-  }
-
-  /**
-   * Sets the output type.
-   *
-   * @param type
-   *          the output type
-   */
-  public void setOutputType(MediaType type) {
-    this.outputType = type;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
    * @see org.opencastproject.composer.api.EncodingProfile#getSuffix()
    */
   @Override
@@ -230,38 +202,6 @@ public class EncodingProfileImpl implements EncodingProfile {
   @Override
   public void setMimeType(String mimeType) {
     this.mimeType = mimeType;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.opencastproject.composer.api.EncodingProfile#getApplicableMediaType()
-   */
-  @Override
-  public MediaType getApplicableMediaType() {
-    return applicableType;
-  }
-
-  /**
-   * Sets the applicable type.
-   *
-   * @param applicableType
-   *          the applicableType to set
-   */
-  public void setApplicableType(MediaType applicableType) {
-    this.applicableType = applicableType;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.opencastproject.composer.api.EncodingProfile#isApplicableTo(org.opencastproject.composer.api.EncodingProfile.MediaType)
-   */
-  @Override
-  public boolean isApplicableTo(MediaType type) {
-    if (type == null)
-      throw new IllegalArgumentException("Type must not be null");
-    return type.equals(applicableType);
   }
 
   /**

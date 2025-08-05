@@ -56,8 +56,6 @@ The produced image attachments will have an flavor with the subtype `preview+pla
 ```properties
 # Player preview image regular size
 profile.preview-regular.image.name = player preview image regular size
-profile.preview-regular.image.input = image
-profile.preview-regular.image.output = image
 profile.preview-regular.image.suffix = -preview-regular.jpg
 profile.preview-regular.image.mimetype = image/jpeg
 profile.preview-regular.image.ffmpeg.command = -i #{in.video.path} -vf scale=480:-2 #{out.dir}/#{out.name}#{out.suffix}

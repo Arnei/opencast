@@ -22,7 +22,6 @@ package org.opencastproject.workflow.handler.composer;
 
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
@@ -238,13 +237,14 @@ public class ProcessSmilWorkflowOperationHandlerTest {
     return job;
   }
 
-  private EncodingProfile createProfile(String name, MediaType inType, MediaType outType, String mime, String suffix) {
+  private EncodingProfile createProfile(String name, String mime, String suffix, boolean isHls) {
     EncodingProfile profile = EasyMock.createNiceMock(EncodingProfile.class); // Video Only
     EasyMock.expect(profile.getIdentifier()).andReturn(name).anyTimes();
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(inType).anyTimes();
-    EasyMock.expect(profile.getOutputType()).andReturn(outType).anyTimes();
     EasyMock.expect(profile.getMimeType()).andReturn(mime).anyTimes();
     EasyMock.expect(profile.getSuffix()).andReturn(suffix).anyTimes();
+    if (isHls) {
+      EasyMock.expect(profile.getExtension("adaptive.type")).andReturn("HLS").anyTimes();
+    }
     EasyMock.replay(profile);
     return profile;
   }
@@ -261,10 +261,10 @@ public class ProcessSmilWorkflowOperationHandlerTest {
     // smilService.fromXml(FileUtils.readFileToString(smilFile, "UTF-8"))
 
     // set up mock profile
-    profile = createProfile(PROFILE_ID, MediaType.Stream, MediaType.AudioVisual, MimeTypes.MPEG4.toString(), "-v.flv");
-    profile2 = createProfile(PROFILE_ID2, MediaType.Visual, MediaType.Visual, MimeTypes.MPEG4.toString(), "-low.mp4");
-    profile3 = createProfile(PROFILE_ID3, MediaType.Audio, MediaType.Audio, MimeTypes.AAC.toString(), "-a.mp4");
-    profilehls = createProfile(PROFILE_HLS, MediaType.Stream, MediaType.Manifest, MimeTypes.HLS.toString(), ".m3u8");
+    profile = createProfile(PROFILE_ID, MimeTypes.MPEG4.toString(), "-v.flv", false);
+    profile2 = createProfile(PROFILE_ID2, MimeTypes.MPEG4.toString(), "-low.mp4", false);
+    profile3 = createProfile(PROFILE_ID3, MimeTypes.AAC.toString(), "-a.mp4", false);
+    profilehls = createProfile(PROFILE_HLS, MimeTypes.HLS.toString(), ".m3u8", true);
     profileList = new EncodingProfile[] { profile, profile2, profile3, profilehls };
 
     // AV both tracks
@@ -641,8 +641,6 @@ public class ProcessSmilWorkflowOperationHandlerTest {
     // set up mock profile
     profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(PROFILE_ID);
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(MediaType.Stream);
-    EasyMock.expect(profile.getOutputType()).andReturn(MediaType.Stream);
     profileList = new EncodingProfile[] { profile };
     EasyMock.replay(profile);
 

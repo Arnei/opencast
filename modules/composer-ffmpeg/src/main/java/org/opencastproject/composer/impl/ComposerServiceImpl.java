@@ -2169,16 +2169,10 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     throw new EncoderException("Unable to create a job - Cannot find paramGroup");
   }
 
-  private List<EncodingProfile> findSuitableProfiles(List<String> encodingProfiles, String mediaType) {
+  private List<EncodingProfile> findSuitableProfiles(List<String> encodingProfiles) {
     List<EncodingProfile> profiles = new ArrayList<>();
-    for (String profileId1 : encodingProfiles) { // Check for mismatched profiles/media types
+    for (String profileId1 : encodingProfiles) {
       EncodingProfile profile = profileScanner.getProfile(profileId1);
-      // warn about bad encoding profiles, but encode anyway, the profile type is not enforced
-      if (VIDEO_ONLY.equals(mediaType) && profile.getApplicableMediaType() == EncodingProfile.MediaType.Audio) {
-        logger.warn("Profile '{}' supports {} but media is Video Only", profileId1, profile.getApplicableMediaType());
-      } else if (AUDIO_ONLY.equals(mediaType) && profile.getApplicableMediaType() == EncodingProfile.MediaType.Visual) {
-        logger.warn("Profile '{}' supports {} but media is Audio Only", profileId1, profile.getApplicableMediaType());
-      }
       profiles.add(profile);
     }
     return (profiles);
@@ -2235,7 +2229,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   protected List<Track> processSmil(Job job, Smil smil, String trackParamGroupId, String mediaType,
           List<String> encodingProfiles) throws EncoderException, MediaPackageException, URISyntaxException {
 
-    List<EncodingProfile> profiles = findSuitableProfiles(encodingProfiles, mediaType);
+    List<EncodingProfile> profiles = findSuitableProfiles(encodingProfiles);
     // If there are no usable encoding profiles, throw exception
     if (profiles.size() == 0)
       throw new EncoderException(

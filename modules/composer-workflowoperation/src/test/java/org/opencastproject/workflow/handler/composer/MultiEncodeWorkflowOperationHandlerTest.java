@@ -23,7 +23,6 @@ package org.opencastproject.workflow.handler.composer;
 
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
@@ -108,13 +107,14 @@ public class MultiEncodeWorkflowOperationHandlerTest {
     return job;
   }
 
-  private EncodingProfile createProfile(String name, MediaType inType, MediaType outType, String mime, String suffix) {
+  private EncodingProfile createProfile(String name, String mime, String suffix, boolean isHls) {
     EncodingProfile profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(name).anyTimes();
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(inType).anyTimes();
-    EasyMock.expect(profile.getOutputType()).andReturn(outType).anyTimes();
     EasyMock.expect(profile.getMimeType()).andReturn(mime).anyTimes();
     EasyMock.expect(profile.getSuffix()).andReturn(suffix).anyTimes();
+    if (isHls) {
+      EasyMock.expect(profile.getExtension("adaptive.type")).andReturn("HLS").anyTimes();
+    }
     EasyMock.replay(profile);
     return profile;
   }
@@ -160,11 +160,11 @@ public class MultiEncodeWorkflowOperationHandlerTest {
     EasyMock.replay(serviceRegistry);
 
     // set up mock profiles
-    profile = createProfile(PROFILE1_ID, MediaType.Stream, MediaType.AudioVisual, MimeTypes.MPEG4.toString(), SUFFIX1);
-    profile2 = createProfile(PROFILE2_ID, MediaType.Stream, MediaType.Visual, MimeTypes.MPEG4.toString(), SUFFIX2);
-    profile3 = createProfile(PROFILE3_ID, MediaType.Stream, MediaType.Visual, MimeTypes.MPEG4.toString(), SUFFIX3);
-    profile4 = createProfile(PROFILE4_ID, MediaType.Stream, MediaType.AudioVisual, MimeTypes.MPEG4.toString(), SUFFIX4);
-    profileHls = createProfile(PROFILE_HLS, MediaType.Stream, MediaType.Manifest, MimeTypes.HLS.toString(), SUFFIX_HLS);
+    profile = createProfile(PROFILE1_ID, MimeTypes.MPEG4.toString(), SUFFIX1, false);
+    profile2 = createProfile(PROFILE2_ID, MimeTypes.MPEG4.toString(), SUFFIX2, false);
+    profile3 = createProfile(PROFILE3_ID, MimeTypes.MPEG4.toString(), SUFFIX3, false);
+    profile4 = createProfile(PROFILE4_ID, MimeTypes.MPEG4.toString(), SUFFIX4, false);
+    profileHls = createProfile(PROFILE_HLS, MimeTypes.HLS.toString(), SUFFIX_HLS, true);
     profileList = new EncodingProfile[] { profile, profile2, profile3, profile4, profileHls };
 
     // set up mock composer service
@@ -485,8 +485,6 @@ public class MultiEncodeWorkflowOperationHandlerTest {
     // set up mock profile
     profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(PROFILE1_ID);
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(MediaType.Stream);
-    EasyMock.expect(profile.getOutputType()).andReturn(MediaType.Stream);
     profileList = new EncodingProfile[] { profile };
     EasyMock.replay(profile);
 

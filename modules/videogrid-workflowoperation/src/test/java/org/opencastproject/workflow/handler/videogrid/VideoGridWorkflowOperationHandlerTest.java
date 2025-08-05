@@ -155,8 +155,6 @@ public class VideoGridWorkflowOperationHandlerTest {
     concatJob.setPayload(MediaPackageElementParser.getAsXml(concatTrack));
     profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(ENCODING_PROFILE_ID).anyTimes();
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(EncodingProfile.MediaType.Stream).anyTimes();
-    EasyMock.expect(profile.getOutputType()).andReturn(EncodingProfile.MediaType.AudioVisual).anyTimes();
     EasyMock.replay(profile);
     ComposerService composerService = EasyMock.createMock(ComposerService.class);
     EasyMock.expect(composerService.getProfile(ENCODING_PROFILE_ID)).andReturn(profile).anyTimes();

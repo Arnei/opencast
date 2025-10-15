@@ -36,7 +36,7 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.LoadUtil;
 import org.opencastproject.util.NotFoundException;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -185,9 +185,9 @@ public class CropServiceImpl extends AbstractJobProducer implements CropService,
   private ServiceRegistry serviceRegistry = null;
 
   /**
-   * The workspace to use when retrieving remote media files
+   * The working file repository to use when retrieving remote media files
    */
-  private Workspace workspace = null;
+  private WorkingFileRepository wfr;
 
   private SecurityService securityService = null;
 
@@ -220,9 +220,9 @@ public class CropServiceImpl extends AbstractJobProducer implements CropService,
 
     File mediaFile;
     try {
-      mediaFile = workspace.get(track.getURI());
+      mediaFile = wfr.get(track);
     } catch (NotFoundException | IOException e) {
-      throw new CropException("Error loading the video file into the workspace", e);
+      throw new CropException("Error loading the video file into the working file repository", e);
     }
 
     logger.info("Starting cropping of {}", track);
@@ -231,9 +231,9 @@ public class CropServiceImpl extends AbstractJobProducer implements CropService,
     String fileName = UUID.randomUUID() + "-" + croppedMedia.getName();
     URI croppedMediaUri;
     try (FileInputStream fileStream = new FileInputStream(croppedMedia)) {
-      croppedMediaUri = workspace.putInCollection(COLLECTION_ID, fileName, fileStream);
+      croppedMediaUri = wfr.putInCollection(COLLECTION_ID, fileName, fileStream);
     } catch (IOException e) {
-      throw new CropException("Error putting output file in workspace collection", e);
+      throw new CropException("Error putting output file in working file repository collection", e);
     }
     Track cropTrack = (Track) MediaPackageElementBuilderFactory.newInstance().newElementBuilder()
             .newElement(Track.TYPE, track.getFlavor());
@@ -493,8 +493,8 @@ public class CropServiceImpl extends AbstractJobProducer implements CropService,
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

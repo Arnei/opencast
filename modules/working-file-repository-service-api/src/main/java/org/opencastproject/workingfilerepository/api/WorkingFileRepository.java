@@ -21,9 +21,12 @@
 
 package org.opencastproject.workingfilerepository.api;
 
+import org.opencastproject.mediapackage.MediaPackageElement;
+import org.opencastproject.mediapackage.identifier.Id;
 import org.opencastproject.storage.StorageUsage;
 import org.opencastproject.util.NotFoundException;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -89,7 +92,11 @@ public interface WorkingFileRepository extends StorageUsage {
    * @throws NotFoundException
    *           if the media package element can't be found
    */
-  InputStream get(String mediaPackageID, String mediaPackageElementID) throws IOException, NotFoundException;
+  InputStream getStream(String mediaPackageID, String mediaPackageElementID) throws IOException, NotFoundException;
+  InputStream getStream(MediaPackageElement mpe) throws IOException, NotFoundException;
+  File get(String mediaPackageID, String mediaPackageElementID) throws IOException, NotFoundException;
+  File get(MediaPackageElement mpe) throws IOException, NotFoundException;
+  File get(URI uri) throws NotFoundException, IOException;
 
   /**
    * Get the URL for a file stored under the given collection.
@@ -147,6 +154,8 @@ public interface WorkingFileRepository extends StorageUsage {
    *           if the element cannot be deleted
    */
   boolean delete(String mediaPackageID, String mediaPackageElementID) throws IOException;
+  boolean delete(MediaPackageElement mpe) throws IOException;
+  void delete(URI uri) throws IOException;
 
   /**
    * Puts a file into a collection, overwriting the existing file if present.
@@ -216,6 +225,9 @@ public interface WorkingFileRepository extends StorageUsage {
   URI moveTo(String fromCollection, String fromFileName, String toMediaPackage, String toMediaPackageElement,
           String toFileName) throws NotFoundException, IOException;
 
+  URI moveTo(URI collectionURI, String toMediaPackage, String toMediaPackageElement, String toFileName)
+      throws NotFoundException, IOException;
+
   /**
    * A textual representation of available and total storage
    *
@@ -241,4 +253,14 @@ public interface WorkingFileRepository extends StorageUsage {
    *          files older than that will be deleted
    */
   boolean cleanupOldFilesFromMediaPackage(long days) throws IOException;
+
+  void cleanup(Id mediaPackageId) throws IOException;
+  void cleanup(Id mediaPackageId, boolean filesOnly) throws IOException;
+
+  /**
+   * Returns the workspace's root directory
+   *
+   * @return Path to the workspace root directory
+   */
+  String rootDirectory();
 }

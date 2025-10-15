@@ -39,7 +39,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.osgi.service.component.annotations.Component;
@@ -75,26 +75,26 @@ public class SubtitleTimeshiftWorkflowOperationHandler extends AbstractWorkflowO
   private static final String VIDEO_SOURCE_FLAVOR_CFG_KEY = "video-source-flavor";
   private static final String TARGET_FLAVOR_CFG_KEY = "target-flavor";
 
-  /** The workspace collection name */
+  /** The working file repository collection name */
   private static final String COLLECTION = "subtitles";
 
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(SubtitleTimeshiftWorkflowOperationHandler.class);
 
   /**
-   * Reference to the workspace service
+   * Reference to the working file repository service
    */
-  private Workspace workspace = null;
+  private WorkingFileRepository wfr;
 
 
   /**
-   * OSGi setter for the workspace class
+   * OSGi setter for the working file repository class
    *
-   * @param workspace an instance of the workspace
+   * @param wfr an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
 
@@ -161,13 +161,13 @@ public class SubtitleTimeshiftWorkflowOperationHandler extends AbstractWorkflowO
     try {
       for (Track originalSubtitleTrack : originalSubtitleTracks) {
 
-        // load the subtitle file from workspace and parse it into a webvtt object
+        // load the subtitle file from working file repository and parse it into a webvtt object
         WebVTTSubtitle newSubtitleFile = loadAndParseSubtitleFile(originalSubtitleTrack);
 
         // shift the timestamps of the parsed webvtt object
         shiftTime(newSubtitleFile, videoTrack.getDuration());
 
-        // save the new subtitle file in the workspace to get a URI
+        // save the new subtitle file in the working file repository to get a URI
         String originalFileName = FilenameUtils.getBaseName(originalSubtitleTrack.getLogicalName());
         String newFileName = "timeshifted-" + originalFileName + ".vtt";
         URI newSubtitleFileUri = saveSubtitleFileToWorkspace(newSubtitleFile, newFileName);
@@ -206,12 +206,12 @@ public class SubtitleTimeshiftWorkflowOperationHandler extends AbstractWorkflowO
     newSubtitleTrack.generateIdentifier();
     newSubtitleTrack.setFlavor(targetFlavor);
     newSubtitleTrack.setURI(subtitleFile);
-    newSubtitleTrack.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.get(subtitleFile, true)));
+    newSubtitleTrack.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, wfr.get(subtitleFile)));
     return newSubtitleTrack;
   }
 
   /**
-   * Saves the subtitle object into the workspace and creates a file there.
+   * Saves the subtitle object into the working file repository and creates a file there.
    *
    * @param webVTTSubtitle The subtitle object.
    * @param fileName The filname of the new subtitle file.
@@ -224,30 +224,30 @@ public class SubtitleTimeshiftWorkflowOperationHandler extends AbstractWorkflowO
       WebVTTWriter writer = new WebVTTWriter();
       writer.write(webVTTSubtitle, outputStream);
       try (ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray())) {
-        return workspace.putInCollection(COLLECTION, fileName, inputStream);
+        return wfr.putInCollection(COLLECTION, fileName, inputStream);
       }
     } catch (IOException e) {
-      logger.error("An exception occurred while parsing and saving a subtitle file to the workspace", e);
+      logger.error("An exception occurred while parsing and saving a subtitle file to the working file repository", e);
       throw new WorkflowOperationException(e);
     }
   }
 
   /**
-   * Loads a subtitle file from the workspace and parses it into a WebVTTSubtitle Object
+   * Loads a subtitle file from the working file repository and parses it into a WebVTTSubtitle Object
    *
    * @param subtitleTrack The track we want to load
    * @return The parsed webVTTSubtitle object
    * @throws WorkflowOperationException when something went wrong in the parsing and loading process
    */
   private WebVTTSubtitle loadAndParseSubtitleFile(Track subtitleTrack) throws WorkflowOperationException {
-    // Get the subtitle file from workspace
+    // Get the subtitle file from working file repository
     File subtitleFile;
     try {
-      subtitleFile = workspace.get(subtitleTrack.getURI());
+      subtitleFile = wfr.get(subtitleTrack);
     } catch (IOException ex) {
       throw new WorkflowOperationException("Can't read " + subtitleTrack.getURI());
     } catch (NotFoundException ex) {
-      throw new WorkflowOperationException("Workspace does not contain a track " + subtitleTrack.getURI());
+      throw new WorkflowOperationException("Working file repository does not contain a track " + subtitleTrack.getURI());
     }
 
     // Next try to parse the file into a WebVTT Object

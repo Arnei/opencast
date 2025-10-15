@@ -26,7 +26,7 @@ import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElements;
 import org.opencastproject.mediapackage.XMLCatalogImpl.CatalogEntry;
 import org.opencastproject.util.Checksum;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,10 +56,10 @@ public final class DublinCoreUtil {
    *
    * @return the catalog or none if the media package does not contain an episode DublinCore
    */
-  public static Optional<DublinCoreCatalog> loadEpisodeDublinCore(final Workspace workspace, MediaPackage mediaPackage) {
+  public static Optional<DublinCoreCatalog> loadEpisodeDublinCore(final WorkingFileRepository wfr, MediaPackage mediaPackage) {
     return Arrays.stream(mediaPackage.getCatalogs(MediaPackageElements.EPISODE))
         .findFirst()
-        .map(dc -> loadDublinCore(workspace, dc));
+        .map(dc -> loadDublinCore(wfr, dc));
   }
 
   /**
@@ -68,10 +68,10 @@ public final class DublinCoreUtil {
    *
    * @return the catalog
    */
-  public static DublinCoreCatalog loadDublinCore(Workspace workspace, MediaPackageElement mpe) {
+  public static DublinCoreCatalog loadDublinCore(WorkingFileRepository wfr, MediaPackageElement mpe) {
     URI uri = mpe.getURI();
     logger.debug("Loading DC catalog from {}", uri);
-    try (InputStream in = workspace.read(uri)) {
+    try (InputStream in = wfr.getStream(mpe)) {
       return DublinCores.read(in);
     } catch (Exception e) {
       logger.error("Unable to load metadata from catalog '{}'", mpe, e);

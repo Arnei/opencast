@@ -35,7 +35,7 @@ import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AccessControlUtil;
 import org.opencastproject.util.Checksum;
 import org.opencastproject.util.DateTimeSupport;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.lang3.CharUtils;
 import org.slf4j.Logger;
@@ -75,7 +75,7 @@ public final class SchedulerUtil {
   };
 
   public static String calculateChecksum(
-      Workspace workspace,
+      WorkingFileRepository wfr,
       List<MediaPackageElementFlavor> eventCatalogUIAdapterFlavors,
       Date startDateTime,
       Date endDateTime,
@@ -114,7 +114,7 @@ public final class SchedulerUtil {
       if (eventCatalogUIAdapterFlavors.contains(c.getFlavor())) {
         Checksum checksum = c.getChecksum();
         if (checksum == null) {
-          DublinCoreCatalog dublinCore = DublinCoreUtil.loadDublinCore(workspace, c);
+          DublinCoreCatalog dublinCore = DublinCoreUtil.loadDublinCore(wfr, c);
           checksum = DublinCoreUtil.calculateChecksum(dublinCore);
           c.setChecksum(checksum);
         }
@@ -153,15 +153,15 @@ public final class SchedulerUtil {
   /**
    * Converts a scheduler event to a human readable string
    *
-   * @param workspace
-   *          the workspace
+   * @param wfr
+   *          the working file repository
    * @param catalogFlavors
    *          the event catalog flavors
    * @param event
    *          the scheduler event
    * @return a human readable string
    */
-  public static String toHumanReadableString(Workspace workspace, List<MediaPackageElementFlavor> catalogFlavors,
+  public static String toHumanReadableString(WorkingFileRepository wfr, List<MediaPackageElementFlavor> catalogFlavors,
           SchedulerEvent event) {
     TechnicalMetadata technicalMetadata = event.getTechnicalMetadata();
     StringBuilder sb = new StringBuilder("Event: ").append(CharUtils.LF);
@@ -208,7 +208,7 @@ public final class SchedulerUtil {
 
       DublinCoreCatalog dublinCore;
       try {
-        dublinCore = DublinCoreUtil.loadDublinCore(workspace, c);
+        dublinCore = DublinCoreUtil.loadDublinCore(wfr, c);
       } catch (Exception e) {
         logger.error("Unable to read event dublincore", e);
         continue;

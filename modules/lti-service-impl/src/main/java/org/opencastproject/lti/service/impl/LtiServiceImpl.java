@@ -67,7 +67,7 @@ import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowListener;
 import org.opencastproject.workflow.api.WorkflowService;
 import org.opencastproject.workflow.api.WorkflowUtil;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -123,7 +123,7 @@ public class LtiServiceImpl implements LtiService {
   private SecurityService securityService;
   private WorkflowService workflowService;
   private AssetManager assetManager;
-  private Workspace workspace;
+  private WorkingFileRepository wfr;
   private ElasticsearchIndex searchIndex;
   private AuthorizationService authorizationService;
   private SeriesService seriesService;
@@ -160,8 +160,8 @@ public class LtiServiceImpl implements LtiService {
 
   /** OSGi DI */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /** OSGi DI */
@@ -303,7 +303,7 @@ public class LtiServiceImpl implements LtiService {
 
         captionsMediaPackage.addTag("lang:" + captionLanguage);
         mediaPackage.add(captionsMediaPackage);
-        final URI captionsUri = workspace
+        final URI captionsUri = wfr
                 .put(
                         mediaPackage.getIdentifier().toString(),
                         captionsMediaPackage.getIdentifier(),

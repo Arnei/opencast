@@ -56,7 +56,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -143,8 +143,8 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The local working file repository */
+  private WorkingFileRepository wfr = null;
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -158,15 +158,15 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository  service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference
@@ -195,7 +195,7 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
     } finally {
       for (MediaPackageElement elem : elementsToClean) {
         try {
-          workspace.delete(elem.getURI());
+          wfr.delete(elem);
         } catch (Exception e) {
           logger.warn("Unable to delete element {}", elem, e);
         }
@@ -285,7 +285,7 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
     // get SMIL catalog
     final SMILDocument smilDocument;
     try {
-      smilDocument = SmilUtil.getSmilDocumentFromMediaPackage(mediaPackage, smilFlavor, workspace);
+      smilDocument = SmilUtil.getSmilDocumentFromMediaPackage(mediaPackage, smilFlavor, wfr);
     } catch (SAXException e) {
       throw new WorkflowOperationException(e);
     }
@@ -405,7 +405,7 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
             fileName = UNKNOWN_KEY;
           }
 
-          concatTrack.setURI(workspace.moveTo(concatTrack.getURI(), mediaPackage.getIdentifier().toString(),
+          concatTrack.setURI(wfr.moveTo(concatTrack.getURI(), mediaPackage.getIdentifier().toString(),
                   concatTrack.getIdentifier(),
                   fileName + "." + FilenameUtils.getExtension(concatTrack.getURI().toString())));
 
@@ -817,7 +817,7 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
       throw new WorkflowOperationException("Muxed job " + muxJob + " returned no payload!");
     }
     muxed.setFlavor(video.getFlavor());
-    muxed.setURI(workspace.moveTo(muxed.getURI(), mediaPackage.getIdentifier().toString(), muxed.getIdentifier(),
+    muxed.setURI(wfr.moveTo(muxed.getURI(), mediaPackage.getIdentifier().toString(), muxed.getIdentifier(),
             FilenameUtils.getName(video.getURI().toString())));
     elementsToClean.add(audio);
     mediaPackage.remove(audio);
@@ -832,11 +832,11 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
     FileInputStream in = null;
     try {
       Track copyTrack = (Track) track.clone();
-      File originalFile = workspace.get(copyTrack.getURI());
+      File originalFile = wfr.get(copyTrack);
       in = new FileInputStream(originalFile);
 
       copyTrack.generateIdentifier();
-      copyTrack.setURI(workspace.put(mediaPackage.getIdentifier().toString(), copyTrack.getIdentifier(),
+      copyTrack.setURI(wfr.put(mediaPackage.getIdentifier().toString(), copyTrack.getIdentifier(),
               FilenameUtils.getName(copyTrack.getURI().toString()), in));
       copyTrack.setFlavor(targetFlavor);
       copyTrack.referTo(track);
@@ -899,11 +899,11 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
     URI uri;
     if (FilenameUtils.getExtension(encodedTrack.getURI().toString()).equalsIgnoreCase(
             FilenameUtils.getExtension(track.getURI().toString()))) {
-      uri = workspace.moveTo(encodedTrack.getURI(), mp.getIdentifier().toString(), encodedTrack.getIdentifier(),
+      uri = wfr.moveTo(encodedTrack.getURI(), mp.getIdentifier().toString(), encodedTrack.getIdentifier(),
               FilenameUtils.getName(track.getURI().toString()));
     } else {
       // The new encoded file has a different extension.
-      uri = workspace.moveTo(
+      uri = wfr.moveTo(
               encodedTrack.getURI(),
               mp.getIdentifier().toString(),
               encodedTrack.getIdentifier(),
@@ -929,7 +929,7 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
     if (trimmedTrack == null)
       throw new WorkflowOperationException("Trimming track " + track + " failed to produce a track");
 
-    URI uri = workspace.moveTo(trimmedTrack.getURI(), mediaPackage.getIdentifier().toString(),
+    URI uri = wfr.moveTo(trimmedTrack.getURI(), mediaPackage.getIdentifier().toString(),
             trimmedTrack.getIdentifier(), FilenameUtils.getName(track.getURI().toString()));
     trimmedTrack.setURI(uri);
     trimmedTrack.setFlavor(track.getFlavor());
@@ -1016,7 +1016,7 @@ public class PartialImportWorkflowOperationHandler extends AbstractWorkflowOpera
   private Track getSilentAudio(final double time, final List<MediaPackageElement> elementsToClean,
           final Long operationId) throws EncoderException, MediaPackageException, WorkflowOperationException,
           NotFoundException, IOException {
-    final URI uri = workspace.putInCollection(COLLECTION_ID, operationId + "-silent", new ByteArrayInputStream(
+    final URI uri = wfr.putInCollection(COLLECTION_ID, operationId + "-silent", new ByteArrayInputStream(
             EMPTY_VALUE.getBytes()));
     final Attachment emptyAttachment = (Attachment) MediaPackageElementBuilderFactory.newInstance().newElementBuilder()
             .elementFromURI(uri, Type.Attachment, MediaPackageElementFlavor.parseFlavor("audio/silent"));

@@ -71,6 +71,7 @@ public class AmberscriptAttachTranscriptionOperationHandler extends AbstractWork
   private CaptionService captionService;
 
   private Workspace workspace;
+  private WorkingFileRepository wfr;
 
   @Override
   @Activate
@@ -110,7 +111,7 @@ public class AmberscriptAttachTranscriptionOperationHandler extends AbstractWork
         throw new WorkflowOperationException("Transcription format conversion job did not complete successfully.");
       }
       MediaPackageElement convertedTranscription = MediaPackageElementParser.getFromXml(job.getPayload());
-      workspace.delete(transcription.getURI());
+      wfr.delete(transcription);
 
       // The SubRip converter always returns Attachments. We may need to turn it into a Track
       if (type == MediaPackageElement.Type.Track) {

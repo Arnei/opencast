@@ -61,7 +61,6 @@ import org.opencastproject.workflow.api.WorkflowDefinition;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowService;
 import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
-import org.opencastproject.workspace.api.Workspace;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -143,7 +142,6 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
   private UserDirectoryService userDirectoryService;
   private WorkflowService workflowService;
   private WorkingFileRepository wfr;
-  private Workspace workspace;
 
   // Only used by unit tests
   private Workflows wfUtil;
@@ -421,7 +419,7 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
 
     if (languageFromDublinCore) {
       for (Catalog catalog : track.getMediaPackage().getCatalogs(MediaPackageElements.EPISODE)) {
-        try (InputStream in = workspace.read(catalog.getURI())) {
+        try (InputStream in = wfr.getStream(catalog)) {
           DublinCoreCatalog dublinCatalog = DublinCores.read(in);
           String dublinCoreLang = dublinCatalog.getFirst(DublinCore.PROPERTY_LANGUAGE);
           if (dublinCoreLang != null) {
@@ -456,7 +454,7 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
     if (speakerFromDublinCore) {
       Set<String> speakers = new HashSet<>();
       for (Catalog catalog : track.getMediaPackage().getCatalogs(MediaPackageElements.EPISODE)) {
-        try (InputStream in = workspace.read(catalog.getURI())) {
+        try (InputStream in = wfr.getStream(catalog)) {
           DublinCoreCatalog dublinCatalog = DublinCores.read(in);
           if (speakerMetadataField.equals(SpeakerMetadataField.creator)
                   || speakerMetadataField.equals(SpeakerMetadataField.both)) {
@@ -652,7 +650,7 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
     }
 
     try {
-      FileBody fileBody = new FileBody(workspace.get(track.getURI()), ContentType.DEFAULT_BINARY);
+      FileBody fileBody = new FileBody(wfr.get(track), ContentType.DEFAULT_BINARY);
       MultipartEntityBuilder builder = MultipartEntityBuilder.create();
       builder.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
       builder.addPart("file", fileBody);
@@ -797,7 +795,7 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
           logger.info("Retrieved details for transcription with jobid: '{}'", jobId);
 
           // Save the result subrip (srt) file into a collection
-          workspace.putInCollection(TRANSCRIPT_COLLECTION, jobId + ".srt", entity.getContent());
+          wfr.putInCollection(TRANSCRIPT_COLLECTION, jobId + ".srt", entity.getContent());
           done = true;
           break;
 
@@ -843,12 +841,12 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
       }
 
       // Results already saved?
-      URI uri = workspace.getCollectionURI(TRANSCRIPT_COLLECTION, jobId + ".srt");
+      URI uri = wfr.getCollectionURI(TRANSCRIPT_COLLECTION, jobId + ".srt");
 
       logger.info("Looking for transcript at URI: {}", uri);
 
       try {
-        workspace.get(uri);
+        wfr.get(uri);
         logger.info("Found captions at URI: {}", uri);
       } catch (Exception e) {
         logger.info("Results not saved: getting from service for jobId {}", jobId);
@@ -936,11 +934,6 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
   @Reference
   public void setOrganizationDirectoryService(OrganizationDirectoryService organizationDirectoryService) {
     this.organizationDirectoryService = organizationDirectoryService;
-  }
-
-  @Reference
-  public void setWorkspace(Workspace ws) {
-    this.workspace = ws;
   }
 
   @Reference

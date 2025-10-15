@@ -45,7 +45,7 @@ import org.opencastproject.security.api.User;
 import org.opencastproject.security.util.SecurityUtil;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Tuple;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.osgi.framework.BundleContext;
@@ -93,8 +93,8 @@ public class AssetManagerUpdatedEventHandler {
   /** Dublin core catalog service */
   protected DublinCoreCatalogService dublinCoreService = null;
 
-  /** The workspace */
-  protected Workspace workspace = null;
+  /** The working file repository */
+  protected WorkingFileRepository wfr = null;
 
   /** The system account to use for running asynchronous events */
   protected String systemAccount = null;
@@ -111,12 +111,12 @@ public class AssetManagerUpdatedEventHandler {
   }
 
   /**
-   * @param workspace
-   *          the workspace to set
+   * @param wfr
+   *          the working file repository to set
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -228,7 +228,7 @@ public class AssetManagerUpdatedEventHandler {
           if (seriesCatalogs.length == 1) {
             Catalog c = seriesCatalogs[0];
             String filename = FilenameUtils.getName(c.getURI().toString());
-            URI uri = workspace.put(mp.getIdentifier().toString(), c.getIdentifier(), filename,
+            URI uri = wfr.put(mp.getIdentifier().toString(), c.getIdentifier(), filename,
                     dublinCoreService.serialize(seriesDublinCore));
             c.setURI(uri);
             // setting the URI to a new source so the checksum will most like be invalid
@@ -245,10 +245,10 @@ public class AssetManagerUpdatedEventHandler {
           }
           authorizationService.removeAcl(mp, AclScope.Series);
           for (Catalog episodeCatalog : mp.getCatalogs(MediaPackageElements.EPISODE)) {
-            DublinCoreCatalog episodeDublinCore = DublinCoreUtil.loadDublinCore(workspace, episodeCatalog);
+            DublinCoreCatalog episodeDublinCore = DublinCoreUtil.loadDublinCore(wfr, episodeCatalog);
             episodeDublinCore.remove(DublinCore.PROPERTY_IS_PART_OF);
             String filename = FilenameUtils.getName(episodeCatalog.getURI().toString());
-            URI uri = workspace.put(mp.getIdentifier().toString(), episodeCatalog.getIdentifier(), filename,
+            URI uri = wfr.put(mp.getIdentifier().toString(), episodeCatalog.getIdentifier(), filename,
                     dublinCoreService.serialize(episodeDublinCore));
             episodeCatalog.setURI(uri);
             // setting the URI to a new source so the checksum will most like be invalid
@@ -272,7 +272,7 @@ public class AssetManagerUpdatedEventHandler {
         } finally {
           if (mpAclAttachmentTuple != null) {
             try {
-              workspace.delete(mpAclAttachmentTuple.getB().getURI());
+              wfr.delete(mpAclAttachmentTuple.getB());
             } catch (Exception ex) {
               // We only want to clean up. If the file is gone, that is fine too.
             }

@@ -86,6 +86,7 @@ public class MicrosoftAzureStartTranscriptionOperationHandler extends AbstractWo
   private ComposerService composerService;
   /** The workspace. */
   private Workspace workspace;
+  private WorkingFileRepository wfr;
 
   /** The configuration options for this handler */
   private static final SortedMap<String, String> CONFIG_OPTIONS;
@@ -213,7 +214,7 @@ public class MicrosoftAzureStartTranscriptionOperationHandler extends AbstractWo
   protected void deleteTrack(Track track) {
     if (track != null && track.getURI() != null) {
       try {
-        workspace.delete(track.getURI());
+        wfr.delete(track);
       } catch (NotFoundException ex) {
         // do nothing
       } catch (IOException ex) {

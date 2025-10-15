@@ -39,7 +39,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -79,18 +79,18 @@ public class CloneWorkflowOperationHandler extends AbstractWorkflowOperationHand
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(CloneWorkflowOperationHandler.class);
 
-  /** The workspace reference */
-  protected Workspace workspace = null;
+  /** The working file repository reference */
+  protected WorkingFileRepository wfr;
 
   /**
-   * Callback for the OSGi environment to set the workspace reference.
+   * Callback for the OSGi environment to set the working file repository reference.
    *
-   * @param workspace
-   *          the workspace
+   * @param wfr
+   *          the working file repository
    */
   @Reference
-  protected void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  protected void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -178,7 +178,7 @@ public class CloneWorkflowOperationHandler extends AbstractWorkflowOperationHand
     String toFileName = null;
     try {
       URI sourceURI = element.getURI();
-      sourceFile = workspace.get(sourceURI);
+      sourceFile = wfr.get(element);
 
       toFileName = newElement.getIdentifier();
       String extension = FilenameUtils.getExtension(sourceFile.getName());
@@ -187,10 +187,10 @@ public class CloneWorkflowOperationHandler extends AbstractWorkflowOperationHand
 
       logger.debug("Start copying element {} to target {}.", sourceFile.getPath(), toFileName);
 
-      URI newUri = workspace.put(element.getMediaPackage().getIdentifier().toString(), newElement.getIdentifier(),
-              toFileName, workspace.read(sourceURI));
+      URI newUri = wfr.put(element.getMediaPackage().getIdentifier().toString(), newElement.getIdentifier(),
+              toFileName, wfr.getStream(element));
       newElement.setURI(newUri);
-      newElement.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.get(newUri)));
+      newElement.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, wfr.get(newElement)));
 
       logger.debug("Element {} copied to target {}.", sourceFile.getPath(), toFileName);
     } catch (IOException e) {

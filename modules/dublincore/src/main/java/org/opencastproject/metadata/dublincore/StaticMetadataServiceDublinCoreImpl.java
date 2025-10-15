@@ -59,7 +59,7 @@ import org.opencastproject.util.data.NonEmptyList;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Predicate;
 import org.opencastproject.util.data.functions.Misc;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.IOUtils;
 import org.osgi.service.component.annotations.Activate;
@@ -71,7 +71,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
-import java.net.URI;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -103,13 +102,13 @@ public class StaticMetadataServiceDublinCoreImpl implements StaticMetadataServic
 
   protected int priority = 0;
 
-  protected Workspace workspace = null;
+  protected WorkingFileRepository wfr = null;
 
   protected MediaPackageSerializer serializer = null;
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference(
@@ -153,7 +152,7 @@ public class StaticMetadataServiceDublinCoreImpl implements StaticMetadataServic
   public StaticMetadata getMetadata(final MediaPackage mp) {
     Catalog[] catalogs = mp.getCatalogs(MediaPackageElements.EPISODE);
     if (catalogs.length > 0) {
-      return newStaticMetadataFromEpisode(DublinCoreUtil.loadDublinCore(workspace, catalogs[0]));
+      return newStaticMetadataFromEpisode(DublinCoreUtil.loadDublinCore(wfr, catalogs[0]));
     }
     return null;
   }
@@ -406,9 +405,7 @@ public class StaticMetadataServiceDublinCoreImpl implements StaticMetadataServic
   private Option<DublinCoreCatalog> load(Catalog catalog) {
     InputStream in = null;
     try {
-      URI uri = catalog.getURI();
-      if (serializer != null) uri = serializer.decodeURI(uri);
-      in = workspace.read(uri);
+      in = wfr.getStream(catalog);
       return some((DublinCoreCatalog) DublinCores.read(in));
     } catch (Exception e) {
       logger.warn("Unable to load metadata from catalog '{}'", catalog);

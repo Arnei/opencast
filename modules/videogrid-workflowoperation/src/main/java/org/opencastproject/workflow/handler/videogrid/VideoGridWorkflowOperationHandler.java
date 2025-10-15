@@ -52,7 +52,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -131,15 +131,15 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
   };
 
   /** Services */
-  private Workspace workspace = null;
+  private WorkingFileRepository wfr;
   private VideoGridService videoGridService = null;
   private MediaInspectionService inspectionService = null;
   private ComposerService composerService = null;
 
   /** Service Callbacks **/
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
   @Reference
   public void setVideoGridService(VideoGridService videoGridService) {
@@ -455,7 +455,7 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
     // Get SMIL catalog
     final SMILDocument smilDocument;
     try {
-      smilDocument = SmilUtil.getSmilDocumentFromMediaPackage(mediaPackage, smilFlavor, workspace);
+      smilDocument = SmilUtil.getSmilDocumentFromMediaPackage(mediaPackage, smilFlavor, wfr);
     } catch (SAXException e) {
       throw new WorkflowOperationException("SMIL is not well formatted", e);
     } catch (IOException | NotFoundException e) {
@@ -660,7 +660,7 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
     }
 
     try {
-      workspace.cleanup(mediaPackage.getIdentifier());
+      wfr.cleanup(mediaPackage.getIdentifier());
     } catch (IOException e) {
       throw new WorkflowOperationException(e);
     }
@@ -779,7 +779,7 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
           seek = seek + seekOffset;
         }
         // Instead of adding the filepath here, we put a placeholder.
-        // This is so that the videogrid service can later replace it, after it put the files in it's workspace
+        // This is so that the videogrid service can later replace it, after it put the files in it's working file repository
         ffmpegFilter += String.format("movie=%s:sp=%s", "#{" + video.getVideo().getIdentifier() + "}", msToS(seek));
         // Subtract away the offset from the timestamps, so the trimming
         // in the fps filter is accurate
@@ -996,13 +996,13 @@ public class VideoGridWorkflowOperationHandler extends AbstractWorkflowOperation
   private String getTrackPath(Track track) throws WorkflowOperationException {
     File mediaFile;
     try {
-      mediaFile = workspace.get(track.getURI());
+      mediaFile = wfr.get(track);
     } catch (NotFoundException e) {
       throw new WorkflowOperationException(
-              "Error finding the media file in the workspace", e);
+              "Error finding the media file in the working file repository", e);
     } catch (IOException e) {
       throw new WorkflowOperationException(
-              "Error reading the media file in the workspace", e);
+              "Error reading the media file in the working file repository", e);
     }
     return mediaFile.getAbsolutePath();
   }

@@ -38,7 +38,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -79,8 +79,8 @@ public class CropWorkflowOperationHandler extends AbstractWorkflowOperationHandl
   /** The composer service */
   private CropService cropService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /**
    * {@inheritDoc}
@@ -155,7 +155,7 @@ public class CropWorkflowOperationHandler extends AbstractWorkflowOperationHandl
       // move into space for media package in ws/wfr
       try {
         String filename = "cropped_" + croppedTrack.getURI().toString();
-        croppedTrack.setURI(workspace
+        croppedTrack.setURI(wfr
                 .moveTo(croppedTrack.getURI(), mediaPackage.getIdentifier().toString(), croppedTrack.getIdentifier(),
                         filename));
       } catch (NotFoundException | IOException e) {
@@ -190,15 +190,15 @@ public class CropWorkflowOperationHandler extends AbstractWorkflowOperationHandl
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  protected void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

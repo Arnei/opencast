@@ -36,7 +36,7 @@ import org.opencastproject.util.ConfigurationException;
 import org.opencastproject.util.MimeType;
 import org.opencastproject.util.OsgiUtil;
 import org.opencastproject.util.data.Option;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
@@ -149,8 +149,8 @@ public class AwsS3AssetStore extends AwsAbstractArchive implements RemoteAssetSt
   /** OSGi Di */
   @Override
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    super.setWorkspace(workspace);
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    super.setWorkingFileRepository(wfr);
   }
 
   /** OSGi Di */

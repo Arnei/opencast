@@ -32,7 +32,6 @@ import org.opencastproject.mediapackage.MediaPackageElementParser;
 import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.selector.AttachmentSelector;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
-import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.ConfiguredTagsAndFlavors;
 import org.opencastproject.workflow.api.WorkflowInstance;
@@ -40,7 +39,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -83,8 +82,8 @@ public class ImageConvertWorkflowOperationHandler extends AbstractWorkflowOperat
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The workspace */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr = null;
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -98,14 +97,14 @@ public class ImageConvertWorkflowOperationHandler extends AbstractWorkflowOperat
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Override
@@ -182,7 +181,7 @@ public class ImageConvertWorkflowOperationHandler extends AbstractWorkflowOperat
                 (List<Attachment>) MediaPackageElementParser.getArrayFromXml(job.getPayload());
         for (Attachment targetElement : targetElements) {
           String targetFileName = FilenameUtils.getName(targetElement.getURI().getPath());
-          URI newTargetElementUri = workspace.moveTo(targetElement.getURI(), mediaPackage.getIdentifier().toString(),
+          URI newTargetElementUri = wfr.moveTo(targetElement.getURI(), mediaPackage.getIdentifier().toString(),
                   targetElement.getIdentifier(), targetFileName);
           targetElement.setURI(newTargetElementUri);
           targetElement.setChecksum(null);
@@ -211,22 +210,20 @@ public class ImageConvertWorkflowOperationHandler extends AbstractWorkflowOperat
     } catch (Throwable t) {
       throw new WorkflowOperationException("Convert image operation failed", t);
     } finally {
-      cleanupWorkspace(jobs.keySet());
+      cleanupWfr(jobs.keySet());
     }
   }
 
-  private void cleanupWorkspace(Collection<Job> jobs) {
+  private void cleanupWfr(Collection<Job> jobs) {
     for (Job job : jobs) {
       try {
         List<Attachment> targetElements =
                 (List<Attachment>) MediaPackageElementParser.getArrayFromXml(job.getPayload());
         for (Attachment targetElement : targetElements) {
           try {
-            workspace.delete(targetElement.getURI());
-          } catch (NotFoundException ex) {
-            logger.trace("The image file {} not found", targetElement, ex);
+            wfr.delete(targetElement);
           } catch (IOException ex) {
-            logger.warn("Unable to delete image file {} from workspace", targetElement, ex);
+            logger.warn("Unable to delete image file {} from working file repository", targetElement, ex);
           }
         }
       } catch (MediaPackageException ex) {

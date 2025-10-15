@@ -45,7 +45,7 @@ import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.util.IoSupport;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workflow.api.WorkflowInstance;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
@@ -111,7 +111,7 @@ public class Ingestor implements Runnable {
 
   private final SeriesService seriesService;
   private final SchedulerService schedulerService;
-  private final Workspace workspace;
+  private final WorkingFileRepository wfr;
 
   private final int maxTries;
 
@@ -268,7 +268,7 @@ public class Ingestor implements Runnable {
 
                       // Update dublincore title and set reference to originally scheduled event
                       try {
-                        DublinCoreCatalog dc = DublinCoreUtil.loadEpisodeDublinCore(workspace, mediaPackage).get();
+                        DublinCoreCatalog dc = DublinCoreUtil.loadEpisodeDublinCore(wfr, mediaPackage).get();
                         var newTitle = dc.get(DublinCore.PROPERTY_TITLE).get(0).getValue()
                                 + " (" + Instant.now().getEpochSecond() + ")";
                         dc.set(DublinCore.PROPERTY_TITLE, newTitle);
@@ -462,7 +462,7 @@ public class Ingestor implements Runnable {
           String workflowDefinition, Map<String, String> workflowConfig, String mediaFlavor, File inbox, int maxThreads,
           SeriesService seriesService, int maxTries, int secondsBetweenTries, Optional<Pattern> metadataPattern,
           DateTimeFormatter dateFormatter, SchedulerService schedulerService, String ffprobe, boolean matchSchedule,
-          float matchThreshold, Workspace workspace) {
+          float matchThreshold, WorkingFileRepository wfr) {
     this.ingestService = ingestService;
     this.secCtx = secCtx;
     this.workflowDefinition = workflowDefinition;
@@ -480,7 +480,7 @@ public class Ingestor implements Runnable {
     this.ffprobe = ffprobe;
     this.matchSchedule = matchSchedule;
     this.matchThreshold = matchThreshold;
-    this.workspace = workspace;
+    this.wfr = wfr;
   }
 
   /**
@@ -544,7 +544,7 @@ public class Ingestor implements Runnable {
       Catalog[] catalogs = mp.getCatalogs(MediaPackageElements.EPISODE);
       if (catalogs.length > 0) {
         Catalog catalog = catalogs[0];
-        URI uri = workspace.put(mp.getIdentifier().toString(), catalog.getIdentifier(), "dublincore.xml", inputStream);
+        URI uri = wfr.put(mp.getIdentifier().toString(), catalog.getIdentifier(), "dublincore.xml", inputStream);
         catalog.setURI(uri);
         // setting the URI to a new source so the checksum will most like be invalid
         catalog.setChecksum(null);

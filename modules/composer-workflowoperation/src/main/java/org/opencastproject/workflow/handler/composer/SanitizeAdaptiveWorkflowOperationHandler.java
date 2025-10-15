@@ -41,7 +41,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -78,19 +78,19 @@ public class SanitizeAdaptiveWorkflowOperationHandler extends AbstractWorkflowOp
   private static final String PLUS = "+";
   private static final String MINUS = "-";
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference
@@ -126,9 +126,9 @@ public class SanitizeAdaptiveWorkflowOperationHandler extends AbstractWorkflowOp
    * @throws EncoderException
    *           if encoding fails
    * @throws IOException
-   *           if read/write operations from and to the workspace fail
+   *           if read/write operations from and to the working file repository fail
    * @throws NotFoundException
-   *           if the workspace does not contain the requested element
+   *           if the working file repository does not contain the requested element
    * @throws URISyntaxException
    */
   private WorkflowOperationResult sanitizeHLS(WorkflowInstance wi)
@@ -164,15 +164,15 @@ public class SanitizeAdaptiveWorkflowOperationHandler extends AbstractWorkflowOp
         @Override
         public File apply(URI uri) {
           try {
-            return workspace.get(uri);
-          } catch (NotFoundException | IOException e1) { // from workspace.get
-            logger.error("Cannot get {} from workspace", uri, e1);
+            return wfr.get(uri);
+          } catch (NotFoundException | IOException e1) {
+            logger.error("Cannot get {} from working file repository", uri, e1);
           }
           return null;
         }
       });
     } catch (URISyntaxException e1) {
-      throw new MediaPackageException("Cannot process tracks from workspace");
+      throw new MediaPackageException("Cannot process tracks from working file repository");
     }
     /**
      * Adds new file to Mediapackage to replace old Track, while retaining all properties. Also sets the target flavor
@@ -183,14 +183,14 @@ public class SanitizeAdaptiveWorkflowOperationHandler extends AbstractWorkflowOp
       public Track apply(File file, Track track) {
         try {
           InputStream inputStream = new FileInputStream(file);
-          // put file into workspace for mp
-          URI uri = workspace.put(mediaPackage.getIdentifier().toString(), track.getIdentifier(), file.getName(),
+          // put file into working file repository for mp
+          URI uri = wfr.put(mediaPackage.getIdentifier().toString(), track.getIdentifier(), file.getName(),
                   inputStream);
           track.setURI(uri); // point track to new URI
           handleTags(track, targetFlavor, targetTrackTags); // add tags and flavor
           return track;
         } catch (Exception e) {
-          logger.error("Cannot add track file to mediapackage in workspace: {} {} ",
+          logger.error("Cannot add track file to mediapackage in working file repository: {} {} ",
                   mediaPackage.getIdentifier().toString(),
                   file);
           return null;
@@ -202,11 +202,9 @@ public class SanitizeAdaptiveWorkflowOperationHandler extends AbstractWorkflowOp
       @Override
       public Void apply(Track track) {
         try {
-          workspace.delete(track.getURI());
-        } catch (NotFoundException e) {
-          logger.error("Cannot delete from workspace: File not found {} ", track);
+          wfr.delete(track);
         } catch (IOException e) {
-          logger.error("Cannot delete from workspace: IO Error {} ", track);
+          logger.error("Cannot delete from working file repository: IO Error {} ", track);
         }
         return null;
       }

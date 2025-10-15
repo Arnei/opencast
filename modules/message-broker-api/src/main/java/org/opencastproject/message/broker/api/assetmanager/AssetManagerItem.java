@@ -31,7 +31,7 @@ import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AccessControlParser;
 import org.opencastproject.util.RequireUtil;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.IOUtils;
 
@@ -221,8 +221,8 @@ public abstract class AssetManagerItem implements MessageItem, Serializable {
   //
 
   /**
-   * @param workspace
-   *          The workspace
+   * @param wfr
+   *          The Working File Repository
    * @param mp
    *          The media package to update.
    * @param acl
@@ -233,10 +233,10 @@ public abstract class AssetManagerItem implements MessageItem, Serializable {
    *          The modification date.
    * @return Builds a {@link AssetManagerItem} for taking a media package snapshot.
    */
-  public static TakeSnapshot add(Workspace workspace, MediaPackage mp, AccessControlList acl, long version, Date date) {
+  public static TakeSnapshot add(WorkingFileRepository wfr, MediaPackage mp, AccessControlList acl, long version, Date date) {
     String dcXml = null;
     for (Catalog catalog: mp.getCatalogs(MediaPackageElements.EPISODE)) {
-      try (InputStream in = workspace.read(catalog.getURI())) {
+      try (InputStream in = wfr.getStream(catalog)) {
         dcXml = IOUtils.toString(in, StandardCharsets.UTF_8);
       } catch (Exception e) {
         throw new IllegalStateException(String.format("Unable to load dublin core catalog for event '%s'",

@@ -37,7 +37,7 @@ import org.opencastproject.util.MimeType;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.OsgiUtil;
 import org.opencastproject.util.data.Option;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -56,7 +56,7 @@ public abstract class AwsAbstractArchive implements AssetStore {
   /** Log facility */
   private static final Logger logger = LoggerFactory.getLogger(AwsAbstractArchive.class);
 
-  protected Workspace workspace;
+  protected WorkingFileRepository wfr;
   protected AwsAssetDatabase database;
 
   /** The store type e.g. aws (long-term), or other implementations */
@@ -97,8 +97,8 @@ public abstract class AwsAbstractArchive implements AssetStore {
   }
 
   /** OSGi Di */
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /** OSGi Di */
@@ -135,7 +135,7 @@ public abstract class AwsAbstractArchive implements AssetStore {
 
   protected File getFileFromWorkspace(Source source) {
     try {
-      return workspace.get(source.getUri());
+      return wfr.get(source.getUri());
     } catch (NotFoundException e) {
       logger.error("Source file '{}' does not exist", source.getUri());
       throw new AssetStoreException(e);

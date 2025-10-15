@@ -123,6 +123,7 @@ public class TextAnalysisWorkflowOperationHandler extends AbstractWorkflowOperat
 
   /** The local workspace */
   private Workspace workspace = null;
+  private WorkingFileRepository wfr;
 
   /** The mpeg7 catalog service */
   private Mpeg7CatalogService mpeg7CatalogService = null;
@@ -375,7 +376,7 @@ public class TextAnalysisWorkflowOperationHandler extends AbstractWorkflowOperat
         // Since we've enriched and stored the mpeg7 catalog, remove the original
         try {
           mediaPackage.remove(segmentCatalog);
-          workspace.delete(segmentCatalog.getURI());
+          wfr.delete(segmentCatalog);
         } catch (Exception e) {
           logger.warn("Unable to delete segment catalog {}", segmentCatalog.getURI(), e);
         }
@@ -388,7 +389,7 @@ public class TextAnalysisWorkflowOperationHandler extends AbstractWorkflowOperat
         logger.debug("Removing temporary images");
         for (Attachment image : images) {
           try {
-            workspace.delete(image.getURI());
+            wfr.delete(image);
           } catch (Exception e) {
             logger.warn("Unable to delete temporary image {}", image.getURI(), e);
           }
@@ -403,7 +404,7 @@ public class TextAnalysisWorkflowOperationHandler extends AbstractWorkflowOperat
             }
             catalog = (Catalog) MediaPackageElementParser.getFromXml(job.getPayload());
             if (catalog != null) {
-              workspace.delete(catalog.getURI());
+              wfr.delete(catalog);
             }
           } catch (Exception e) {
             if (catalog != null) {

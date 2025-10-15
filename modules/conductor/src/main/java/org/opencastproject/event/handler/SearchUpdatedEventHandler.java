@@ -55,7 +55,7 @@ import org.opencastproject.security.util.SecurityUtil;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.NotFoundException;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.osgi.framework.BundleContext;
@@ -105,8 +105,8 @@ public class SearchUpdatedEventHandler {
   /** Dublin core catalog service */
   protected DublinCoreCatalogService dublinCoreService = null;
 
-  /** The workspace */
-  protected Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /** The system account to use for running asynchronous events */
   protected String systemAccount = null;
@@ -132,12 +132,12 @@ public class SearchUpdatedEventHandler {
   }
 
   /**
-   * @param workspace
-   *          the workspace to set
+   * @param wfr
+   *          the working file repository to set
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -251,7 +251,7 @@ public class SearchUpdatedEventHandler {
           if (seriesCatalogs.length == 1) {
             Catalog c = seriesCatalogs[0];
             String filename = FilenameUtils.getName(c.getURI().toString());
-            URI uri = workspace.put(mp.getIdentifier().toString(), c.getIdentifier(), filename,
+            URI uri = wfr.put(mp.getIdentifier().toString(), c.getIdentifier(), filename,
                     dublinCoreService.serialize(seriesDublinCore));
             c.setURI(uri);
             // setting the URI to a new source so the checksum will most like be invalid
@@ -321,10 +321,10 @@ public class SearchUpdatedEventHandler {
           NotFoundException, ServiceRegistryException, IllegalArgumentException, IOException {
     // Update the episode catalog
     for (Catalog episodeCatalog : mp.getCatalogs(MediaPackageElements.EPISODE)) {
-      DublinCoreCatalog episodeDublinCore = DublinCoreUtil.loadDublinCore(workspace, episodeCatalog);
+      DublinCoreCatalog episodeDublinCore = DublinCoreUtil.loadDublinCore(wfr, episodeCatalog);
       episodeDublinCore.remove(DublinCore.PROPERTY_IS_PART_OF);
       String filename = FilenameUtils.getName(episodeCatalog.getURI().toString());
-      URI uri = workspace.put(mp.getIdentifier().toString(), episodeCatalog.getIdentifier(), filename,
+      URI uri = wfr.put(mp.getIdentifier().toString(), episodeCatalog.getIdentifier(), filename,
               dublinCoreService.serialize(episodeDublinCore));
       episodeCatalog.setURI(uri);
       // setting the URI to a new source so the checksum will most like be invalid

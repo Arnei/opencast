@@ -44,7 +44,7 @@ import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.IoSupport;
 import org.opencastproject.util.LoadUtil;
 import org.opencastproject.util.NotFoundException;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -117,8 +117,8 @@ public class CaptionServiceImpl extends AbstractJobProducer implements CaptionSe
   /** The load introduced on the system by creating a caption job */
   private float captionJobLoad = DEFAULT_CAPTION_JOB_LOAD;
 
-  /** Reference to workspace */
-  protected Workspace workspace;
+  /** Reference to working file repository */
+  protected WorkingFileRepository wfr;
 
   /** Reference to remote service manager */
   protected ServiceRegistry serviceRegistry;
@@ -222,7 +222,7 @@ public class CaptionServiceImpl extends AbstractJobProducer implements CaptionSe
       // get input file
       File captionsFile;
       try {
-        captionsFile = workspace.get(input.getURI());
+        captionsFile = wfr.get(input);
       } catch (NotFoundException e) {
         throw new CaptionConverterException("Requested media package element " + input + " could not be found.");
       } catch (IOException e) {
@@ -300,7 +300,7 @@ public class CaptionServiceImpl extends AbstractJobProducer implements CaptionSe
 
     File captions;
     try {
-      captions = workspace.get(input.getURI());
+      captions = wfr.get(input);
     } catch (NotFoundException e) {
       throw new CaptionConverterException("Requested media package element " + input + " could not be found.");
     } catch (IOException e) {
@@ -447,7 +447,7 @@ public class CaptionServiceImpl extends AbstractJobProducer implements CaptionSe
       // since we're writing to memory, this should not happen
     }
     ByteArrayInputStream in = new ByteArrayInputStream(outputStream.toByteArray());
-    return workspace.putInCollection(COLLECTION, outputName + "." + converter.getExtension(), in);
+    return wfr.putInCollection(COLLECTION, outputName + "." + converter.getExtension(), in);
   }
 
   private boolean isNumeric(String str) {
@@ -498,11 +498,11 @@ public class CaptionServiceImpl extends AbstractJobProducer implements CaptionSe
   }
 
   /**
-   * Setter for workspace via declarative activation
+   * Setter for working file repository via declarative activation
    */
   @Reference
-  protected void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  protected void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**

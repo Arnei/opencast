@@ -61,7 +61,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -129,8 +129,8 @@ public class CompositeWorkflowOperationHandler extends AbstractWorkflowOperation
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -144,15 +144,15 @@ public class CompositeWorkflowOperationHandler extends AbstractWorkflowOperation
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -202,7 +202,7 @@ public class CompositeWorkflowOperationHandler extends AbstractWorkflowOperation
         InputStream in = null;
         try {
           in = UrlSupport.url(compositeSettings.getSourceUrlWatermark()).openStream();
-          URI imageUrl = workspace.putInCollection(COLLECTION, compositeSettings.getWatermarkIdentifier() + "."
+          URI imageUrl = wfr.putInCollection(COLLECTION, compositeSettings.getWatermarkIdentifier() + "."
                   + FilenameUtils.getExtension(compositeSettings.getSourceUrlWatermark()), in);
           urlAttachment.setURI(imageUrl);
         } catch (Exception e) {
@@ -650,7 +650,7 @@ public class CompositeWorkflowOperationHandler extends AbstractWorkflowOperation
 
         Track compoundTrack = (Track) MediaPackageElementParser.getFromXml(compositeJob.getPayload());
 
-        compoundTrack.setURI(workspace.moveTo(compoundTrack.getURI(), mediaPackage.getIdentifier().toString(),
+        compoundTrack.setURI(wfr.moveTo(compoundTrack.getURI(), mediaPackage.getIdentifier().toString(),
                 compoundTrack.getIdentifier(),
                 "composite." + FilenameUtils.getExtension(compoundTrack.getURI().toString())));
 
@@ -672,7 +672,7 @@ public class CompositeWorkflowOperationHandler extends AbstractWorkflowOperation
       }
     } finally {
       if (compositeSettings.getSourceUrlWatermark() != null)
-        workspace.deleteFromCollection(
+        wfr.deleteFromCollection(
                 COLLECTION,
                 compositeSettings.getWatermarkIdentifier() + "."
                         + FilenameUtils.getExtension(compositeSettings.getSourceUrlWatermark()));
@@ -685,7 +685,7 @@ public class CompositeWorkflowOperationHandler extends AbstractWorkflowOperation
     if (watermarkAttachment.isSome() && compositeSettings.getWatermarkLayout().isSome()) {
       BufferedImage image;
       try {
-        File watermarkFile = workspace.get(watermarkAttachment.get().getURI());
+        File watermarkFile = wfr.get(watermarkAttachment.get());
         image = ImageIO.read(watermarkFile);
       } catch (Exception e) {
         logger.warn("Unable to read the watermark image attachment {}", watermarkAttachment.get().getURI(), e);
@@ -785,7 +785,7 @@ public class CompositeWorkflowOperationHandler extends AbstractWorkflowOperation
 
         Track compoundTrack = (Track) MediaPackageElementParser.getFromXml(compositeJob.getPayload());
 
-        compoundTrack.setURI(workspace.moveTo(compoundTrack.getURI(), mediaPackage.getIdentifier().toString(),
+        compoundTrack.setURI(wfr.moveTo(compoundTrack.getURI(), mediaPackage.getIdentifier().toString(),
                 compoundTrack.getIdentifier(),
                 "composite." + FilenameUtils.getExtension(compoundTrack.getURI().toString())));
 
@@ -807,7 +807,7 @@ public class CompositeWorkflowOperationHandler extends AbstractWorkflowOperation
       }
     } finally {
       if (compositeSettings.getSourceUrlWatermark() != null)
-        workspace.deleteFromCollection(
+        wfr.deleteFromCollection(
                 COLLECTION,
                 compositeSettings.getWatermarkIdentifier() + "."
                         + FilenameUtils.getExtension(compositeSettings.getSourceUrlWatermark()));

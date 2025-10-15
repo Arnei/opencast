@@ -57,7 +57,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -100,8 +100,8 @@ public class SegmentPreviewsWorkflowOperationHandler extends AbstractWorkflowOpe
   /** The mpeg7 catalog service */
   private Mpeg7CatalogService mpeg7CatalogService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -126,15 +126,15 @@ public class SegmentPreviewsWorkflowOperationHandler extends AbstractWorkflowOpe
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference
@@ -330,7 +330,7 @@ public class SegmentPreviewsWorkflowOperationHandler extends AbstractWorkflowOpe
             // store new image in the mediaPackage
             mediaPackage.add(composedImage);
             String fileName = getFileNameFromElements(t, composedImage);
-            composedImage.setURI(workspace.moveTo(composedImage.getURI(), mediaPackage.getIdentifier().toString(),
+            composedImage.setURI(wfr.moveTo(composedImage.getURI(), mediaPackage.getIdentifier().toString(),
                     composedImage.getIdentifier(), fileName));
           }
         }
@@ -396,7 +396,7 @@ public class SegmentPreviewsWorkflowOperationHandler extends AbstractWorkflowOpe
   protected Mpeg7Catalog loadMpeg7Catalog(Catalog catalog) throws IOException {
     InputStream in = null;
     try {
-      File f = workspace.get(catalog.getURI());
+      File f = wfr.get(catalog);
       in = new FileInputStream(f);
       return mpeg7CatalogService.load(in);
     } catch (NotFoundException e) {

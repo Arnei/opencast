@@ -50,7 +50,7 @@ import org.opencastproject.util.MimeTypes;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.UnknownFileTypeException;
 import org.opencastproject.util.data.Tuple;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -74,11 +74,11 @@ public class MediaInspector {
 
   private static final Logger logger = LoggerFactory.getLogger(MediaInspector.class);
 
-  private final Workspace workspace;
+  private final WorkingFileRepository wfr;
   private final String ffprobePath;
 
-  public MediaInspector(Workspace workspace, String ffprobePath) {
-    this.workspace = workspace;
+  public MediaInspector(WorkingFileRepository wfr, String ffprobePath) {
+    this.wfr = wfr;
     this.ffprobePath = ffprobePath;
   }
 
@@ -92,18 +92,18 @@ public class MediaInspector {
    *           if inspection fails
    */
   public Track inspectTrack(URI trackURI, Map<String, String> options) throws MediaInspectionException {
-    logger.debug("inspect(" + trackURI + ") called, using workspace " + workspace);
+    logger.debug("inspect(" + trackURI + ") called, using working file repository " + wfr);
     throwExceptionIfInvalid(options);
 
     try {
       // Get the file from the URL (runtime exception if invalid)
       File file = null;
       try {
-        file = workspace.get(trackURI);
+        file = wfr.get(trackURI);
       } catch (NotFoundException notFound) {
         throw new MediaInspectionException("Unable to find resource " + trackURI, notFound);
       } catch (IOException ioe) {
-        throw new MediaInspectionException("Error reading " + trackURI + " from workspace", ioe);
+        throw new MediaInspectionException("Error reading " + trackURI + " from working file repository", ioe);
       }
 
       // Make sure the file has an extension. Otherwise, tools like ffmpeg will not work.
@@ -219,7 +219,7 @@ public class MediaInspector {
       // Get the file from the URL
       File file = null;
       try {
-        file = workspace.get(originalTrackUrl);
+        file = wfr.get(originalTrack);
       } catch (NotFoundException e) {
         throw new MediaInspectionException("File " + originalTrackUrl + " was not found and can therefore not be "
             + "inspected", e);
@@ -337,11 +337,11 @@ public class MediaInspector {
     try {
       File file;
       try {
-        file = workspace.get(element.getURI());
+        file = wfr.get(element);
       } catch (NotFoundException e) {
-        throw new MediaInspectionException("Unable to find " + element.getURI() + " in the workspace", e);
+        throw new MediaInspectionException("Unable to find " + element.getURI() + " in the working file repository", e);
       } catch (IOException e) {
-        throw new MediaInspectionException("Error accessing " + element.getURI() + " in the workspace", e);
+        throw new MediaInspectionException("Error accessing " + element.getURI() + " in the working file repository", e);
       }
 
       // Checksum

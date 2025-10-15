@@ -45,7 +45,7 @@ import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
 import org.opencastproject.workflow.api.WorkflowOperationResultImpl;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.lang3.StringUtils;
 import org.osgi.service.component.annotations.Component;
@@ -131,8 +131,8 @@ public class ExecuteManyWorkflowOperationHandler extends AbstractWorkflowOperati
   /** Reference to the media inspection service */
   private MediaInspectionService inspectionService = null;
 
-  /** The workspace service */
-  protected Workspace workspace;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /**
    * {@inheritDoc}
@@ -279,12 +279,12 @@ public class ExecuteManyWorkflowOperationHandler extends AbstractWorkflowOperati
           if (setWfProps) {
             // The job payload is a file with set of properties for the workflow
             final Properties properties = new Properties();
-            File propertiesFile = workspace.get(resultElements[i].getURI());
+            File propertiesFile = wfr.get(resultElements[i]);
             try (InputStreamReader reader = new InputStreamReader(new FileInputStream(propertiesFile), StandardCharsets.UTF_8)) {
               properties.load(reader);
             }
             logger.debug("Loaded {} properties from {}", properties.size(), propertiesFile);
-            workspace.deleteFromCollection(ExecuteService.COLLECTION, propertiesFile.getName());
+            wfr.deleteFromCollection(ExecuteService.COLLECTION, propertiesFile.getName());
 
             // Add the properties to the wfProps
             wfProps.putAll((Map) properties);
@@ -294,7 +294,7 @@ public class ExecuteManyWorkflowOperationHandler extends AbstractWorkflowOperati
             // Store new element to mediaPackage
             mediaPackage.addDerived(resultElements[i], inputElements[i]);
             // Store new element to mediaPackage
-            URI uri = workspace.moveTo(resultElements[i].getURI(), mediaPackage.getIdentifier().toString(),
+            URI uri = wfr.moveTo(resultElements[i].getURI(), mediaPackage.getIdentifier().toString(),
                   resultElements[i].getIdentifier(), outputFilename);
 
             resultElements[i].setURI(uri);
@@ -380,13 +380,13 @@ public class ExecuteManyWorkflowOperationHandler extends AbstractWorkflowOperati
   }
 
   /**
-   * Sets a reference to the workspace service.
+   * Sets a reference to the working file repository service.
    *
-   * @param workspace
+   * @param wfr
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**

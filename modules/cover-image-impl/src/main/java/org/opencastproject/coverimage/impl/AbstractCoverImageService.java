@@ -38,7 +38,7 @@ import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.XmlSafeParser;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.batik.apps.rasterizer.DestinationType;
 import org.apache.batik.apps.rasterizer.SVGConverter;
@@ -85,7 +85,7 @@ public abstract class AbstractCoverImageService extends AbstractJobProducer impl
   }
 
   /** The workspace service */
-  protected Workspace workspace = null;
+  protected WorkingFileRepository wfr;
 
   /** The service registry service */
   protected ServiceRegistry serviceRegistry;
@@ -171,7 +171,7 @@ public abstract class AbstractCoverImageService extends AbstractJobProducer impl
       rasterizeSvg(tempSvg, tempPng);
 
       try (FileInputStream in = new FileInputStream(tempPng)) {
-        result = workspace.putInCollection(COVERIMAGE_WORKSPACE_COLLECTION, job.getId() + "_coverimage.png", in);
+        result = wfr.putInCollection(COVERIMAGE_WORKSPACE_COLLECTION, job.getId() + "_coverimage.png", in);
         log.debug("Put the cover image into the workspace ({})", result);
       } catch (IOException e) {
         log.warn("Error while putting resulting image into workspace collection '{}'",

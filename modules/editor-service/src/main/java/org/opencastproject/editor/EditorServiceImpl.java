@@ -85,6 +85,7 @@ import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowService;
 import org.opencastproject.workflow.api.WorkflowUtil;
 import org.opencastproject.workflow.handler.distribution.InternalPublicationChannel;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 import org.opencastproject.workspace.api.Workspace;
 
 import org.apache.commons.io.FileUtils;
@@ -160,6 +161,7 @@ public class EditorServiceImpl implements EditorService {
   private UrlSigningService urlSigningService;
   private WorkflowService workflowService;
   private Workspace workspace;
+  private WorkingFileRepository wfr;
   private AuthorizationService authorizationService;
 
 
@@ -597,8 +599,8 @@ public class EditorServiceImpl implements EditorService {
           // Delete the old files from the working file repository and workspace if they were in there
           logger.info("Removing old track file {}", oldTrackURI);
           try {
-            workspace.delete(oldTrackURI);
-          } catch (NotFoundException | IOException e) {
+            wfr.delete(oldTrackURI);
+          } catch (IOException e) {
             logger.info("Could not remove track from workspace. Could be it was never there.");
           }
         }

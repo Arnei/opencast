@@ -38,6 +38,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 import org.opencastproject.workspace.api.Workspace;
 
 import org.apache.commons.io.FilenameUtils;
@@ -79,8 +80,8 @@ public class SpeechToTextAttachWorkflowOperationHandler extends AbstractWorkflow
     attachment, track
   }
 
-  /** The workspace service. */
-  private Workspace workspace;
+  /** The working file repository service. */
+  private WorkingFileRepository wfr;
 
   /** The inspection service. */
   private MediaInspectionService mediaInspectionService;
@@ -193,7 +194,7 @@ public class SpeechToTextAttachWorkflowOperationHandler extends AbstractWorkflow
 
       mediaPackage.add(MediaPackageElementParser.getFromXml(inspection.getPayload()));
 
-      workspace.delete(output);
+      wfr.delete(output);
     } catch (Exception e) {
       throw new WorkflowOperationException("Error handling text-to-speech service output", e);
     }

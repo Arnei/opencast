@@ -51,7 +51,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -99,8 +99,8 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
   private ComposerService composerService = null;
   /** The smil service to parse the smil */
   private SmilService smilService;
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The local working file repository */
+  private WorkingFileRepository wfr = null;
 
   private Predicate<EncodingProfile> isManifestEP = p -> p.getOutputType() == EncodingProfile.MediaType.Manifest;
 
@@ -212,15 +212,15 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference
@@ -271,9 +271,9 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
    * @throws WorkflowOperationException
    *           if errors occur during processing
    * @throws IOException
-   *           if the workspace operations fail
+   *           if the working file repository operations fail
    * @throws NotFoundException
-   *           if the workspace doesn't contain the requested file
+   *           if the working file repository doesn't contain the requested file
    */
   private WorkflowOperationResult processSmil(MediaPackage src, WorkflowOperationInstance operation)
           throws EncoderException, IOException, NotFoundException, MediaPackageException, WorkflowOperationException {
@@ -498,7 +498,7 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
       // character differently; the default regex currently does).
       String suffixToSanitize = "X" + ep.getSuffix();
       // !! workspace.putInCollection renames the file - need to do the same with suffix
-      String suffix = workspace.toSafeName(suffixToSanitize).substring(1);
+      String suffix = wfr.toSafeName(suffixToSanitize).substring(1);
       if (suffix.length() > 0 && rawfileName.endsWith(suffix)) {
         track.addTag(ep.getIdentifier());
         return;
@@ -572,7 +572,7 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
           } else // preserve name from profile - should we do this?
             fileName = FilenameUtils.getName(composedTrack.getURI().getPath());
 
-          composedTrack.setURI(workspace.moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(),
+          composedTrack.setURI(wfr.moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(),
                   composedTrack.getIdentifier(), fileName));
           synchronized (mediaPackage) {
             mediaPackage.addDerived(composedTrack, track);
@@ -681,7 +681,7 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
     }
     Smil smil = null;
     try {
-      File smilFile = workspace.get(catalogs[0].getURI());
+      File smilFile = wfr.get(catalogs[0]);
       // break up chained method for junit smil service mockup
       SmilResponse response = smilService.fromXml(FileUtils.readFileToString(smilFile, "UTF-8"));
       smil = response.getSmil();

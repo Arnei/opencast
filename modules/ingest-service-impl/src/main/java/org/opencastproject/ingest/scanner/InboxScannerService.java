@@ -33,7 +33,7 @@ import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.security.util.SecurityContext;
 import org.opencastproject.series.api.SeriesService;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -137,7 +137,7 @@ public class InboxScannerService implements ArtifactInstaller, ManagedService {
   private OrganizationDirectoryService orgDir;
   private SeriesService seriesService;
   private SchedulerService schedulerService;
-  protected Workspace workspace;
+  protected WorkingFileRepository wfr;
 
   private ComponentContext cc;
 
@@ -239,7 +239,7 @@ public class InboxScannerService implements ArtifactInstaller, ManagedService {
     this.ingestor = new Ingestor(ingestService, securityContext.get(), workflowDefinition,
             workflowConfig, mediaFlavor, inbox, maxThreads, seriesService, maxTries, secondsBetweenTries,
             metadataPattern, dateFormatter, schedulerService, ffprobe, matchSchedule, matchThreshold,
-            workspace);
+            wfr);
     new Thread(ingestor).start();
     logger.info("Now watching inbox {}", inbox.getAbsolutePath());
   }
@@ -380,7 +380,7 @@ public class InboxScannerService implements ArtifactInstaller, ManagedService {
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 }

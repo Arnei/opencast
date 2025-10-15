@@ -52,7 +52,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -103,8 +103,8 @@ public class InspectWorkflowOperationHandler extends AbstractWorkflowOperationHa
   /** The dublin core catalog service */
   private DublinCoreCatalogService dcService;
 
-  /** The local workspace */
-  private Workspace workspace;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   @Reference
   public void setDublincoreService(DublinCoreCatalogService dcService) {
@@ -123,15 +123,15 @@ public class InspectWorkflowOperationHandler extends AbstractWorkflowOperationHa
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -271,8 +271,8 @@ public class InspectWorkflowOperationHandler extends AbstractWorkflowOperationHa
       InputStream in = dcService.serialize(dublinCore);
       String mpId = mediaPackage.getIdentifier().toString();
       String elementId = dcCatalogs[0].getIdentifier();
-      workspace.put(mpId, elementId, FilenameUtils.getName(dcCatalogs[0].getURI().getPath()), in);
-      dcCatalogs[0].setURI(workspace.getURI(mpId, elementId));
+      wfr.put(mpId, elementId, FilenameUtils.getName(dcCatalogs[0].getURI().getPath()), in);
+      dcCatalogs[0].setURI(wfr.getURI(mpId, elementId));
     }
   }
 
@@ -288,7 +288,7 @@ public class InspectWorkflowOperationHandler extends AbstractWorkflowOperationHa
   protected DublinCoreCatalog loadDublinCoreCatalog(Catalog catalog) throws IOException {
     InputStream in = null;
     try {
-      File f = workspace.get(catalog.getURI());
+      File f = wfr.get(catalog);
       in = new FileInputStream(f);
       return dcService.load(in);
     } catch (NotFoundException e) {

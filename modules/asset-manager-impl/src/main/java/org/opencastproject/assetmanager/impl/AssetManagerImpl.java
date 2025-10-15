@@ -85,7 +85,7 @@ import org.opencastproject.util.MimeTypes;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.RequireUtil;
 import org.opencastproject.util.data.functions.Functions;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.common.collect.Sets;
 
@@ -93,7 +93,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.units.qual.A;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -156,7 +155,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
   private SecurityService securityService;
   private AuthorizationService authorizationService;
   private OrganizationDirectoryService orgDir;
-  private Workspace workspace;
+  private WorkingFileRepository wfr;
   private AssetStore assetStore;
   private HttpAssetProvider httpAssetProvider;
   private String systemUserName;
@@ -226,8 +225,8 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference
@@ -496,7 +495,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
       throw new RuntimeException("The current implementation of the index requires versions being of type 'long'.");
     }
 
-    return AssetManagerItem.add(workspace, mp, authorizationService.getActiveAcl(mp).getA(),
+    return AssetManagerItem.add(wfr, mp, authorizationService.getActiveAcl(mp).getA(),
             version, snapshot.getArchivalDate());
   }
 
@@ -1296,15 +1295,13 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
 
         inputStream = inputStreamOpt.get();
         manifestFileName = UUID.randomUUID() + ".xml";
-        URI manifestTmpUri = workspace.putInCollection("archive", manifestFileName, inputStream);
+        URI manifestTmpUri = wfr.putInCollection("archive", manifestFileName, inputStream);
         targetStore.put(pathToManifest, Source.mk(manifestTmpUri, Optional.empty(), Optional.of(MimeTypes.XML)));
       } finally {
         IOUtils.closeQuietly(inputStream);
         try {
           // Make sure to clean up the temporary file
-          workspace.deleteFromCollection("archive", manifestFileName);
-        } catch (NotFoundException e) {
-          // This is OK, we are deleting it anyway
+          wfr.deleteFromCollection("archive", manifestFileName);
         } catch (IOException e) {
           // This usually happens when the collection directory cannot be deleted
           // because another process is running at the same time and wrote a file there
@@ -1348,7 +1345,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
           File file = null;
           try {
             logger.trace("Calculate checksum for {}", mpe.getURI());
-            file = workspace.get(mpe.getURI(), true);
+            file = wfr.get(mpe);
             mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, file));
           } catch (IOException | NotFoundException e) {
             throw new AssetManagerException(String.format(
@@ -1450,7 +1447,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
     // temporarily save the manifest XML into the workspace to
     // Fix file not found exception when several snapshots are taken at the same time
     final String manifestFileName = format("manifest_%s_%s.xml", pmp.getMediaPackage().getIdentifier(), version);
-    final URI manifestTmpUri = workspace.putInCollection(
+    final URI manifestTmpUri = wfr.putInCollection(
             "archive",
             manifestFileName,
             IOUtils.toInputStream(MediaPackageParser.getAsXml(pmp.getMediaPackage()), "UTF-8"));
@@ -1460,7 +1457,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
               Source.mk(manifestTmpUri, Optional.empty(), Optional.of(MimeTypes.XML)));
     } finally {
       // make sure to clean up the temporary file
-      workspace.deleteFromCollection("archive", manifestFileName);
+      wfr.deleteFromCollection("archive", manifestFileName);
     }
   }
 
@@ -1564,7 +1561,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
       EventIndexUtils.updateEvent(event, mp);
 
       for (Catalog catalog: mp.getCatalogs(MediaPackageElements.EPISODE)) {
-        try (InputStream in = workspace.read(catalog.getURI())) {
+        try (InputStream in = wfr.getStream(catalog)) {
           EventIndexUtils.updateEvent(event, DublinCores.read(in));
         } catch (IOException | NotFoundException e) {
           throw new IllegalStateException(String.format("Unable to load dublin core catalog for event '%s'",
@@ -1577,7 +1574,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
       for (EventCatalogUIAdapter extendedCatalogUIAdapter : extendedEventCatalogUIAdapters.getOrDefault(orgId,
               Collections.emptyList())) {
         for (Catalog catalog: mp.getCatalogs(extendedCatalogUIAdapter.getFlavor())) {
-          try (InputStream in = workspace.read(catalog.getURI())) {
+          try (InputStream in = wfr.getStream(catalog)) {
             EventIndexUtils.updateEventExtendedMetadata(event, DublinCores.read(in),
                     extendedCatalogUIAdapter.getFlavor());
           } catch (IOException | NotFoundException e) {

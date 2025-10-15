@@ -47,7 +47,7 @@ import org.opencastproject.util.LoadUtil;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.OsgiUtil;
 import org.opencastproject.util.data.Option;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -509,11 +509,11 @@ public class AwsS3DistributionServiceImpl extends AbstractDistributionService
     notNull(element, "element");
 
     try {
-      return distributeElement(channelId, mediaPackage, element, checkAvailability, workspace.get(element.getURI()));
+      return distributeElement(channelId, mediaPackage, element, checkAvailability, wfr.get(element));
     } catch (NotFoundException e) {
-      throw new DistributionException("Unable to find " + element.getURI() + " in the workspace", e);
+      throw new DistributionException("Unable to find " + element.getURI() + " in the working file repository", e);
     } catch (IOException e) {
-      throw new DistributionException("Error loading " + element.getURI() + " from the workspace", e);
+      throw new DistributionException("Error loading " + element.getURI() + " from the working file repository", e);
     }
   }
 
@@ -850,7 +850,7 @@ public class AwsS3DistributionServiceImpl extends AbstractDistributionService
               Files.createDirectories(newPath.getParent());
               // If this flavor is a HLS playlist and therefore has internal references
               if (AdaptivePlaylist.isPlaylist(t)) {
-                File f = workspace.get(t.getURI()); // Get actual file
+                File f = wfr.get(t); // Get actual file
                 Path plcopy = Files.copy(f.toPath(), newPath);
                 tcopy.setURI(plcopy.toUri()); // make it into an URI from filesystem
               } else {
@@ -1039,8 +1039,8 @@ public class AwsS3DistributionServiceImpl extends AbstractDistributionService
 
   @Reference
   @Override
-  public void setWorkspace(Workspace workspace) {
-    super.setWorkspace(workspace);
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    super.setWorkingFileRepository(wfr);
   }
 
   @Reference

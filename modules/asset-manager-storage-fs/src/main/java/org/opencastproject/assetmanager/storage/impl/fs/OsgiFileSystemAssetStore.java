@@ -24,7 +24,7 @@ import static org.opencastproject.util.IoSupport.file;
 
 import org.opencastproject.assetmanager.api.storage.AssetStore;
 import org.opencastproject.util.data.Option;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -85,11 +85,11 @@ public class OsgiFileSystemAssetStore extends AbstractFileSystemAssetStore {
   /** The root directories for storing files (typically one) */
   private List<String> rootDirectories;
 
-  /** The workspace */
-  private Workspace workspace;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
-  @Override protected Workspace getWorkspace() {
-    return workspace;
+  @Override protected WorkingFileRepository getWorkingFileRepository() {
+    return wfr;
   }
 
   @Override
@@ -184,8 +184,8 @@ public class OsgiFileSystemAssetStore extends AbstractFileSystemAssetStore {
    * OSGi DI.
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**

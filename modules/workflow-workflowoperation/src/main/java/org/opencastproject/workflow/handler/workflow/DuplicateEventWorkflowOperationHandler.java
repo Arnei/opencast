@@ -69,7 +69,7 @@ import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
 import org.opencastproject.workflow.handler.distribution.InternalPublicationChannel;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -169,8 +169,8 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   /** AssetManager to use for creating new media packages. */
   private AssetManager assetManager;
 
-  /** The workspace to use for retrieving and storing files. */
-  protected Workspace workspace;
+  /** The working file repository to use for retrieving and storing files. */
+  protected WorkingFileRepository wfr;
 
   /** The distribution service */
   protected DistributionService distributionService;
@@ -213,12 +213,12 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   /**
    * Callback for the OSGi declarative services configuration.
    *
-   * @param workspace
-   *          the workspace
+   * @param wfr
+   *          the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -338,7 +338,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
         // Clone the media package (without its elements)
         String useTitle;
         if (title.isEmpty() || (title.startsWith("${") && (title.endsWith("}")))) {
-          final DublinCoreCatalog dublinCore = DublinCoreUtil.loadEpisodeDublinCore(workspace, mediaPackage).get();
+          final DublinCoreCatalog dublinCore = DublinCoreUtil.loadEpisodeDublinCore(wfr, mediaPackage).get();
           useTitle = dublinCore.getFirst(DublinCore.PROPERTY_TITLE);
         } else {
           useTitle = title;
@@ -366,7 +366,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
           URI newSeriesURI = null;
           String newSeriesId = UUID.randomUUID().toString();
           try (InputStream seriesDCInputStream = IOUtils.toInputStream(series.dc.toXmlString(), "UTF-8")) {
-            newSeriesURI = workspace.put(newMpId, newSeriesId, "dublincore.xml", seriesDCInputStream);
+            newSeriesURI = wfr.put(newMpId, newSeriesId, "dublincore.xml", seriesDCInputStream);
           }
           MediaPackageElementBuilder elementBuilder = MediaPackageElementBuilderFactory.newInstance()
                   .newElementBuilder();
@@ -427,18 +427,16 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     // Remove temporary files of new media package
     for (URI temporaryFile : temporaryFiles) {
       try {
-        workspace.delete(temporaryFile);
-      } catch (NotFoundException e) {
-        logger.debug("{} could not be found in the workspace and hence, cannot be deleted.", temporaryFile);
+        wfr.delete(temporaryFile);
       } catch (IOException e) {
-        logger.warn("Failed to delete {} from workspace.", temporaryFile);
+        logger.warn("Failed to delete {} from wfr.", temporaryFile);
       }
     }
     newMp.ifPresent(mp -> {
       try {
-        workspace.cleanup(mp.getIdentifier());
+        wfr.cleanup(mp.getIdentifier());
       } catch (IOException e) {
-        logger.warn("Failed to cleanup the workspace for media package {}", mp.getIdentifier());
+        logger.warn("Failed to cleanup the wfr for media package {}", mp.getIdentifier());
       }
     });
   }
@@ -500,10 +498,10 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     sourcePubElements.addAll(Arrays.asList(sourcePublication.getTracks()));
     for (final MediaPackageElement e : sourcePubElements) {
       try {
-        // We first have to copy the media package element into the workspace
+        // We first have to copy the media package element into the wfr
         final MediaPackageElement element = (MediaPackageElement) e.clone();
-        try (InputStream inputStream = workspace.read(element.getURI())) {
-          final URI tmpUri = workspace.put(destination.getIdentifier().toString(), element.getIdentifier(),
+        try (InputStream inputStream = wfr.getStream(element)) {
+          final URI tmpUri = wfr.put(destination.getIdentifier().toString(), element.getIdentifier(),
               FilenameUtils.getName(element.getURI().toString()), inputStream);
           temporaryFiles.add(tmpUri);
           element.setIdentifier(null);
@@ -544,7 +542,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       final List<URI> temporaryFiles,
       final Date creationDate
   ) throws WorkflowOperationException {
-    final DublinCoreCatalog destinationDublinCore = DublinCoreUtil.loadEpisodeDublinCore(workspace, source).get();
+    final DublinCoreCatalog destinationDublinCore = DublinCoreUtil.loadEpisodeDublinCore(wfr, source).get();
     destinationDublinCore.setIdentifier(null);
     destinationDublinCore.setURI(sourceDublinCore.getURI());
     destinationDublinCore.set(DublinCore.PROPERTY_CREATED, OpencastMetadataCodec.encodeDate(creationDate, Precision.Second));
@@ -558,7 +556,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     }
     try (InputStream inputStream = IOUtils.toInputStream(destinationDublinCore.toXmlString(), "UTF-8")) {
       final String elementId = UUID.randomUUID().toString();
-      final URI newUrl = workspace.put(destination.getIdentifier().toString(), elementId, "dublincore.xml",
+      final URI newUrl = wfr.put(destination.getIdentifier().toString(), elementId, "dublincore.xml",
           inputStream);
       temporaryFiles.add(newUrl);
       final MediaPackageElement mpe = destination.add(newUrl, MediaPackageElement.Type.Catalog,

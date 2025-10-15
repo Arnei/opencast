@@ -46,7 +46,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -106,8 +106,8 @@ public class ConcatWorkflowOperationHandler extends AbstractWorkflowOperationHan
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The local working file repository service */
+  private WorkingFileRepository wfr = null;
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -121,15 +121,15 @@ public class ConcatWorkflowOperationHandler extends AbstractWorkflowOperationHan
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -319,7 +319,7 @@ public class ConcatWorkflowOperationHandler extends AbstractWorkflowOperationHan
 
       Track concatTrack = (Track) MediaPackageElementParser.getFromXml(concatJob.getPayload());
 
-      concatTrack.setURI(workspace.moveTo(concatTrack.getURI(), mediaPackage.getIdentifier().toString(),
+      concatTrack.setURI(wfr.moveTo(concatTrack.getURI(), mediaPackage.getIdentifier().toString(),
               concatTrack.getIdentifier(), "concat." + FilenameUtils.getExtension(concatTrack.getURI().toString())));
 
       addNewTrack(mediaPackage, concatTrack, targetTagsOption, targetFlavor);

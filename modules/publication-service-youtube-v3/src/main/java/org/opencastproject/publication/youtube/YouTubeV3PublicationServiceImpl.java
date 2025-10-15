@@ -41,7 +41,7 @@ import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.LoadUtil;
 import org.opencastproject.util.MimeTypes;
 import org.opencastproject.util.XProperties;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.api.services.youtube.model.Playlist;
 import com.google.api.services.youtube.model.SearchResult;
@@ -119,8 +119,8 @@ public class YouTubeV3PublicationServiceImpl
     Publish, Retract
   }
 
-  /** workspace instance */
-  protected Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /** The remote service registry */
   protected ServiceRegistry serviceRegistry = null;
@@ -271,8 +271,8 @@ public class YouTubeV3PublicationServiceImpl
     }
     try {
       // create context strategy for publication
-      final YouTubePublicationAdapter c = new YouTubePublicationAdapter(mediaPackage, workspace);
-      final File file = workspace.get(element.getURI());
+      final YouTubePublicationAdapter c = new YouTubePublicationAdapter(mediaPackage, wfr);
+      final File file = wfr.get(element);
       final String episodeName = c.getEpisodeName();
       final UploadProgressListener operationProgressListener = new UploadProgressListener(mediaPackage, file);
       final String privacyStatus = makeVideosPrivate ? "private" : "public";
@@ -355,7 +355,7 @@ public class YouTubeV3PublicationServiceImpl
     if (youtube == null) {
       return null;
     }
-    final YouTubePublicationAdapter contextStrategy = new YouTubePublicationAdapter(mediaPackage, workspace);
+    final YouTubePublicationAdapter contextStrategy = new YouTubePublicationAdapter(mediaPackage, wfr);
     final String episodeName = contextStrategy.getEpisodeName();
     try {
       retract(mediaPackage.getSeriesTitle(), episodeName);
@@ -412,14 +412,14 @@ public class YouTubeV3PublicationServiceImpl
   }
 
   /**
-   * Callback for the OSGi environment to set the workspace reference.
+   * Callback for the OSGi environment to set the working file repository reference.
    *
-   * @param workspace
-   *          the workspace
+   * @param wfr
+   *          the working file repository
    */
   @Reference
-  protected void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**

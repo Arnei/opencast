@@ -43,7 +43,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -87,8 +87,8 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   @Activate
   public void activate(ComponentContext cc) {
@@ -107,15 +107,15 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   private Predicate<EncodingProfile> isManifestEP = p ->  p.getOutputType() == EncodingProfile.MediaType.Manifest;
@@ -347,9 +347,9 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
    *
    * @throws WorkflowOperationException if errors occur during processing
    *
-   * @throws IOException if the workspace operations fail
+   * @throws IOException if the working file repository operations fail
    *
-   * @throws NotFoundException if the workspace doesn't contain the requested file
+   * @throws NotFoundException if the working file repository doesn't contain the requested file
    */
   private WorkflowOperationResult multiencode(MediaPackage src, WorkflowOperationInstance operation)
           throws EncoderException, IOException, NotFoundException, MediaPackageException, WorkflowOperationException {
@@ -445,7 +445,7 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
             fileName = FilenameUtils.getName(composedTrack.getURI().getPath());
           }
           // store new tracks to mediaPackage
-          composedTrack.setURI(workspace.moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(),
+          composedTrack.setURI(wfr.moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(),
                   composedTrack.getIdentifier(), fileName));
           mediaPackage.addDerived(composedTrack, sourceTrack);
         }
@@ -474,8 +474,8 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
       // converted in toSafeName (because the regex used there may treat the first
       // character differently; the default one does now).
       String suffixToSanitize = "X" + ep.getSuffix();
-      // !! workspace.putInCollection renames the file - need to do the same with suffix
-      String suffix = workspace.toSafeName(suffixToSanitize).substring(1);
+      // !! wfr.putInCollection renames the file - need to do the same with suffix
+      String suffix = wfr.toSafeName(suffixToSanitize).substring(1);
       if (suffix.length() > 0 && rawfileName.endsWith(suffix)) {
         track.addTag(ep.getIdentifier());
         return;

@@ -45,7 +45,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -77,7 +77,7 @@ public class MetadataToAclWorkflowOperationHandler extends AbstractWorkflowOpera
 
   private AuthorizationService authorizationService;
   private UserDirectoryService userDirectory;
-  private Workspace workspace;
+  private WorkingFileRepository wfr;
 
   @Override
   public WorkflowOperationResult start(WorkflowInstance workflowInstance, JobContext context)
@@ -96,7 +96,7 @@ public class MetadataToAclWorkflowOperationHandler extends AbstractWorkflowOpera
     }
     DublinCoreCatalog dcCatalog;
     try {
-      dcCatalog = DublinCoreXmlFormat.read(workspace.read(catalogs[0].getURI()));
+      dcCatalog = DublinCoreXmlFormat.read(wfr.getStream(catalogs[0]));
     } catch (IOException | SAXException | ParserConfigurationException | NotFoundException e) {
       throw new WorkflowOperationException("Unable to load Dublin Core catalog from media package " + mediaPackage, e);
     }
@@ -149,8 +149,8 @@ public class MetadataToAclWorkflowOperationHandler extends AbstractWorkflowOpera
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

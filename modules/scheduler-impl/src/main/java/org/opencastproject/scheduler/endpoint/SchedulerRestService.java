@@ -176,6 +176,7 @@ public class SchedulerRestService {
   private CaptureAgentStateService agentService;
   private CaptureNowProlongingService prolongingService;
   private Workspace workspace;
+  private WorkingFileRepository wfr;
 
   private final Gson gson = new Gson();
   private final Gson gsonTimestamp = new GsonBuilder()
@@ -1431,7 +1432,7 @@ public class SchedulerRestService {
           for (MediaPackageElement elem : mediaPackage.getElements()) {
             if (MediaPackageElements.EPISODE.matches(elem.getFlavor())) {
               try {
-                workspace.delete(elem.getURI());
+                wfr.delete(elem);
               } catch (NotFoundException e) {
                 logger.warn("Unable to find (and hence, delete), this mediapackage '{}' element '{}'",
                     mediaPackage.getIdentifier(), elem.getIdentifier());

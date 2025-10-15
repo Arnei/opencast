@@ -65,7 +65,7 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.util.MimeTypes;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.UrlSupport;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -175,7 +175,7 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
   private DublinCoreCatalogService dublinCoreService; // to setialize dc catalogs
   private CaptureAgentStateService captureAgentService; // to get agent capabilities
   private ServiceRegistry serviceRegistry; // to create publish/retract jobs
-  private Workspace workspace; // to save dc catalogs before distributing
+  private WorkingFileRepository wfr; // to save dc catalogs before distributing
   private AssetManager assetManager; // to get current media package
   private AuthorizationService authService;
   private OrganizationDirectoryService organizationService;
@@ -680,7 +680,7 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
       // Clean up
       for (String id : elementIds) {
         MediaPackageElement e = mp.getElementById(id);
-        workspace.delete(e.getURI());
+        wfr.delete(e);
       }
 
       return mp;
@@ -715,9 +715,9 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
         }
 
         MediaPackageElement e = mp.getElementById(aclId);
-        // Cleanup workspace/wfr
+        // Cleanup working file repository/wfr
         mp.remove(e);
-        workspace.delete(e.getURI());
+        wfr.delete(e);
 
         // Add distributed acl to mp
         mp.add(MediaPackageElementParser.getFromXml(distributionJob.getPayload()));
@@ -903,8 +903,8 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
   }
 
   @Reference
-  public void setWorkspace(Workspace ws) {
-    this.workspace = ws;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

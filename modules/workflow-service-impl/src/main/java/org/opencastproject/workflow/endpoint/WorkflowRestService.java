@@ -146,6 +146,7 @@ public class WorkflowRestService extends AbstractJobProducerEndpoint {
   protected ServiceRegistry serviceRegistry = null;
   /** The workspace */
   private Workspace workspace;
+  private WorkingFileRepository wfr;
 
   /** Resource lock */
   private final Striped<Lock> lock = Striped.lazyWeakLock(1024);
@@ -551,7 +552,7 @@ public class WorkflowRestService extends AbstractJobProducerEndpoint {
           if (MediaPackageSupport.contains(elem.getIdentifier(), newMp))
             continue;
           try {
-            workspace.delete(elem.getURI());
+            wfr.delete(elem);
             logger.info("Deleted removed mediapackge element {}", elem);
           } catch (NotFoundException e) {
             logger.info("Removed mediapackage element {} is already deleted", elem);

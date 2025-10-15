@@ -103,6 +103,7 @@ public class TimelinePreviewsWorkflowOperationHandler extends AbstractWorkflowOp
 
   /** The workspace service. */
   private Workspace workspace = null;
+  private WorkingFileRepository wfr;
 
   @Override
   @Activate
@@ -270,8 +271,7 @@ public class TimelinePreviewsWorkflowOperationHandler extends AbstractWorkflowOp
       if (StringUtils.isNotEmpty(jobPayload)) {
         try {
           MediaPackageElement timelinepreviewsMpe = MediaPackageElementParser.getFromXml(jobPayload);
-          URI timelinepreviewsUri = timelinepreviewsMpe.getURI();
-          workspace.delete(timelinepreviewsUri);
+          wfr.delete(timelinepreviewsMpe);
         } catch (MediaPackageException ex) {
             // unexpected job payload
           logger.error("Can't parse timeline previews attachment from job {}", job.getId());

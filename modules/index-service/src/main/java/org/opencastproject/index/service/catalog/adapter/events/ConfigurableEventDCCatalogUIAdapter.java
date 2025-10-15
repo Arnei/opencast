@@ -33,7 +33,7 @@ import org.opencastproject.metadata.dublincore.DublinCoreUtil;
 import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.metadata.dublincore.EventCatalogUIAdapter;
 import org.opencastproject.util.IoSupport;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -55,12 +55,12 @@ public class ConfigurableEventDCCatalogUIAdapter extends ConfigurableDCCatalogUI
 
   private static final Logger logger = LoggerFactory.getLogger(ConfigurableEventDCCatalogUIAdapter.class);
 
-  private Workspace workspace;
+  private WorkingFileRepository wfr;
 
   @Override
   public DublinCoreMetadataCollection getFields(MediaPackage mediapackage) {
     List<DublinCoreCatalog> dcCatalogs = Arrays.stream(mediapackage.getCatalogs(flavor))
-            .map(catalog -> DublinCoreUtil.loadDublinCore(getWorkspace(), catalog))
+            .map(catalog -> DublinCoreUtil.loadDublinCore(getWorkingFileRepository(), catalog))
             .collect(Collectors.toList());
 
     return getFieldsFromCatalogs(dcCatalogs);
@@ -85,7 +85,7 @@ public class ConfigurableEventDCCatalogUIAdapter extends ConfigurableDCCatalogUI
       filename = "dublincore.xml";
     } else {
       catalog = catalogs[0];
-      dc = DublinCoreUtil.loadDublinCore(getWorkspace(), catalog);
+      dc = DublinCoreUtil.loadDublinCore(getWorkingFileRepository(), catalog);
       dc.addBindings(config.getXmlNamespaceContext());
       filename = FilenameUtils.getName(catalog.getURI().toString());
     }
@@ -96,23 +96,23 @@ public class ConfigurableEventDCCatalogUIAdapter extends ConfigurableDCCatalogUI
     InputStream inputStream = null;
     try {
       inputStream = IOUtils.toInputStream(dc.toXmlString(), "UTF-8");
-      uri = getWorkspace().put(mediaPackage.getIdentifier().toString(), catalog.getIdentifier(), filename, inputStream);
+      uri = getWorkingFileRepository().put(mediaPackage.getIdentifier().toString(), catalog.getIdentifier(), filename, inputStream);
       catalog.setURI(uri);
       // setting the URI to a new source so the checksum will most like be invalid
       catalog.setChecksum(null);
     } catch (IOException e) {
-      logger.error("Unable to store catalog {} metadata to workspace", catalog, e);
+      logger.error("Unable to store catalog {} metadata to working file repository", catalog, e);
     } finally {
       IoSupport.closeQuietly(inputStream);
     }
     return catalog;
   }
 
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
-  protected Workspace getWorkspace() {
-    return workspace;
+  protected WorkingFileRepository getWorkingFileRepository() {
+    return wfr;
   }
 }

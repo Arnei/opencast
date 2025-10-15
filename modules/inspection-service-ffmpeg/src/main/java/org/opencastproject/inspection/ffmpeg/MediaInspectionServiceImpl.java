@@ -35,7 +35,7 @@ import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.LoadUtil;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -87,7 +87,7 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
     Inspect, Enrich
   }
 
-  private Workspace workspace;
+  private WorkingFileRepository wfr;
   private ServiceRegistry serviceRegistry;
   private SecurityService securityService = null;
   private UserDirectoryService userDirectoryService = null;
@@ -114,7 +114,7 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
       logger.debug("FFprobe config binary: {}", path);
       ffprobeBinary = path;
     }
-    inspector = new MediaInspector(workspace, ffprobeBinary);
+    inspector = new MediaInspector(wfr, ffprobeBinary);
   }
 
   @Modified
@@ -228,9 +228,9 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
   }
 
   @Reference
-  protected void setWorkspace(Workspace workspace) {
-    logger.debug("setting " + workspace);
-    this.workspace = workspace;
+  protected void setWorkingFileRepository(WorkingFileRepository wfr) {
+    logger.debug("setting " + wfr);
+    this.wfr = wfr;
   }
 
   @Reference

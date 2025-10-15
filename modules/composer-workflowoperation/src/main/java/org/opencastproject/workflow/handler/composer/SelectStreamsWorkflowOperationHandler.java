@@ -40,7 +40,7 @@ import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -81,8 +81,8 @@ public class SelectStreamsWorkflowOperationHandler extends AbstractWorkflowOpera
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The local working file repository */
+  private WorkingFileRepository wfr = null;
 
   private enum AudioMuxing {
     NONE, FORCE, DUPLICATE;
@@ -121,15 +121,15 @@ public class SelectStreamsWorkflowOperationHandler extends AbstractWorkflowOpera
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local wfr service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(final Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(final WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   private EncodingProfile getProfile(final String identifier) throws WorkflowOperationException {
@@ -540,7 +540,7 @@ public class SelectStreamsWorkflowOperationHandler extends AbstractWorkflowOpera
     // Note that the composed track must have an ID before being moved to the mediapackage in the working file
     // repository. This ID is generated when the track is added to the mediapackage. So the track must be added
     // to the mediapackage before attempting to move the file.
-    composedTrack.setURI(workspace
+    composedTrack.setURI(wfr
             .moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(), composedTrack.getIdentifier(),
                     fileName));
     return new TrackJobResult(composedTrack, job.getQueueTime());
@@ -592,8 +592,8 @@ public class SelectStreamsWorkflowOperationHandler extends AbstractWorkflowOpera
       }
 
       // Copy the files on dis and put them into the working file repository
-      final URI newUri = workspace.put(track.getMediaPackage().getIdentifier().toString(), copiedTrack.getIdentifier(),
-              targetFilename, workspace.read(track.getURI()));
+      final URI newUri = wfr.put(track.getMediaPackage().getIdentifier().toString(), copiedTrack.getIdentifier(),
+              targetFilename, wfr.getStream(track));
       copiedTrack.setURI(newUri);
     } catch (IOException | NotFoundException e) {
       throw new WorkflowOperationException(String.format("Error while copying track %s", track.getIdentifier()), e);

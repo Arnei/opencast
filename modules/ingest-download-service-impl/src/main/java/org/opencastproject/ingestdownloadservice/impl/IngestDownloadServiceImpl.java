@@ -107,7 +107,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
   /**
    * The workspace service
    */
-  private Workspace workspace;
+  private WorkingFileRepository wfr;
 
   /**
    * The http client to use when connecting to remote servers
@@ -123,13 +123,13 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
   }
 
   /**
-   * Sets the workspace to use.
+   * Sets the working file repository to use.
    *
-   * @param workspace the workspace
+   * @param wfr the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -246,7 +246,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       elementSelector.addFlavor(flavor);
     }
 
-    final String baseUrl = workspace.getBaseUri().toString();
+    final String baseUrl = wfr.getBaseUri().toString();
 
     List<URI> externalUris = new ArrayList<>();
     for (MediaPackageElement element : elementSelector.select(mediaPackage, tagsAndFlavor)) {
@@ -282,7 +282,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
         element.setURI(uri);
       } finally {
         try {
-          workspace.delete(originalUri);
+          wfr.delete(element);
         } catch (Exception e) {
           logger.warn("Unable to delete ingest-downloaded element {}", element.getURI(), e);
         }

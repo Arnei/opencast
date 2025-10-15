@@ -47,7 +47,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringEscapeUtils;
@@ -88,8 +88,8 @@ public abstract class CoverImageWorkflowOperationHandlerBase extends AbstractWor
   /** Returns a cover image service */
   protected abstract CoverImageService getCoverImageService();
 
-  /** Returns a workspace service */
-  protected abstract Workspace getWorkspace();
+  /** Returns a working file repository service */
+  protected abstract WorkingFileRepository getWorkingFileRepository();
 
   /** Returns a static metadata service */
   protected abstract StaticMetadataService getStaticMetadataService();
@@ -157,7 +157,7 @@ public abstract class CoverImageWorkflowOperationHandlerBase extends AbstractWor
       generate = serviceRegistry.getJob(generate.getId());
       Attachment coverImage = (Attachment) MediaPackageElementParser.getFromXml(generate.getPayload());
 
-      URI attachmentUri = getWorkspace().moveTo(coverImage.getURI(), mediaPackage.getIdentifier().toString(),
+      URI attachmentUri = getWorkingFileRepository().moveTo(coverImage.getURI(), mediaPackage.getIdentifier().toString(),
               UUID.randomUUID().toString(), COVERIMAGE_FILENAME);
       coverImage.setURI(attachmentUri);
 
@@ -205,7 +205,7 @@ public abstract class CoverImageWorkflowOperationHandlerBase extends AbstractWor
       return null;
     }
     try {
-      return getWorkspace().get(atts[0].getURI()).getAbsolutePath();
+      return getWorkingFileRepository().get(atts[0]).getAbsolutePath();
     } catch (NotFoundException | IOException e) {
       throw new WorkflowOperationException(e);
     }
@@ -233,7 +233,7 @@ public abstract class CoverImageWorkflowOperationHandlerBase extends AbstractWor
     }
 
     try {
-      File coverImageFile = getWorkspace().get(url.toURI());
+      File coverImageFile = getWorkingFileRepository().get(url.toURI());
       return coverImageFile.getPath();
     } catch (NotFoundException e) {
       logger.warn("Poster image could not be found at '{}'", url);
@@ -312,7 +312,7 @@ public abstract class CoverImageWorkflowOperationHandlerBase extends AbstractWor
                     StringUtils.lowerCase(episodeFlavor.getSubtype())));
 
     //load metadata-catalog
-    DublinCoreCatalog dc = DublinCoreUtil.loadDublinCore(getWorkspace(), catalogs[0]);
+    DublinCoreCatalog dc = DublinCoreUtil.loadDublinCore(getWorkingFileRepository(), catalogs[0]);
     Map<EName, List<DublinCoreValue>> data = dc.getValues();
 
     //build xml from metadata
@@ -334,7 +334,7 @@ public abstract class CoverImageWorkflowOperationHandlerBase extends AbstractWor
           }
           xml.append("<series>");
           //get Series metadata
-          DublinCoreCatalog dcSeries = DublinCoreUtil.loadDublinCore(getWorkspace(), seriesCatalogs[0]);
+          DublinCoreCatalog dcSeries = DublinCoreUtil.loadDublinCore(getWorkingFileRepository(), seriesCatalogs[0]);
           Map<EName, List<DublinCoreValue>> seriesMetadata = dcSeries.getValues();
           //append series metadata
           for (Map.Entry<EName, List<DublinCoreValue>> seriesEntry : seriesMetadata.entrySet()) {

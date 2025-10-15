@@ -116,7 +116,7 @@ import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowInstance.WorkflowState;
 import org.opencastproject.workflow.api.WorkflowParsingException;
 import org.opencastproject.workflow.api.WorkflowService;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.common.net.MediaType;
 
@@ -218,7 +218,7 @@ public class IndexServiceImpl implements IndexService {
   private SeriesService seriesService;
   private UserDirectoryService userDirectoryService;
   private WorkflowService workflowService;
-  private Workspace workspace;
+  private WorkingFileRepository wfr;
   private ElasticsearchIndex elasticsearchIndex;
 
   /** The single thread executor service */
@@ -407,12 +407,12 @@ public class IndexServiceImpl implements IndexService {
   /**
    * OSGi DI.
    *
-   * @param workspace
-   *          the workspace to set
+   * @param wfr
+   *          the working file repository to set
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -1000,8 +1000,8 @@ public class IndexServiceImpl implements IndexService {
         } finally {
           for (MediaPackageElement mediaPackageElement : mediaPackage.getElements()) {
             try {
-              workspace.delete(mediaPackage.getIdentifier().toString(), mediaPackageElement.getIdentifier());
-            } catch (NotFoundException | IOException e) {
+              wfr.delete(mediaPackageElement);
+            } catch (IOException e) {
               logger.warn("Failed to delete media package element", e);
             }
           }
@@ -1025,7 +1025,7 @@ public class IndexServiceImpl implements IndexService {
    */
   private DublinCoreCatalog getDublinCoreCatalog(EventHttpServletRequest eventHttpServletRequest) {
     DublinCoreCatalog dc;
-    Optional<DublinCoreCatalog> dcOpt = DublinCoreUtil.loadEpisodeDublinCore(workspace,
+    Optional<DublinCoreCatalog> dcOpt = DublinCoreUtil.loadEpisodeDublinCore(wfr,
             eventHttpServletRequest.getMediaPackage().get());
     if (dcOpt.isPresent()) {
       dc = dcOpt.get();
@@ -1084,7 +1084,7 @@ public class IndexServiceImpl implements IndexService {
       Catalog[] catalogs = mp.getCatalogs(MediaPackageElements.EPISODE);
       if (catalogs.length > 0) {
         Catalog catalog = catalogs[0];
-        URI uri = workspace.put(mp.getIdentifier().toString(), catalog.getIdentifier(), "dublincore.xml", inputStream);
+        URI uri = wfr.put(mp.getIdentifier().toString(), catalog.getIdentifier(), "dublincore.xml", inputStream);
         catalog.setURI(uri);
         // setting the URI to a new source so the checksum will most like be invalid
         catalog.setChecksum(null);
@@ -1731,10 +1731,10 @@ public class IndexServiceImpl implements IndexService {
             mp.setSeriesTitle(seriesDC.getFirst(DublinCore.PROPERTY_TITLE));
             try (InputStream in = IOUtils.toInputStream(seriesDC.toXmlString(), "UTF-8")) {
               String elementId = UUID.randomUUID().toString();
-              URI catalogUrl = workspace.put(mp.getIdentifier().toString(), elementId, "dublincore.xml", in);
+              URI catalogUrl = wfr.put(mp.getIdentifier().toString(), elementId, "dublincore.xml", in);
               MediaPackageElement mpe = mp.add(catalogUrl, MediaPackageElement.Type.Catalog, MediaPackageElements.SERIES);
               mpe.setIdentifier(elementId);
-              mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.read(catalogUrl)));
+              mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, wfr.getStream(mpe)));
               if (StringUtils.isNotBlank(oldSeriesId)) {
                 for (String tag : seriesDcTags) {
                   mpe.addTag(tag);
@@ -1781,11 +1781,11 @@ public class IndexServiceImpl implements IndexService {
             for (String seriesElementType : seriesElements.keySet()) {
               try (InputStream in = new ByteArrayInputStream(seriesElements.get(seriesElementType))) {
                 String elementId = UUID.randomUUID().toString();
-                URI catalogUrl = workspace.put(mp.getIdentifier().toString(), elementId, "dublincore.xml", in);
+                URI catalogUrl = wfr.put(mp.getIdentifier().toString(), elementId, "dublincore.xml", in);
                 MediaPackageElement mpe = mp.add(catalogUrl, MediaPackageElement.Type.Catalog,
                         MediaPackageElementFlavor.flavor(seriesElementType, "series"));
                 mpe.setIdentifier(elementId);
-                mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.read(catalogUrl)));
+                mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, wfr.getStream(mpe)));
                 if (StringUtils.isNotBlank(oldSeriesId)) {
                   if (seriesExtDcTags.containsKey(seriesElementType)) {
                     for (String tag : seriesExtDcTags.get(seriesElementType)) {
@@ -1989,7 +1989,7 @@ public class IndexServiceImpl implements IndexService {
       try {
         String commentCatalog = EventCommentParser.getAsXml(comments);
         in = IOUtils.toInputStream(commentCatalog, "UTF-8");
-        URI uri = workspace.put(mediaPackage.getIdentifier().toString(), c.getIdentifier(), "comments.xml", in);
+        URI uri = wfr.put(mediaPackage.getIdentifier().toString(), c.getIdentifier(), "comments.xml", in);
         c.setURI(uri);
         // setting the URI to a new source so the checksum will most like be invalid
         c.setChecksum(null);
@@ -2000,11 +2000,7 @@ public class IndexServiceImpl implements IndexService {
       // Remove comments catalog
       if (c != null) {
         mediaPackage.remove(c);
-        try {
-          workspace.delete(c.getURI());
-        } catch (NotFoundException e) {
-          logger.warn("Comments catalog {} not found to delete!", c.getURI());
-        }
+        wfr.delete(c);
       }
     }
   }

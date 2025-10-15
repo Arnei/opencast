@@ -42,7 +42,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.lang3.StringUtils;
 import org.osgi.service.component.annotations.Component;
@@ -92,8 +92,8 @@ public class PrepareAVWorkflowOperationHandler extends AbstractWorkflowOperation
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The local working file repository */
+  private WorkingFileRepository wfr;
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -107,15 +107,15 @@ public class PrepareAVWorkflowOperationHandler extends AbstractWorkflowOperation
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -144,9 +144,9 @@ public class PrepareAVWorkflowOperationHandler extends AbstractWorkflowOperation
    * @throws EncoderException
    *           if encoding fails
    * @throws IOException
-   *           if read/write operations from and to the workspace fail
+   *           if read/write operations from and to the working file repository fail
    * @throws NotFoundException
-   *           if the workspace does not contain the requested element
+   *           if the working file repository does not contain the requested element
    */
   private WorkflowOperationResult mux(WorkflowInstance wi) throws EncoderException,
           WorkflowOperationException, NotFoundException, MediaPackageException, IOException {
@@ -285,7 +285,7 @@ public class PrepareAVWorkflowOperationHandler extends AbstractWorkflowOperation
       composedTrack = (Track) MediaPackageElementParser.getFromXml(job.getPayload());
       mediaPackage.add(composedTrack);
       String fileName = getFileNameFromElements(videoTrack, composedTrack);
-      composedTrack.setURI(workspace.moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(),
+      composedTrack.setURI(wfr.moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(),
               composedTrack.getIdentifier(), fileName));
     }
 
@@ -335,7 +335,7 @@ public class PrepareAVWorkflowOperationHandler extends AbstractWorkflowOperation
       // Note that the composed track must have an ID before being moved to the mediapackage in the working file
       // repository. This ID is generated when the track is added to the mediapackage. So the track must be added
       // to the mediapackage before attempting to move the file.
-      composedTrack.setURI(workspace.moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(),
+      composedTrack.setURI(wfr.moveTo(composedTrack.getURI(), mediaPackage.getIdentifier().toString(),
               composedTrack.getIdentifier(), fileName));
     }
     return composedTrack;

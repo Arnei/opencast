@@ -28,7 +28,7 @@ import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.publication.api.PublicationException;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -61,11 +61,11 @@ public class YouTubePublicationAdapter {
    *
    * @param mp
    *          the mediapackage identifier
-   * @param workspace
-   *          the workspace service
+   * @param wfr
+   *          the working file repository service
    * @throws PublicationException
    */
-  public YouTubePublicationAdapter(MediaPackage mp, Workspace workspace) throws PublicationException {
+  public YouTubePublicationAdapter(MediaPackage mp, WorkingFileRepository wfr) throws PublicationException {
     if (mp == null) {
       throw new PublicationException("Media package is null");
     }
@@ -75,14 +75,14 @@ public class YouTubePublicationAdapter {
     if (episodeCatalogs.length == 0) {
       dcEpisode = null;
     } else {
-      dcEpisode = parseDublinCoreCatalog(episodeCatalogs[0], workspace);
+      dcEpisode = parseDublinCoreCatalog(episodeCatalogs[0], wfr);
     }
 
     Catalog[] seriesCatalogs = mediaPackage.getCatalogs(MediaPackageElements.SERIES);
     if (seriesCatalogs.length == 0) {
       dcSeries = null;
     } else {
-      dcSeries = parseDublinCoreCatalog(seriesCatalogs[0], workspace);
+      dcSeries = parseDublinCoreCatalog(seriesCatalogs[0], wfr);
     }
   }
 
@@ -142,16 +142,16 @@ public class YouTubePublicationAdapter {
   }
 
   /**
-   * Parse Dublincore metadata from the workspace
+   * Parse Dublincore metadata from the working file repository
    *
    * @param catalog
    *          A mediapackage's catalog file
    * @return Catalog parse from XML
    */
-  private DublinCoreCatalog parseDublinCoreCatalog(Catalog catalog, Workspace workspace) {
+  private DublinCoreCatalog parseDublinCoreCatalog(Catalog catalog, WorkingFileRepository wfr) {
     InputStream is = null;
     try {
-      File dcFile = workspace.get(catalog.getURI());
+      File dcFile = wfr.get(catalog);
       is = new FileInputStream(dcFile);
       return DublinCores.read(is);
     } catch (Exception e) {

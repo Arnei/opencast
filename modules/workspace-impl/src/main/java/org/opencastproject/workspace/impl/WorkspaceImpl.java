@@ -650,155 +650,155 @@ public final class WorkspaceImpl implements Workspace {
     waitForResource(uri, HttpServletResponse.SC_NOT_FOUND, "File %s does not disappear in WFR");
   }
 
-  @Override
-  public void delete(String mediaPackageID, String mediaPackageElementID) throws NotFoundException, IOException {
-    // delete locally
-    final File f = workspaceFile(WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX, mediaPackageID, mediaPackageElementID);
-    FileUtils.deleteQuietly(f);
-    FileSupport.delete(f.getParentFile());
-    // delete in WFR
-    wfr.delete(mediaPackageID, mediaPackageElementID);
-    // todo check in WFR
-  }
+//  @Override
+//  public void delete(String mediaPackageID, String mediaPackageElementID) throws NotFoundException, IOException {
+//    // delete locally
+//    final File f = workspaceFile(WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX, mediaPackageID, mediaPackageElementID);
+//    FileUtils.deleteQuietly(f);
+//    FileSupport.delete(f.getParentFile());
+//    // delete in WFR
+//    wfr.delete(mediaPackageID, mediaPackageElementID);
+//    // todo check in WFR
+//  }
 
-  @Override
-  public URI put(String mediaPackageID, String mediaPackageElementID, String fileName, InputStream in)
-          throws IOException {
-    String safeFileName = toSafeName(fileName);
-    final URI uri = wfr.getURI(mediaPackageID, mediaPackageElementID, fileName);
-    notNull(in, "in");
+//  @Override
+//  public URI put(String mediaPackageID, String mediaPackageElementID, String fileName, InputStream in)
+//          throws IOException {
+//    String safeFileName = toSafeName(fileName);
+//    final URI uri = wfr.getURI(mediaPackageID, mediaPackageElementID, fileName);
+//    notNull(in, "in");
+//
+//    // Determine the target location in the workspace
+//    File workspaceFile = null;
+//    synchronized (lock) {
+//      workspaceFile = toWorkspaceFile(uri);
+//      FileUtils.touch(workspaceFile);
+//    }
+//
+//    // Try hard linking first and fall back to tee-ing to both the working file repository and the workspace
+//    if (linkingEnabled) {
+//      // The WFR stores an md5 hash along with the file, so we need to use the API and not try to write (link) the file
+//      // there ourselves
+//      wfr.put(mediaPackageID, mediaPackageElementID, fileName, in);
+//      File workingFileRepoDirectory = workingFileRepositoryFile(WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX,
+//              mediaPackageID, mediaPackageElementID);
+//      File workingFileRepoCopy = new File(workingFileRepoDirectory, safeFileName);
+//      FileSupport.link(workingFileRepoCopy, workspaceFile, true);
+//    } else {
+//      try (FileOutputStream out = new FileOutputStream(workspaceFile)) {
+//        try (InputStream tee = new TeeInputStream(in, out, true)) {
+//          wfr.put(mediaPackageID, mediaPackageElementID, fileName, tee);
+//        }
+//      }
+//    }
+//    // wait until the file appears on the WFR node
+//    waitForResource(uri, HttpServletResponse.SC_OK, "File %s does not appear in WFR");
+//    return uri;
+//  }
 
-    // Determine the target location in the workspace
-    File workspaceFile = null;
-    synchronized (lock) {
-      workspaceFile = toWorkspaceFile(uri);
-      FileUtils.touch(workspaceFile);
-    }
-
-    // Try hard linking first and fall back to tee-ing to both the working file repository and the workspace
-    if (linkingEnabled) {
-      // The WFR stores an md5 hash along with the file, so we need to use the API and not try to write (link) the file
-      // there ourselves
-      wfr.put(mediaPackageID, mediaPackageElementID, fileName, in);
-      File workingFileRepoDirectory = workingFileRepositoryFile(WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX,
-              mediaPackageID, mediaPackageElementID);
-      File workingFileRepoCopy = new File(workingFileRepoDirectory, safeFileName);
-      FileSupport.link(workingFileRepoCopy, workspaceFile, true);
-    } else {
-      try (FileOutputStream out = new FileOutputStream(workspaceFile)) {
-        try (InputStream tee = new TeeInputStream(in, out, true)) {
-          wfr.put(mediaPackageID, mediaPackageElementID, fileName, tee);
-        }
-      }
-    }
-    // wait until the file appears on the WFR node
-    waitForResource(uri, HttpServletResponse.SC_OK, "File %s does not appear in WFR");
-    return uri;
-  }
-
-  @Override
-  public URI putInCollection(String collectionId, String fileName, InputStream in) throws IOException {
-    String safeFileName = toSafeName(fileName);
-    URI uri = wfr.getCollectionURI(collectionId, fileName);
-
-    // Determine the target location in the workspace
-    InputStream tee = null;
-    File tempFile = null;
-    FileOutputStream out = null;
-    try {
-      synchronized (lock) {
-        tempFile = toWorkspaceFile(uri);
-        FileUtils.touch(tempFile);
-        out = new FileOutputStream(tempFile);
-      }
-
-      // Try hard linking first and fall back to tee-ing to both the working file repository and the workspace
-      if (linkingEnabled) {
-        tee = in;
-        wfr.putInCollection(collectionId, fileName, tee);
-        FileUtils.forceMkdir(tempFile.getParentFile());
-        File workingFileRepoDirectory = workingFileRepositoryFile(WorkingFileRepository.COLLECTION_PATH_PREFIX,
-                collectionId);
-        File workingFileRepoCopy = new File(workingFileRepoDirectory, safeFileName);
-        FileSupport.link(workingFileRepoCopy, tempFile, true);
-      } else {
-        tee = new TeeInputStream(in, out, true);
-        wfr.putInCollection(collectionId, fileName, tee);
-      }
-    } catch (IOException e) {
-      FileUtils.deleteQuietly(tempFile);
-      throw e;
-    } finally {
-      IoSupport.closeQuietly(tee);
-      IoSupport.closeQuietly(out);
-    }
-    waitForResource(uri, HttpServletResponse.SC_OK, "File %s does not appear in WFR");
-    return uri;
-  }
-
-  @Override
-  public URI getURI(String mediaPackageID, String mediaPackageElementID) {
-    return wfr.getURI(mediaPackageID, mediaPackageElementID);
-  }
-
-  @Override
-  public URI getCollectionURI(String collectionID, String fileName) {
-    return wfr.getCollectionURI(collectionID, fileName);
-  }
-
-  @Override
-  public URI moveTo(URI collectionURI, String toMediaPackage, String toMediaPackageElement, String toFileName)
-          throws NotFoundException, IOException {
-    String path = collectionURI.toString();
-    String filename = FilenameUtils.getName(path);
-    String collection = getCollection(collectionURI);
-    logger.debug("Moving {} from {} to {}/{}", filename, collection, toMediaPackage, toMediaPackageElement);
-    // move locally
-    File original = toWorkspaceFile(collectionURI);
-    if (original.isFile()) {
-      URI copyURI = wfr.getURI(toMediaPackage, toMediaPackageElement, toFileName);
-      File copy = toWorkspaceFile(copyURI);
-      FileUtils.forceMkdir(copy.getParentFile());
-      FileUtils.deleteQuietly(copy);
-      FileUtils.moveFile(original, copy);
-      if (!isStaticCollection(collection)) {
-        FileSupport.delete(original.getParentFile());
-      }
-    }
-    // move in WFR
-    final URI wfrUri = wfr.moveTo(collection, filename, toMediaPackage, toMediaPackageElement, toFileName);
-    // wait for WFR
-    waitForResource(wfrUri, SC_OK, "File %s does not appear in WFR");
-    return wfrUri;
-  }
-
-  @Override
-  public URI[] getCollectionContents(String collectionId) throws NotFoundException {
-    return wfr.getCollectionContents(collectionId);
-  }
-
-  private void deleteFromCollection(String collectionId, String fileName, boolean removeCollection)
-          throws NotFoundException, IOException {
-    // local delete
-    final File f = workspaceFile(WorkingFileRepository.COLLECTION_PATH_PREFIX, collectionId, toSafeName(fileName));
-    FileUtils.deleteQuietly(f);
-    if (removeCollection) {
-      FileSupport.delete(f.getParentFile());
-    }
-    // delete in WFR
-    try {
-      wfr.deleteFromCollection(collectionId, fileName, removeCollection);
-    } catch (IllegalArgumentException e) {
-      throw new NotFoundException(e);
-    }
-    // wait for WFR
-    waitForResource(wfr.getCollectionURI(collectionId, fileName), SC_NOT_FOUND, "File %s does not disappear in WFR");
-  }
-
-  @Override
-  public void deleteFromCollection(String collectionId, String fileName) throws NotFoundException, IOException {
-    deleteFromCollection(collectionId, fileName, false);
-  }
+//  @Override
+//  public URI putInCollection(String collectionId, String fileName, InputStream in) throws IOException {
+//    String safeFileName = toSafeName(fileName);
+//    URI uri = wfr.getCollectionURI(collectionId, fileName);
+//
+//    // Determine the target location in the workspace
+//    InputStream tee = null;
+//    File tempFile = null;
+//    FileOutputStream out = null;
+//    try {
+//      synchronized (lock) {
+//        tempFile = toWorkspaceFile(uri);
+//        FileUtils.touch(tempFile);
+//        out = new FileOutputStream(tempFile);
+//      }
+//
+//      // Try hard linking first and fall back to tee-ing to both the working file repository and the workspace
+//      if (linkingEnabled) {
+//        tee = in;
+//        wfr.putInCollection(collectionId, fileName, tee);
+//        FileUtils.forceMkdir(tempFile.getParentFile());
+//        File workingFileRepoDirectory = workingFileRepositoryFile(WorkingFileRepository.COLLECTION_PATH_PREFIX,
+//                collectionId);
+//        File workingFileRepoCopy = new File(workingFileRepoDirectory, safeFileName);
+//        FileSupport.link(workingFileRepoCopy, tempFile, true);
+//      } else {
+//        tee = new TeeInputStream(in, out, true);
+//        wfr.putInCollection(collectionId, fileName, tee);
+//      }
+//    } catch (IOException e) {
+//      FileUtils.deleteQuietly(tempFile);
+//      throw e;
+//    } finally {
+//      IoSupport.closeQuietly(tee);
+//      IoSupport.closeQuietly(out);
+//    }
+//    waitForResource(uri, HttpServletResponse.SC_OK, "File %s does not appear in WFR");
+//    return uri;
+//  }
+//
+//  @Override
+//  public URI getURI(String mediaPackageID, String mediaPackageElementID) {
+//    return wfr.getURI(mediaPackageID, mediaPackageElementID);
+//  }
+//
+//  @Override
+//  public URI getCollectionURI(String collectionID, String fileName) {
+//    return wfr.getCollectionURI(collectionID, fileName);
+//  }
+//
+//  @Override
+//  public URI moveTo(URI collectionURI, String toMediaPackage, String toMediaPackageElement, String toFileName)
+//          throws NotFoundException, IOException {
+//    String path = collectionURI.toString();
+//    String filename = FilenameUtils.getName(path);
+//    String collection = getCollection(collectionURI);
+//    logger.debug("Moving {} from {} to {}/{}", filename, collection, toMediaPackage, toMediaPackageElement);
+//    // move locally
+//    File original = toWorkspaceFile(collectionURI);
+//    if (original.isFile()) {
+//      URI copyURI = wfr.getURI(toMediaPackage, toMediaPackageElement, toFileName);
+//      File copy = toWorkspaceFile(copyURI);
+//      FileUtils.forceMkdir(copy.getParentFile());
+//      FileUtils.deleteQuietly(copy);
+//      FileUtils.moveFile(original, copy);
+//      if (!isStaticCollection(collection)) {
+//        FileSupport.delete(original.getParentFile());
+//      }
+//    }
+//    // move in WFR
+//    final URI wfrUri = wfr.moveTo(collection, filename, toMediaPackage, toMediaPackageElement, toFileName);
+//    // wait for WFR
+//    waitForResource(wfrUri, SC_OK, "File %s does not appear in WFR");
+//    return wfrUri;
+//  }
+//
+//  @Override
+//  public URI[] getCollectionContents(String collectionId) throws NotFoundException {
+//    return wfr.getCollectionContents(collectionId);
+//  }
+//
+//  private void deleteFromCollection(String collectionId, String fileName, boolean removeCollection)
+//          throws NotFoundException, IOException {
+//    // local delete
+//    final File f = workspaceFile(WorkingFileRepository.COLLECTION_PATH_PREFIX, collectionId, toSafeName(fileName));
+//    FileUtils.deleteQuietly(f);
+//    if (removeCollection) {
+//      FileSupport.delete(f.getParentFile());
+//    }
+//    // delete in WFR
+//    try {
+//      wfr.deleteFromCollection(collectionId, fileName, removeCollection);
+//    } catch (IllegalArgumentException e) {
+//      throw new NotFoundException(e);
+//    }
+//    // wait for WFR
+//    waitForResource(wfr.getCollectionURI(collectionId, fileName), SC_NOT_FOUND, "File %s does not disappear in WFR");
+//  }
+//
+//  @Override
+//  public void deleteFromCollection(String collectionId, String fileName) throws NotFoundException, IOException {
+//    deleteFromCollection(collectionId, fileName, false);
+//  }
 
   /**
    * Transforms a URI into a workspace File. If the file comes from the working file repository, the path in the

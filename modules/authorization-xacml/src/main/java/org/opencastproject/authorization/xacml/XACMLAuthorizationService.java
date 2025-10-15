@@ -42,6 +42,7 @@ import org.opencastproject.security.api.User;
 import org.opencastproject.util.MimeTypes;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Tuple;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 import org.opencastproject.workspace.api.Workspace;
 
 import org.apache.commons.io.IOUtils;
@@ -82,8 +83,8 @@ public class XACMLAuthorizationService implements AuthorizationService {
   /** The default filename for XACML attachments */
   private static final String XACML_FILENAME = "xacml.xml";
 
-  /** The workspace */
-  protected Workspace workspace;
+  /** The wfr */
+  protected WorkingFileRepository wfr;
 
   /** The security service */
   protected SecurityService securityService;
@@ -222,7 +223,7 @@ public class XACMLAuthorizationService implements AuthorizationService {
     final String elementId = toElementId(scope);
     URI uri;
     try (InputStream in = IOUtils.toInputStream(xacmlContent, "UTF-8")) {
-      uri = workspace.put(mp.getIdentifier().toString(), elementId, XACML_FILENAME, in);
+      uri = wfr.put(mp.getIdentifier().toString(), elementId, XACML_FILENAME, in);
     } catch (IOException e) {
       throw new MediaPackageException("Error storing xacml for media package " + mp.getIdentifier());
     }
@@ -284,7 +285,7 @@ public class XACMLAuthorizationService implements AuthorizationService {
     for (Attachment a : mp.getAttachments(flavor)) {
       attachment = (Attachment) a.clone();
       try {
-        workspace.delete(a.getURI());
+        wfr.delete(a);
       } catch (Exception e) {
         logger.warn("Unable to delete XACML file:", e);
       }
@@ -296,7 +297,7 @@ public class XACMLAuthorizationService implements AuthorizationService {
   /** Load an ACL from the given URI. */
   private Optional<AccessControlList> loadAcl(final URI uri) {
     logger.debug("Load Acl from {}", uri);
-    try (InputStream is = workspace.read(uri)) {
+    try (InputStream is = wfr.getStream(uri)) {
       AccessControlList acl = XACMLUtils.parseXacml(is);
       return Optional.of(acl);
     } catch (NotFoundException e) {
@@ -347,14 +348,14 @@ public class XACMLAuthorizationService implements AuthorizationService {
   }
 
   /**
-   * Sets the workspace to use for retrieving XACML policies
+   * Sets the working file repository to use for retrieving XACML policies
    *
-   * @param workspace
-   *          the workspace to set
+   * @param wfr
+   *          the working file repository to set
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**

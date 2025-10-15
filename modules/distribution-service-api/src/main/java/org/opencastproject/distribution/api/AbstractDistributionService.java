@@ -27,7 +27,7 @@ import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.TrustedHttpClient;
 import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import java.io.File;
 
@@ -42,8 +42,8 @@ public abstract class AbstractDistributionService extends AbstractJobProducer {
   /** The remote service registry */
   protected ServiceRegistry serviceRegistry = null;
 
-  /** The workspace reference */
-  protected Workspace workspace = null;
+  /** The working file repository */
+  protected WorkingFileRepository wfr;
 
   /** The security service */
   protected SecurityService securityService = null;
@@ -64,13 +64,13 @@ public abstract class AbstractDistributionService extends AbstractJobProducer {
   }
 
   /**
-   * Callback for the OSGi environment to set the workspace reference.
+   * Callback for the OSGi environment to set the working file repository reference.
    *
-   * @param workspace
-   *          the workspace
+   * @param wfr
+   *          the working file repository
    */
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**

@@ -199,6 +199,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
 
   /** The workspace */
   protected Workspace workspace = null;
+  protected WorkingFileRepository wfr = null;
 
   /** The service registry */
   protected ServiceRegistry serviceRegistry = null;
@@ -896,7 +897,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
       }
       try {
         logger.debug("Removing temporary file {} for workflow {}", elem.getURI(), workflowInstance);
-        workspace.delete(elem.getURI());
+        wfr.delete(elem);
       } catch (IOException e) {
         logger.warn("Unable to delete mediapackage element", e);
       } catch (NotFoundException e) {

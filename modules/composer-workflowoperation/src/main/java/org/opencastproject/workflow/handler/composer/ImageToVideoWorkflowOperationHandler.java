@@ -51,7 +51,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.osgi.service.component.annotations.Component;
@@ -82,8 +82,8 @@ public class ImageToVideoWorkflowOperationHandler extends AbstractWorkflowOperat
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -97,15 +97,15 @@ public class ImageToVideoWorkflowOperationHandler extends AbstractWorkflowOperat
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Override
@@ -149,7 +149,7 @@ public class ImageToVideoWorkflowOperationHandler extends AbstractWorkflowOperat
       for (final Job job : jobs) {
         if (job.getPayload().length() > 0) {
           Track track = (Track) MediaPackageElementParser.getFromXml(job.getPayload());
-          track.setURI(workspace.moveTo(track.getURI(), mp.getIdentifier().toString(), track.getIdentifier(),
+          track.setURI(wfr.moveTo(track.getURI(), mp.getIdentifier().toString(), track.getIdentifier(),
                   FilenameUtils.getName(track.getURI().toString())));
           // Adjust the target tags
           applyTargetTagsToElement(targetTags, track);

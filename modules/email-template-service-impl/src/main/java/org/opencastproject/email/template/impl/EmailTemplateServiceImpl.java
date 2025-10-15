@@ -39,7 +39,7 @@ import org.opencastproject.util.doc.DocUtil;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationInstance.OperationState;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -75,8 +75,8 @@ public class EmailTemplateServiceImpl implements EmailTemplateService {
 
   public static final String DEFAULT_DELIMITER_FOR_MULTIPLE = ", ";
 
-  /** The workspace (needed to read the catalogs when processing templates) **/
-  private Workspace workspace;
+  /** The working file repository (needed to read the catalogs when processing templates) **/
+  private WorkingFileRepository wfr;
 
   /** Email template scanner is optional and has dynamic policy */
   private final AtomicReference<EmailTemplateScanner> templateScannerRef = new AtomicReference<EmailTemplateScanner>();
@@ -169,7 +169,7 @@ public class EmailTemplateServiceImpl implements EmailTemplateService {
 
     for (Catalog c : catalogElements) {
       DublinCoreCatalog dc;
-      try (InputStream in = workspace.read(c.getURI())) {
+      try (InputStream in = wfr.getStream(c)) {
         dc = DublinCores.read(in);
       } catch (Exception e) {
         logger.warn("Error when populating catalog data", e);
@@ -235,14 +235,14 @@ public class EmailTemplateServiceImpl implements EmailTemplateService {
   }
 
   /**
-   * Callback for OSGi to set the {@link Workspace}.
+   * Callback for OSGi to set the {@link WorkingFileRepository}.
    *
-   * @param ws
-   *          the workspace
+   * @param wfr
+   *          the working file repository
    */
   @Reference
-  void setWorkspace(Workspace ws) {
-    this.workspace = ws;
+  void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**

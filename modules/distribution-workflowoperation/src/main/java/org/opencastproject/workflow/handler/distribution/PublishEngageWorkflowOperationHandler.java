@@ -68,7 +68,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
@@ -151,7 +151,7 @@ public class PublishEngageWorkflowOperationHandler extends AbstractWorkflowOpera
   /** The search service */
   private SearchService searchService = null;
 
-  private Workspace workspace;
+  private WorkingFileRepository wfr;
 
   /** The server url */
   private URL serverUrl;
@@ -207,8 +207,8 @@ public class PublishEngageWorkflowOperationHandler extends AbstractWorkflowOpera
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
 
@@ -404,11 +404,10 @@ public class PublishEngageWorkflowOperationHandler extends AbstractWorkflowOpera
         }
 
         if (StringUtils.isBlank(mediaPackageForSearch.getTitle())) {
-          var dcUri = Arrays.stream(mediaPackageForSearch.getCatalogs(MediaPackageElements.EPISODE))
-              .findFirst()
-              .map(MediaPackageElement::getURI);
-          if (dcUri.isPresent()) {
-            try (var in = workspace.read(dcUri.get())) {
+          var catalog = Arrays.stream(mediaPackageForSearch.getCatalogs(MediaPackageElements.EPISODE))
+              .findFirst();
+          if (catalog.isPresent()) {
+            try (var in = wfr.getStream(catalog.get())) {
               DublinCoreXmlFormat.read(in)
                   .get(DublinCore.PROPERTY_TITLE)
                   .stream()

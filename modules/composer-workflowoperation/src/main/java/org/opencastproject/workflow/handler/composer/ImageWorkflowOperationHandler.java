@@ -51,7 +51,7 @@ import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.osgi.service.component.annotations.Component;
@@ -97,8 +97,8 @@ public class ImageWorkflowOperationHandler extends AbstractWorkflowOperationHand
   /** The composer service */
   private ComposerService composerService = null;
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /**
    * Callback for the OSGi declarative services configuration.
@@ -112,15 +112,15 @@ public class ImageWorkflowOperationHandler extends AbstractWorkflowOperationHand
   }
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local working file repository service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Override
@@ -174,7 +174,7 @@ public class ImageWorkflowOperationHandler extends AbstractWorkflowOperationHand
               mp.addDerived(image, extraction.track);
               String fileName = createFileName(
                   extraction.profile.getSuffix(), extraction.track.getURI(), position, cfg);
-              moveToWorkspace(this, mp, image, fileName);
+              moveToWfr(this, mp, image, fileName);
             }
           } else {
             // fewer images than expected have been extracted
@@ -236,11 +236,11 @@ public class ImageWorkflowOperationHandler extends AbstractWorkflowOperationHand
     return formatFileName(format, pos.position, suffix);
   }
 
-  /** Move the extracted <code>image</code> to its final location in the workspace and rename it to <code>fileName</code>. */
-  protected void moveToWorkspace(final ImageWorkflowOperationHandler handler, final MediaPackage mp,
+  /** Move the extracted <code>image</code> to its final location in the working file repository and rename it to <code>fileName</code>. */
+  protected void moveToWfr(final ImageWorkflowOperationHandler handler, final MediaPackage mp,
       final Attachment image, final String fileName) throws WorkflowOperationException {
     try {
-      image.setURI(handler.workspace.moveTo(
+      image.setURI(handler.wfr.moveTo(
           image.getURI(),
           mp.getIdentifier().toString(),
           image.getIdentifier(),

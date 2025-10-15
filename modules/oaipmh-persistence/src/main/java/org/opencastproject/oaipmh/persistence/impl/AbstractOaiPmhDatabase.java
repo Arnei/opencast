@@ -38,7 +38,7 @@ import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.util.MimeTypes;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.XmlUtil;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -72,7 +72,7 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
 
   public abstract SecurityService getSecurityService();
 
-  public abstract Workspace getWorkspace();
+  public abstract WorkingFileRepository getWorkingFileRepository();
 
   @Override
   public void store(MediaPackage mediaPackage, String repository) throws OaiPmhDatabaseException {
@@ -134,7 +134,7 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
         continue;
       }
       String catalogXml = null;
-      try (InputStream in = getWorkspace().read(mpe.getURI())) {
+      try (InputStream in = getWorkingFileRepository().getStream(mpe)) {
         catalogXml = IOUtils.toString(in, "UTF-8");
       } catch (Throwable e) {
         logger.warn("Unable to load catalog {} from media package {}",

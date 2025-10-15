@@ -39,7 +39,7 @@ import org.opencastproject.util.LoadUtil;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.waveform.api.WaveformService;
 import org.opencastproject.waveform.api.WaveformServiceException;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -164,8 +164,8 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
   /** Reference to the service registry */
   private ServiceRegistry serviceRegistry = null;
 
-  /** The workspace to use when retrieving remote media files */
-  private Workspace workspace = null;
+  /** The working file repository to use when retrieving remote media files */
+  private WorkingFileRepository wfr;
 
   /** The security service */
   private SecurityService securityService = null;
@@ -325,16 +325,16 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
       throw new WaveformServiceException("Track has no audio");
     }
 
-    // copy source file into workspace
+    // copy source file into working file repository
     File mediaFile;
     try {
-      mediaFile = workspace.get(track.getURI());
+      mediaFile = wfr.get(track);
     } catch (NotFoundException e) {
       throw new WaveformServiceException(
-          "Error finding the media file in the workspace", e);
+          "Error finding the media file in the working file repository", e);
     } catch (IOException e) {
       throw new WaveformServiceException(
-          "Error reading the media file in the workspace", e);
+          "Error reading the media file in the working file repository", e);
     }
 
     String waveformFilePath = FilenameUtils.removeExtension(mediaFile.getAbsolutePath())
@@ -393,19 +393,19 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
               + "using command\n%s", exitCode, String.join(" ", command)));
     }
 
-    // put waveform image into workspace
+    // put waveform image into working file repository
     FileInputStream waveformFileInputStream = null;
     URI waveformFileUri;
     try {
       waveformFileInputStream = new FileInputStream(waveformFilePath);
-      waveformFileUri = workspace.putInCollection(COLLECTION_ID,
+      waveformFileUri = wfr.putInCollection(COLLECTION_ID,
               FilenameUtils.getName(waveformFilePath), waveformFileInputStream);
-      logger.info("Copied the created waveform to the workspace {}", waveformFileUri);
+      logger.info("Copied the created waveform to the working file repository {}", waveformFileUri);
     } catch (FileNotFoundException ex) {
       throw new WaveformServiceException(String.format("Waveform image file '%s' not found", waveformFilePath), ex);
     } catch (IOException ex) {
       throw new WaveformServiceException(String.format(
-              "Can't write waveform image file '%s' to workspace", waveformFilePath), ex);
+              "Can't write waveform image file '%s' to working file repository", waveformFilePath), ex);
     } catch (IllegalArgumentException ex) {
       throw new WaveformServiceException(ex);
     } finally {
@@ -526,7 +526,7 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 }

@@ -32,7 +32,7 @@ import org.opencastproject.speechtotext.api.SpeechToTextEngine;
 import org.opencastproject.speechtotext.api.SpeechToTextService;
 import org.opencastproject.speechtotext.api.SpeechToTextServiceException;
 import org.opencastproject.util.LoadUtil;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -81,7 +81,7 @@ public class SpeechToTextServiceImpl extends AbstractJobProducer implements Spee
   /** List of available operations on jobs */
   private static final String OPERATION = "speechtotext";
 
-  /** The workspace collection name */
+  /** The working file repository collection name */
   private static final String COLLECTION = "subtitles";
 
   private static final String TMP_PREFIX = "tmp_";
@@ -91,8 +91,8 @@ public class SpeechToTextServiceImpl extends AbstractJobProducer implements Spee
   // OSGi service instances
   //================================================================================
 
-  /** The workspace service */
-  private Workspace workspace;
+  /** The working file repository service */
+  private WorkingFileRepository wfr;
 
   /** The registry service */
   private ServiceRegistry serviceRegistry;
@@ -146,20 +146,20 @@ public class SpeechToTextServiceImpl extends AbstractJobProducer implements Spee
     }
     URI subtitleFilesURI;
     var name = String.format("job-%d", job.getId());
-    var jobDir  = Path.of(workspace.rootDirectory(), "collection", COLLECTION, name).toFile();
+    var jobDir  = Path.of(wfr.rootDirectory(), "collection", COLLECTION, name).toFile();
 
     try {
       // prepare the output file
       jobDir.mkdirs();
       SpeechToTextEngine.Result result = speechToTextEngine.generateSubtitlesFile(
-              workspace.get(mediaFile), jobDir, language, translate);
+          wfr.get(mediaFile), jobDir, language, translate);
       language = result.getLanguage();
 
       // we need to call the "putInCollection" method to get
       // a URI, that can be used in the following processes
       final var outputName = String.format("%d-%s.vtt", job.getId(), FilenameUtils.getBaseName(mediaFile.getPath()));
       try (FileInputStream in = new FileInputStream(result.getSubtitleFile())) {
-        subtitleFilesURI = workspace.putInCollection(COLLECTION, outputName, in);
+        subtitleFilesURI = wfr.putInCollection(COLLECTION, outputName, in);
       }
     } catch (Exception e) {
       throw new SpeechToTextServiceException("Error while generating subtitle from " + mediaFile, e);
@@ -220,8 +220,8 @@ public class SpeechToTextServiceImpl extends AbstractJobProducer implements Spee
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

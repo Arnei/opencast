@@ -56,7 +56,7 @@ import org.opencastproject.util.OsgiUtil;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.data.Effect;
 import org.opencastproject.util.data.functions.Misc;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -320,11 +320,11 @@ public class DownloadDistributionServiceImpl extends AbstractDistributionService
     try {
       File source;
       try {
-        source = workspace.get(element.getURI());
+        source = wfr.get(element);
       } catch (NotFoundException e) {
-        throw new DistributionException("Unable to find " + element.getURI() + " in the workspace", e);
+        throw new DistributionException("Unable to find " + element.getURI() + " in the working file repository", e);
       } catch (IOException e) {
-        throw new DistributionException("Error loading " + element.getURI() + " from the workspace", e);
+        throw new DistributionException("Error loading " + element.getURI() + " from the working file repository", e);
       }
 
       // Try to find a duplicated element source
@@ -444,11 +444,11 @@ public class DownloadDistributionServiceImpl extends AbstractDistributionService
 
     File source;
     try {
-      source = workspace.get(element.getURI());
+      source = wfr.get(element);
     } catch (NotFoundException e) {
-      throw new DistributionException("Unable to find " + element.getURI() + " in the workspace", e);
+      throw new DistributionException("Unable to find " + element.getURI() + " in the working file repository", e);
     } catch (IOException e) {
-      throw new DistributionException("Error loading " + element.getURI() + " from the workspace", e);
+      throw new DistributionException("Error loading " + element.getURI() + " from the working file repository", e);
     }
 
     // Try to find a duplicated element source
@@ -909,8 +909,8 @@ public class DownloadDistributionServiceImpl extends AbstractDistributionService
 
   @Reference
   @Override
-  public void setWorkspace(Workspace workspace) {
-    super.setWorkspace(workspace);
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    super.setWorkingFileRepository(wfr);
   }
 
   @Reference

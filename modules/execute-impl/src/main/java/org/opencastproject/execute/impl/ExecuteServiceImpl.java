@@ -43,7 +43,7 @@ import org.opencastproject.util.ConfigurationException;
 import org.opencastproject.util.IoSupport;
 import org.opencastproject.util.LoadUtil;
 import org.opencastproject.util.NotFoundException;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.lang3.StringUtils;
 import org.osgi.framework.BundleContext;
@@ -103,7 +103,7 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
   protected OrganizationDirectoryService organizationDirectoryService = null;
 
   /** The workspace service */
-  protected Workspace workspace;
+  protected WorkingFileRepository wfr;
 
   /**
    * List of allowed commands that can be run with an executor. By convention, an empty set doesn't mean any command can
@@ -333,7 +333,7 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
     try {
       if (outFileName != null) {
         // FIXME : Find a better way to place the output File
-        File firstElement = workspace.get(mp.getElements()[0].getURI());
+        File firstElement = wfr.get(mp.getElements()[0]);
         outFile = new File(firstElement.getParentFile(), outFileName);
       }
 
@@ -364,7 +364,7 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
             logger.warn("Found more than one element with flavor '{}'. Using {} by default...", matcher.group(2),
                     elements[0].getIdentifier());
 
-          File elementFile = workspace.get(elements[0].getURI());
+          File elementFile = wfr.get(elements[0]);
           matcher.appendReplacement(sb, elementFile.getAbsolutePath());
         } else if (matcher.group(1).equals("tags")) {
           elements = mp.getElementsByTags(Arrays.asList(StringUtils.split(matcher.group(2), ",")));
@@ -376,7 +376,7 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
             logger.warn("Found more than one element with matching tags '{}'. Using {} by default...", matcher.group(2),
                 elements[0].getIdentifier());
 
-          File elementFile = workspace.get(elements[0].getURI());
+          File elementFile = wfr.get(elements[0]);
           matcher.appendReplacement(sb, elementFile.getAbsolutePath());
         } else if (matcher.group(1).equals("out")) {
           matcher.appendReplacement(sb, outFile.getAbsolutePath());
@@ -394,9 +394,9 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
       throw new ExecuteException("Tag 'flavor' must specify a valid MediaPackage element flavor.", e);
     } catch (NotFoundException e) {
       throw new ExecuteException(
-              "The element '" + elements[0].getURI().toString() + "' does not exist in the workspace.", e);
+              "The element '" + elements[0].getURI().toString() + "' does not exist in the working file repository.", e);
     } catch (IOException e) {
-      throw new ExecuteException("Error retrieving MediaPackage element from workspace: '"
+      throw new ExecuteException("Error retrieving MediaPackage element from working file repository: '"
               + elements[0].getURI().toString() + "'.", e);
     }
 
@@ -428,8 +428,8 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
     File outFile = null;
 
     try {
-      // Get the track file from the workspace
-      File trackFile = workspace.get(element.getURI());
+      // Get the track file from the working file repository
+      File trackFile = wfr.get(element);
 
       // Put the destination file in the same folder as the source file
       if (outFileName != null)
@@ -464,11 +464,11 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
 
       return runCommand(arguments, outFile, expectedType);
     } catch (IOException e) {
-      logger.error("Error retrieving file from workspace: {}", element.getURI());
-      throw new ExecuteException("Error retrieving file from workspace: " + element.getURI(), e);
+      logger.error("Error retrieving file from working file repository: {}", element.getURI());
+      throw new ExecuteException("Error retrieving file from working file repository: " + element.getURI(), e);
     } catch (NotFoundException e) {
-      logger.error("Element '{}' cannot be found in the workspace.", element.getURI());
-      throw new ExecuteException("Element " + element.getURI() + " cannot be found in the workspace");
+      logger.error("Element '{}' cannot be found in the working file repository.", element.getURI());
+      throw new ExecuteException("Element " + element.getURI() + " cannot be found in the working file repository");
     }
   }
 
@@ -499,7 +499,7 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
         // Read the command output
         if (outFile != null) {
           if (outFile.isFile()) {
-            URI newURI = workspace.putInCollection(ExecuteService.COLLECTION, outFile.getName(), new FileInputStream(outFile));
+            URI newURI = wfr.putInCollection(ExecuteService.COLLECTION, outFile.getName(), new FileInputStream(outFile));
             if (outFile.delete()) {
               logger.debug("Deleted the local copy of the encoded file at {}", outFile.getAbsolutePath());
             } else {
@@ -650,13 +650,13 @@ public class ExecuteServiceImpl extends AbstractJobProducer implements ExecuteSe
   }
 
   /**
-   * Sets a reference to the workspace service.
+   * Sets a reference to the working file repository service.
    *
-   * @param workspace
+   * @param wfr
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Override

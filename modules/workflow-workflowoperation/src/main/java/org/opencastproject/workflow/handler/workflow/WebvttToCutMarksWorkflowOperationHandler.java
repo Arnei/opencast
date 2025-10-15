@@ -42,7 +42,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.gson.Gson;
 
@@ -126,8 +126,8 @@ public class WebvttToCutMarksWorkflowOperationHandler extends AbstractWorkflowOp
     ALWAYS_INCLUDE
   }
 
-  /** The workspace. */
-  private Workspace workspace;
+  /** The working file repository. */
+  private WorkingFileRepository wfr;
 
   @Override
   public WorkflowOperationResult start(WorkflowInstance workflowInstance, JobContext context)
@@ -344,7 +344,7 @@ public class WebvttToCutMarksWorkflowOperationHandler extends AbstractWorkflowOp
       MediaPackageElement mpe = mpeBuilder.newElement(MediaPackageElement.Type.Attachment, targetFlavor);
       mpe.generateIdentifier();
 
-      URI cutMarksURI = workspace.put(mp.getIdentifier().toString(), mpe.getIdentifier(), TARGET_FILENAME, cutMarksOut);
+      URI cutMarksURI = wfr.put(mp.getIdentifier().toString(), mpe.getIdentifier(), TARGET_FILENAME, cutMarksOut);
 
       mpe.setURI(cutMarksURI);
 
@@ -370,7 +370,7 @@ public class WebvttToCutMarksWorkflowOperationHandler extends AbstractWorkflowOp
     InputStream webvttIS = null;
     WebVTTSubtitle webvtt;
     try {
-      webvttIS = workspace.read(webvttURI);
+      webvttIS = wfr.getStream(webvttElements[0]);
       WebVTTParser wvparser = new WebVTTParser();
 
       webvtt = wvparser.parse(webvttIS);
@@ -423,8 +423,8 @@ public class WebvttToCutMarksWorkflowOperationHandler extends AbstractWorkflowOp
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

@@ -59,7 +59,7 @@ import org.opencastproject.series.api.SeriesException;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Tuple;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -129,8 +129,8 @@ public final class SearchServiceIndex extends AbstractIndexProducer implements I
 
   private SeriesService seriesService;
 
-  /** The local workspace */
-  private Workspace workspace;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   /** The security service */
   private SecurityService securityService;
@@ -282,7 +282,7 @@ public final class SearchServiceIndex extends AbstractIndexProducer implements I
     String orgId = securityService.getOrganization().getId();
     //If the entry has been deleted then there's *probably* no dc file to load.
     DublinCoreCatalog dc = null == delDate
-        ? DublinCoreUtil.loadEpisodeDublinCore(workspace, mediaPackage).orElse(DublinCores.mkSimple())
+        ? DublinCoreUtil.loadEpisodeDublinCore(wfr, mediaPackage).orElse(DublinCores.mkSimple())
         : DublinCores.mkSimple();
 
     List<DublinCoreCatalog> seriesList = Collections.emptyList();
@@ -578,8 +578,8 @@ public final class SearchServiceIndex extends AbstractIndexProducer implements I
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

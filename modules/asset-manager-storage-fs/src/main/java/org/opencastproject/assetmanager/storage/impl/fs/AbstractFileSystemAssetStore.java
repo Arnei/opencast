@@ -36,7 +36,7 @@ import org.opencastproject.assetmanager.api.storage.StoragePath;
 import org.opencastproject.util.FileSupport;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Option;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -60,7 +60,7 @@ public abstract class AbstractFileSystemAssetStore implements AssetStore {
   /** The store type e.g. filesystem (short-term), aws (long-term), other implementations */
   protected String storeType = null;
 
-  protected abstract Workspace getWorkspace();
+  protected abstract WorkingFileRepository getWorkingFileRepository();
 
   protected abstract String getRootDirectory();
   protected abstract String getRootDirectory(String orgId, String mpId);
@@ -75,11 +75,7 @@ public abstract class AbstractFileSystemAssetStore implements AssetStore {
 
   @Override
   public void put(StoragePath storagePath, Source source) throws AssetStoreException {
-    // Retrieving the file from the workspace has the advantage that in most cases the file already exists in the local
-    // working file repository. In the very few cases where the file is not in the working file repository,
-    // this strategy leads to a minor overhead because the file not only gets downloaded and stored in the file system
-    // but also a hard link needs to be created (or if that's not possible, a copy of the file.
-    final File origin = getUniqueFileFromWorkspace(source);
+    final File origin = getFileFromWrf(source);
     final File destination = createFile(storagePath, source);
     try {
       mkParent(destination);
@@ -94,14 +90,14 @@ public abstract class AbstractFileSystemAssetStore implements AssetStore {
     }
   }
 
-  private File getUniqueFileFromWorkspace(Source source) {
+  private File getFileFromWrf(Source source) {
     try {
-      return getWorkspace().get(source.getUri(), true);
+      return getWorkingFileRepository().get(source.getUri());
     } catch (NotFoundException e) {
       logger.error("Source file '{}' does not exist", source.getUri());
       throw new AssetStoreException(e);
     } catch (IOException e) {
-      logger.error("Error while getting file '{}' from workspace: {}", source.getUri(), getMessage(e));
+      logger.error("Error while getting file '{}' from working file repository: {}", source.getUri(), getMessage(e));
       throw new AssetStoreException(e);
     }
   }

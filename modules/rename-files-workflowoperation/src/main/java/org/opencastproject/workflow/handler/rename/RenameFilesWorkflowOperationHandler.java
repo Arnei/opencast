@@ -37,7 +37,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FilenameUtils;
 import org.osgi.service.component.ComponentContext;
@@ -70,19 +70,19 @@ public class RenameFilesWorkflowOperationHandler extends AbstractWorkflowOperati
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(RenameFilesWorkflowOperationHandler.class);
 
-  /** The local workspace */
-  private Workspace workspace = null;
+  /** The local working file repository */
+  private WorkingFileRepository wfr = null;
 
   /**
-   * Callback for declarative services configuration that will introduce us to the local workspace service.
+   * Callback for declarative services configuration that will introduce us to the local wfr service.
    * Implementation assumes that the reference is configured as being static.
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**
@@ -139,8 +139,8 @@ public class RenameFilesWorkflowOperationHandler extends AbstractWorkflowOperati
 
       // Put updated filename in working file repository and update the track.
       // Make sure it has a new identifier to prevent conflicts with the old files.
-      try (var in = workspace.read(uri)) {
-        var newUri = workspace.put(mediaPackageId, track.getIdentifier(), filename, in);
+      try (var in = wfr.getStream(track)) {
+        var newUri = wfr.put(mediaPackageId, track.getIdentifier(), filename, in);
         logger.info("Renaming {} to {}", uri, newUri);
         track.setURI(newUri);
       } catch (NotFoundException | IOException e) {
@@ -150,8 +150,8 @@ public class RenameFilesWorkflowOperationHandler extends AbstractWorkflowOperati
       // Delete the old files from the working file repository and workspace if they were in there
       logger.debug("Removing old track file {}", uri);
       try {
-        workspace.delete(uri);
-      } catch (NotFoundException | IOException e) {
+        wfr.delete(uri);
+      } catch (IOException e) {
         logger.debug("Could not remove track from workspace. Could be it was never there.");
       }
 
@@ -205,7 +205,7 @@ public class RenameFilesWorkflowOperationHandler extends AbstractWorkflowOperati
     for (var flavor: Arrays.asList(MediaPackageElements.EPISODE, MediaPackageElements.SERIES)) {
       // Get metadata catalogs
       for (var catalog : mediaPackage.getCatalogs(flavor)) {
-        DublinCoreCatalog dc = DublinCoreUtil.loadDublinCore(workspace, catalog);
+        DublinCoreCatalog dc = DublinCoreUtil.loadDublinCore(wfr, catalog);
         for (var entry : dc.getValues().entrySet()) {
           var key = String.format("#{%s.%s}", flavor.getSubtype(), entry.getKey().getLocalName());
           var value = entry.getValue().get(0).getValue();

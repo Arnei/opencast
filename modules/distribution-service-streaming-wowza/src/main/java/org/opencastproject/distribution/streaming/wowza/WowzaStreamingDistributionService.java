@@ -49,7 +49,7 @@ import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.RequireUtil;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.XmlSafeParser;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -515,9 +515,9 @@ public class WowzaStreamingDistributionService extends AbstractDistributionServi
     try {
       File source;
       try {
-        source = workspace.get(element.getURI());
+        source = wfr.get(element);
       } catch (NotFoundException | IOException e) {
-        throw new DistributionException("Error getting element " + element.getURI() + " from the workspace", e);
+        throw new DistributionException("Error getting element " + element.getURI() + " from the working file repository", e);
       }
 
       ArrayList<MediaPackageElement> distribution = new ArrayList<>();
@@ -1164,8 +1164,8 @@ public class WowzaStreamingDistributionService extends AbstractDistributionServi
 
   @Reference
   @Override
-  public void setWorkspace(Workspace workspace) {
-    super.setWorkspace(workspace);
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

@@ -75,7 +75,7 @@ import org.opencastproject.util.UnknownFileTypeException;
 import org.opencastproject.util.data.Collections;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Tuple;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.google.gson.Gson;
 
@@ -234,8 +234,8 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   /** Reference to the media inspection service */
   private MediaInspectionService inspectionService = null;
 
-  /** Reference to the workspace service */
-  private Workspace workspace = null;
+  /** Reference to the working file repository service */
+  private WorkingFileRepository wfr = null;
 
   /** Reference to the receipt service */
   private ServiceRegistry serviceRegistry;
@@ -306,18 +306,18 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   }
 
   /**
-   * Load track into workspace and return a file handler, filing an incident if something went wrong.
+   * Load track into working file repository and return a file handler, filing an incident if something went wrong.
    *
    * @param job The job in which context this operation is executed
-   * @param name Name of the track to load into the workspace
-   * @param track Track to load into the workspace
+   * @param name Name of the track to load into the working file repository
+   * @param track Track to load into the working file repository
    * @return File handler for track
-   * @throws EncoderException Could not load file into workspace
+   * @throws EncoderException Could not load file into working file repository
    */
   private File loadTrackIntoWorkspace(final Job job, final String name, final Track track, boolean unique)
           throws EncoderException {
     try {
-      return workspace.get(track.getURI(), unique);
+      return wfr.get(track);
     } catch (NotFoundException e) {
       incident().recordFailure(job, WORKSPACE_GET_NOT_FOUND, e,
               getWorkspaceMediapackageParams(name, track), NO_DETAILS);
@@ -330,21 +330,21 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   }
 
   /**
-   * Load URI into workspace by URI and return a file handler, filing an incident if something went wrong.
+   * Load URI into working file repository by URI and return a file handler, filing an incident if something went wrong.
    *
    * @param job
    *          The job in which context this operation is executed
    * @param name
-   *          Name of the track to load into the workspace
+   *          Name of the track to load into the working file repository
    * @param uri
-   *          URI of Track to load into the workspace
+   *          URI of Track to load into the working file repository
    * @return File handler for track
    * @throws EncoderException
-   *           Could not load file into workspace
+   *           Could not load file into working file repository
    */
   private File loadURIIntoWorkspace(final Job job, final String name, final URI uri) throws EncoderException {
     try {
-      return workspace.get(uri);
+      return wfr.get(uri);
     } catch (NotFoundException e) {
       incident().recordFailure(job, WORKSPACE_GET_NOT_FOUND, e, getWorkspaceCollectionParams(name, name, uri),
               NO_DETAILS);
@@ -456,14 +456,14 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     if (output.isEmpty()) {
       return none();
     } else if (output.size() != 1) {
-      // Ensure we do not leave behind old files in the workspace
+      // Ensure we do not leave behind old files in the working file repository
       for (File file : output) {
         FileUtils.deleteQuietly(file);
       }
       throw new EncoderException("Composite does not support multiple files as output");
     }
 
-    // Put the file in the workspace
+    // Put the file in the working file repository
     URI workspaceURI = putToCollection(job, output.get(0), "encoded file");
 
     // Have the encoded track inspected and return the result
@@ -558,12 +558,12 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         }
       }
 
-      // Put the file in the workspace
+      // Put the file in the working file repository
       final List<String> tags = profile.getTags();
       try (InputStream in = new FileInputStream(file)) {
         var encodedFileName = file.getName();
         var workspaceFilename = fileMapping.get(encodedFileName);
-        var url = workspace.putInCollection(COLLECTION, workspaceFilename, in);
+        var url = wfr.putInCollection(COLLECTION, workspaceFilename, in);
         returnURLs.add(url);
 
         var tagsForUrl = new ArrayList<String>();
@@ -574,9 +574,9 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         }
         tagsForUrls.add(tagsForUrl);
 
-        logger.info("Copied the encoded file to the workspace at {}", url);
+        logger.info("Copied the encoded file to the working file repository at {}", url);
       } catch (Exception e) {
-        throw new EncoderException("Unable to put the encoded file into the workspace", e);
+        throw new EncoderException("Unable to put the encoded file into the working file repository", e);
       }
     }
 
@@ -591,7 +591,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
       encodedTracks.add(inspectedTrack);
     }
 
-    // Clean up workspace
+    // Clean up working file repository
     for (File encodingOutput: outputFiles) {
       if (encodingOutput.delete()) {
         logger.info("Deleted the local copy of the encoded file at {}", encodingOutput.getAbsolutePath());
@@ -691,7 +691,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     if (!output.exists() || output.length() == 0)
       return none();
 
-    // Put the file in the workspace
+    // Put the file in the working file repository
     URI workspaceURI = putToCollection(job, output, "trimmed file");
 
     // Have the encoded track inspected and return the result
@@ -812,7 +812,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
       File watermarkFile = null;
       if (watermarkOption.isSome()) {
         try {
-          watermarkFile = workspace.get(watermarkOption.get().getElement().getURI());
+          watermarkFile = wfr.get(watermarkOption.get().getElement());
         } catch (NotFoundException e) {
           incident().recordFailure(job, WORKSPACE_GET_NOT_FOUND, e,
                   getWorkspaceMediapackageParams("watermark image", watermarkOption.get().getElement()),
@@ -939,7 +939,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
 
       // We expect one file as output
       if (output.size() != 1) {
-        // Ensure we do not leave behind old files in the workspace
+        // Ensure we do not leave behind old files in the working file repository
         for (File file : output) {
           FileUtils.deleteQuietly(file);
         }
@@ -947,7 +947,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
       }
 
 
-      // Put the file in the workspace
+      // Put the file in the working file repository
       URI workspaceURI = putToCollection(job, output.get(0), "compound file");
 
       // Have the compound track inspected and return the result
@@ -1058,16 +1058,16 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     // Creating video filter command for concat
     if (sameCodec) {
       // create file list to use Concat demuxer - lossless - pack contents into a single container
-      fileList = new File(workspace.rootDirectory(), "concat_tracklist_" + job.getId() + ".txt");
+      fileList = new File(wfr.rootDirectory(), "concat_tracklist_" + job.getId() + ".txt");
       fileList.deleteOnExit();
       try (PrintWriter printer = new PrintWriter(new FileWriter(fileList, true))) {
         for (Track track : tracks) {
-          printer.append("file '").append(workspace.get(track.getURI()).getAbsolutePath()).append("'\n");
+          printer.append("file '").append(wfr.get(track).getAbsolutePath()).append("'\n");
         }
       } catch (IOException e) {
         throw new EncoderException("Cannot create file list for concat", e);
       } catch (NotFoundException e) {
-        throw new EncoderException("Cannot find track filename in workspace for concat", e);
+        throw new EncoderException("Cannot find track filename in working file repository for concat", e);
       }
       concatCommand = "-f concat -safe 0 -i " + fileList.getAbsolutePath();
     } else {
@@ -1102,7 +1102,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     if (!output.exists() || output.length() == 0)
       return none();
 
-    // Put the file in the workspace
+    // Put the file in the working file repository
     URI workspaceURI = putToCollection(job, output, "concatenated file");
 
     // Have the concat track inspected and return the result
@@ -1138,7 +1138,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     // Get the attachment and make sure it exist
     File imageFile;
     try {
-      imageFile = workspace.get(sourceImage.getURI());
+      imageFile = wfr.get(sourceImage);
     } catch (NotFoundException e) {
       incident().recordFailure(job, WORKSPACE_GET_NOT_FOUND, e,
               getWorkspaceMediapackageParams("source image", sourceImage), NO_DETAILS);
@@ -1181,7 +1181,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     if (!output.exists() || output.length() == 0)
       return none();
 
-    // Put the file in the workspace
+    // Put the file in the working file repository
     URI workspaceURI = putToCollection(job, output, "converted image file");
 
     // Have the compound track inspected and return the result
@@ -1324,10 +1324,10 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         throw new EncoderException("Extracted image " + output.toString() + " is empty!");
       }
 
-      // Put the file in the workspace
+      // Put the file in the working file repository
 
       try (InputStream in = new FileInputStream(output)) {
-        URI returnURL = workspace.putInCollection(COLLECTION,
+        URI returnURL = wrf.putInCollection(COLLECTION,
                 job.getId() + "_" + i++ + "." + FilenameUtils.getExtension(output.getAbsolutePath()), in);
         logger.debug("Copied image file to the workspace at {}", returnURL);
         workspaceURIs.add(returnURL);
@@ -1349,7 +1349,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     for (URI url : workspaceURIs) {
       Attachment attachment = (Attachment) builder.elementFromURI(url, Attachment.TYPE, null);
       try {
-        attachment.setSize(workspace.get(url).length());
+        attachment.setSize(wfr.get(url).length());
       } catch (NotFoundException | IOException e) {
         logger.warn("Could not get file size of {}", url);
       }
@@ -1449,7 +1449,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         // Finally get the file that needs to be encoded
         File imageFile;
         try {
-          imageFile = workspace.get(sourceImage.getURI());
+          imageFile = wfr.get(sourceImage);
         } catch (NotFoundException e) {
           incident().recordFailure(job, WORKSPACE_GET_NOT_FOUND, e,
                   getWorkspaceMediapackageParams("source image", sourceImage), NO_DETAILS);
@@ -1478,7 +1478,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
               "Image conversion job %d didn't created an output file for the source image %s with encoding profile %s",
               job.getId(), sourceImage.getURI().toString(), profileId));
 
-        // Put the file in the workspace
+        // Put the file in the working file repository
         URI workspaceURI = putToCollection(job, output, "converted image file");
 
         MediaPackageElementBuilder builder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
@@ -1496,11 +1496,9 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     } catch (Throwable t) {
       for (Attachment convertedImage : convertedImages) {
         try {
-          workspace.delete(convertedImage.getURI());
-        } catch (NotFoundException ex) {
-          // do nothing here
+          wfr.delete(convertedImage.getURI());
         } catch (IOException ex) {
-          logger.warn("Unable to delete converted image {} from workspace", convertedImage.getURI(), ex);
+          logger.warn("Unable to delete converted image {} from working file repository", convertedImage.getURI(), ex);
         }
       }
       throw t;
@@ -1754,9 +1752,9 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   private void cleanupWorkspace(URI... workspaceURIs) {
     for (URI url : workspaceURIs) {
       try {
-        workspace.delete(url);
+        wfr.delete(url);
       } catch (Exception e) {
-        logger.warn("Could not delete {} from workspace: {}", url, e.getMessage());
+        logger.warn("Could not delete {} from working file repository: {}", url, e.getMessage());
       }
     }
   }
@@ -1895,7 +1893,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
    * Generate a "unique" name by job identifier
    */
   private String renameJobFile(long jobId, File file) {
-      return workspace.toSafeName(format("%s.%s", jobId, FilenameUtils.getName(file.getAbsolutePath())));
+      return wfr.toSafeName(format("%s.%s", jobId, FilenameUtils.getName(file.getAbsolutePath())));
   }
 
   protected void hlsSetReference(Track track) throws IOException {
@@ -1907,14 +1905,14 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     List<URI> returnURLs = new ArrayList<>(files.size());
     for (File file: files) {
       try (InputStream in = new FileInputStream(file)) {
-        URI newFileURI = workspace.putInCollection(COLLECTION, renameJobFile(job.getId(), file), in);
+        URI newFileURI = wfr.putInCollection(COLLECTION, renameJobFile(job.getId(), file), in);
         logger.info("Copied the {} to the workspace at {}", description, newFileURI);
         returnURLs.add(newFileURI);
       } catch (Exception e) {
         incident().recordFailure(job, WORKSPACE_PUT_COLLECTION_IO_EXCEPTION, e,
                 getWorkspaceCollectionParams(description, COLLECTION, file.toURI()), NO_DETAILS);
         returnURLs.forEach(this::cleanupWorkspace);
-        throw new EncoderException("Unable to put the " + description + " into the workspace", e);
+        throw new EncoderException("Unable to put the " + description + " into the working file repository", e);
       } finally {
         cleanup(file);
       }
@@ -1967,14 +1965,14 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   }
 
   /**
-   * Sets the workspace
+   * Sets the working file repository
    *
-   * @param workspace
-   *          an instance of the workspace
+   * @param wfr
+   *          an instance of the working file repository
    */
   @Reference
-  protected void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  protected void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   /**

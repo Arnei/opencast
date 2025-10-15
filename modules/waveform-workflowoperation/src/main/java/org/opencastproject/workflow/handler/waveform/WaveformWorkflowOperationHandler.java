@@ -39,6 +39,7 @@ import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 import org.opencastproject.workspace.api.Workspace;
 
 import org.apache.commons.lang3.StringUtils;
@@ -106,8 +107,8 @@ public class WaveformWorkflowOperationHandler extends AbstractWorkflowOperationH
   /** The waveform service. */
   private WaveformService waveformService = null;
 
-  /** The workspace service. */
-  private Workspace workspace = null;
+  /** The working file repository */
+  private WorkingFileRepository wfr;
 
   @Override
   public void activate(ComponentContext cc) {
@@ -209,7 +210,7 @@ public class WaveformWorkflowOperationHandler extends AbstractWorkflowOperationH
                 mediaPackage.getIdentifier()));
       }
 
-      // copy waveform attachments into workspace and add them to the media package
+      // copy waveform attachments into working file repository and add them to the media package
       for (Job job : waveformJobs) {
         String jobPayload = job.getPayload();
         if (StringUtils.isEmpty(jobPayload)) {
@@ -218,7 +219,7 @@ public class WaveformWorkflowOperationHandler extends AbstractWorkflowOperationH
         MediaPackageElement waveformMpe = null;
         try {
           waveformMpe = MediaPackageElementParser.getFromXml(jobPayload);
-          URI newURI = workspace.moveTo(waveformMpe.getURI(),
+          URI newURI = wfr.moveTo(waveformMpe.getURI(),
               mediaPackage.getIdentifier().toString(),
               waveformMpe.getIdentifier(),
               "waveform.png");
@@ -230,7 +231,7 @@ public class WaveformWorkflowOperationHandler extends AbstractWorkflowOperationH
           throw new WorkflowOperationException("Waveform image file '" + waveformMpe.getURI() + "' not found", ex);
         } catch (IOException ex) {
           throw new WorkflowOperationException("Can't get workflow image file '"
-              + waveformMpe.getURI() + "' from workspace");
+              + waveformMpe.getURI() + "' from working file repository");
         }
 
         // set the waveform attachment flavor and add it to the media package
@@ -250,7 +251,7 @@ public class WaveformWorkflowOperationHandler extends AbstractWorkflowOperationH
 
     } finally {
       try {
-        workspace.cleanup(mediaPackage.getIdentifier(), true);
+        wfr.cleanup(mediaPackage.getIdentifier(), true);
       } catch (IOException e) {
         throw new WorkflowOperationException(e);
       }
@@ -263,8 +264,8 @@ public class WaveformWorkflowOperationHandler extends AbstractWorkflowOperationH
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

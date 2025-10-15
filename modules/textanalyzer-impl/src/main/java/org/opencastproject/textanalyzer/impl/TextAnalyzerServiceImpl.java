@@ -114,6 +114,7 @@ public class TextAnalyzerServiceImpl extends AbstractJobProducer implements Text
 
   /** The workspace to ue when retrieving remote media files */
   private Workspace workspace = null;
+  private WorkingFileRepository wfr;
 
   /** The mpeg-7 service */
   protected Mpeg7CatalogService mpeg7CatalogService;
@@ -242,7 +243,7 @@ public class TextAnalyzerServiceImpl extends AbstractJobProducer implements Text
       }
     } finally {
       try {
-        workspace.delete(imageUrl);
+        workspace.delete(image);
       } catch (Exception e) {
         logger.warn("Unable to delete temporary text analysis image {}", imageUrl, e);
       }

@@ -30,7 +30,7 @@ import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.XmlUtil;
 import org.opencastproject.util.data.Either;
 import org.opencastproject.util.data.functions.Misc;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.android.mms.dom.smil.parser.SmilXmlParser;
 
@@ -171,13 +171,13 @@ public final class SmilUtil {
 
 
   public static SMILDocument getSmilDocumentFromMediaPackage(MediaPackage mp, MediaPackageElementFlavor smilFlavor,
-      Workspace workspace)
+      WorkingFileRepository wfr)
           throws IOException, SAXException, NotFoundException {
     final AbstractMediaPackageElementSelector<Catalog> smilSelector = new CatalogSelector();
     smilSelector.addFlavor(smilFlavor);
     final Collection<Catalog> smilCatalog = smilSelector.select(mp, false);
     if (smilCatalog.size() == 1) {
-      return getSmilDocument(smilCatalog.iterator().next(), workspace);
+      return getSmilDocument(smilCatalog.iterator().next(), wfr);
     } else {
       logger.error("More or less than one smil catalog found: {}", smilCatalog);
       throw new IllegalStateException("More or less than one smil catalog found!");
@@ -185,11 +185,11 @@ public final class SmilUtil {
   }
 
   /** Get the SMIL document from a catalog. */
-  private static SMILDocument getSmilDocument(final Catalog smilCatalog, Workspace workspace) throws NotFoundException,
+  private static SMILDocument getSmilDocument(final Catalog smilCatalog, WorkingFileRepository wfr) throws NotFoundException,
           IOException, SAXException {
     FileInputStream in = null;
     try {
-      File smilXmlFile = workspace.get(smilCatalog.getURI());
+      File smilXmlFile = wfr.get(smilCatalog);
       SmilXmlParser smilParser = new SmilXmlParser();
       in = new FileInputStream(smilXmlFile);
       return smilParser.parse(in);

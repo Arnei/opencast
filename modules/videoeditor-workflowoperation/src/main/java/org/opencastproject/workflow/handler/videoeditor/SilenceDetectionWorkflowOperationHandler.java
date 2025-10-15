@@ -47,7 +47,7 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
-import org.opencastproject.workspace.api.Workspace;
+import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -112,8 +112,8 @@ public class SilenceDetectionWorkflowOperationHandler extends AbstractWorkflowOp
   /** The smil service for smil parsing. */
   private SmilService smilService;
 
-  /** The workspace. */
-  private Workspace workspace;
+  /** The working file repository. */
+  private WorkingFileRepository wfr;
 
   @Override
   public WorkflowOperationResult start(WorkflowInstance workflowInstance, JobContext context)
@@ -226,7 +226,7 @@ public class SilenceDetectionWorkflowOperationHandler extends AbstractWorkflowOp
         InputStream is = null;
         try {
           is = IOUtils.toInputStream(smil.toXML(), "UTF-8");
-          URI smilURI = workspace.put(mp.getIdentifier().toString(), smil.getId(), TARGET_FILE_NAME, is);
+          URI smilURI = wfr.put(mp.getIdentifier().toString(), smil.getId(), TARGET_FILE_NAME, is);
           MediaPackageElementFlavor smilFlavor = smilTargetFlavor;
           if (smilFlavor == null) {
             smilFlavor = new MediaPackageElementFlavor(sourceTrack.getFlavor().getType(), smilFlavorSubType);
@@ -236,7 +236,7 @@ public class SilenceDetectionWorkflowOperationHandler extends AbstractWorkflowOp
           mp.add(catalog);
         } catch (Exception ex) {
           throw new WorkflowOperationException(String.format(
-                  "Failed to put smil into workspace. Silence detection for track %s failed",
+                  "Failed to put smil into working file repository. Silence detection for track %s failed",
                   sourceTrack.getIdentifier()), ex);
         } finally {
           IOUtils.closeQuietly(is);
@@ -333,8 +333,8 @@ public class SilenceDetectionWorkflowOperationHandler extends AbstractWorkflowOp
   }
 
   @Reference
-  public void setWorkspace(Workspace workspace) {
-    this.workspace = workspace;
+  public void setWorkingFileRepository(WorkingFileRepository wfr) {
+    this.wfr = wfr;
   }
 
   @Reference

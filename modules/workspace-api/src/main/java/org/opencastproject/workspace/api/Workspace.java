@@ -21,6 +21,7 @@
 
 package org.opencastproject.workspace.api;
 
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.identifier.Id;
 import org.opencastproject.storage.StorageUsage;
 import org.opencastproject.util.NotFoundException;
@@ -31,98 +32,130 @@ import java.io.InputStream;
 import java.net.URI;
 
 /**
- * Provides efficient access java.io.File objects from potentially remote URIs. This helper service prevents different
- * service implementations running in the same osgi container from downloading remote files multiple times.
- *
- * Additionally, when the system is configured to use shared storage, this performance gain is also achieved across
- * distributed osgi containers. The methods from WorkingFileRepository are also available as a convenience to clients.
+ * The Working File Repository is a file storage service that supports the lecture capture system. It may be used by
+ * other clients, but is neither intended nor required to be used by other systems.
  */
 public interface Workspace extends StorageUsage {
+  /** The character encoding used for URLs */
+  String CHAR_ENCODING = "UTF-8";
 
-  String toSafeName(String fileName);
+  /** Path prefix for working file repository uris */
+  String URI_PREFIX = "/workspace/";
 
-  /**
-   * Gets a locally cached {@link File} for the given URI.
-   *
-   * @param uri
-   * @return The locally cached file
-   * @throws NotFoundException
-   *           if the file does not exist
-   * @throws IOException
-   *           if reading the file from the workspace fails
-   */
-  File get(URI uri) throws NotFoundException, IOException;
+  /** Path prefix for collection items */
+  String COLLECTION_PATH_PREFIX = "/collection/";
 
-  /**
-   * Get a locally cached {@link File} for a given URI, optionally ensuring that the file is cached in a unique path
-   * so that it can safely be removed afterwards.
-   *
-   * @param uri
-   *          URI to the resource to get
-   * @param uniqueFilename
-   *          If a unique path should be used
-   * @return The locally cached file
-   * @throws NotFoundException
-   *           if the file does not exist
-   * @throws IOException
-   *           if reading the file from the workspace fails
-   */
-  File get(URI uri, boolean uniqueFilename) throws NotFoundException, IOException;
+  /** Path prefix for mediapackage elements */
+  String MEDIAPACKAGE_PATH_PREFIX = "/mediapackage/";
+
+  /** The job type we use to register with the remote services manager */
+  String SERVICE_TYPE = "org.opencastproject.workspace";
 
   /**
-   * Get the {@link File} for the given URI directly from the working file repository.
-   * If shared storage is not available, then fall back to get(uri).
-   *
-   * @param uri
-   *        URI identifying the resource to load
-   * @return The file
-   * @throws NotFoundException
-   *           if the file does not exist
-   * @throws IOException
-   *           if reading the file from the working file repository fails
-   */
-  InputStream read(URI uri) throws NotFoundException, IOException;
-
-
-  /**
-   * Gets the base URI for files stored using this service.
+   * Gets the base URI for this service.
    *
    * @return The base URI
    */
   URI getBaseUri();
 
+  String toSafeName(String fileName);
+
   /**
-   * Store the data stream under the given media package and element IDs, specifying a filename.
+   * Stream the file stored under the given media package and element IDs.
    *
    * @param mediaPackageID
+   *          the media package identifier
    * @param mediaPackageElementID
-   * @param fileName
-   * @param in
+   *          the media package element identifier
+   * @return the media package element contents
    * @throws IOException
-   *           if writing the data to the workspace fails
-   * @throws IllegalArgumentException
-   *           if a URI cannot be created using the arguments provided
+   *           if there is a problem reading the data
+   * @throws NotFoundException
+   *           if the media package element can't be found
    */
-  URI put(String mediaPackageID, String mediaPackageElementID, String fileName, InputStream in) throws IOException,
+  InputStream getStream(String mediaPackageID, String mediaPackageElementID) throws IOException, NotFoundException;
+  InputStream getStream(MediaPackageElement mpe) throws IOException, NotFoundException;
+  File get(String mediaPackageID, String mediaPackageElementID) throws IOException, NotFoundException;
+  File get(MediaPackageElement mpe) throws IOException, NotFoundException;
+  File get(URI uri) throws NotFoundException, IOException;
+
+  /**
+   * Get the URL for a file stored under the given collection.
+   *
+   * @param collectionID
+   *          the collection identifier
+   * @param fileName
+   *          the file name
+   * @return the file's uri
+   * @throws IllegalArgumentException
+   *           if a <code>URI</code> cannot be created from the arguments
+   */
+  URI getCollectionURI(String collectionID, String fileName) throws IllegalArgumentException;
+
+  /**
+   * Get the URL for a file stored under the given media package and element IDs. This may be called for mediapackages,
+   * elements, or files that have not yet been stored in the repository.
+   *
+   * @param mediaPackageID
+   *          the media package identifier
+   * @param mediaPackageElementID
+   *          the media package element identifier
+   * @return the URI to this resource
+   * @throws IllegalArgumentException
+   *           if a <code>URI</code> cannot be created from the arguments
+   */
+  URI getURI(String mediaPackageID, String mediaPackageElementID) throws IllegalArgumentException;
+
+  /**
+   * Get the URL for a file stored under the given media package and element IDs. This may be called for mediapackages,
+   * elements, or files that have not yet been stored in the repository.
+   *
+   * @param mediaPackageID
+   *          the media package identifier
+   * @param mediaPackageElementID
+   *          the media package element identifier
+   * @param fileName
+   *          the file name
+   * @return the URI to this resource
+   * @throws IllegalArgumentException
+   *           if a <code>URI</code> cannot be created from the arguments
+   */
+  URI getURI(String mediaPackageID, String mediaPackageElementID, String fileName) throws IllegalArgumentException;
+
+  /**
+   * Store the data stream under the given media package and element IDs with filename as name of the file.
+   *
+   * @param mediaPackageID
+   *          the media package identifier
+   * @param mediaPackageElementID
+   *          the media package element identifier
+   * @param filename
+   *          the file name to use
+   * @param in
+   *          the input stream
+   * @return The URL to access this file
+   * @throws IOException
+   *           if the input stream cannot be accessed or the element cannot be written to the repository
+   * @throws IllegalArgumentException
+   *           if a <code>URI</code> cannot be created from the arguments
+   */
+  URI put(String mediaPackageID, String mediaPackageElementID, String filename, InputStream in) throws IOException,
           IllegalArgumentException;
 
   /**
-   * Stores the data stream in the given collection, overwriting any data with the same collection id and file name.
+   * Puts a file into a collection, overwriting the existing file if present.
    *
    * @param collectionId
-   *          The collection to use for storing this data
+   *          The collection identifier
    * @param fileName
-   *          the filename to use in the collection.
+   *          The filename to use in storing the input stream
    * @param in
-   *          the inputstream
-   * @return the URI of the stored data
+   *          the data to store
+   * @return The URI identifying the file
    * @throws IOException
-   *           if writing the data to the workspace fails
-   * @throws IllegalArgumentException
-   *           if a URI cannot be created using the arguments provided
+   *           if the input stream cannot be accessed or the file cannot be written to the repository
    */
-  URI putInCollection(String collectionId, String fileName, InputStream in) throws IOException,
-          IllegalArgumentException;
+  URI putInCollection(String collectionId, String fileName, InputStream in) throws IOException;
 
   /**
    * Gets the URIs of the members of this collection
@@ -131,35 +164,23 @@ public interface Workspace extends StorageUsage {
    *          the collection identifier
    * @return the URIs for each member of the collection
    * @throws NotFoundException
-   *           if the collection cannot be found
-   * @throws IllegalArgumentException
-   *           if a URI cannot be created using the arguments provided
+   *           if the collectionId does not exist
    */
-  URI[] getCollectionContents(String collectionId) throws NotFoundException, IllegalArgumentException;
-
-  /**
-   * Delete the file stored at the given uri.
-   *
-   * @param uri
-   *          the uri
-   * @throws NotFoundException
-   *           if there was not file stored under this combination of mediapackage and element IDs.
-   * @throws IOException
-   *           if deleting the data from the workspace fails
-   */
-  void delete(URI uri) throws NotFoundException, IOException;
+  URI[] getCollectionContents(String collectionId) throws NotFoundException;
 
   /**
    * Delete the file stored at the given media package and element IDs.
    *
    * @param mediaPackageID
+   *          the media package identifier
    * @param mediaPackageElementID
-   * @throws NotFoundException
-   *           if there was not file stored under this combination of mediapackage and element IDs.
+   *          the media package element identifier
    * @throws IOException
-   *           if deleting the data from the workspace fails
+   *           if the element cannot be deleted
    */
   void delete(String mediaPackageID, String mediaPackageElementID) throws NotFoundException, IOException;
+  void delete(MediaPackageElement mpe) throws NotFoundException, IOException;
+  void delete(URI uri) throws NotFoundException, IOException;
 
   /**
    * Removes a file from a collection
@@ -168,46 +189,31 @@ public interface Workspace extends StorageUsage {
    *          the collection identifier
    * @param fileName
    *          the filename to remove
-   * @throws NotFoundException
-   *           if there was no file with the provided name stored under this collection.
-   * @throws IOException
-   *           if deleting the data from the workspace fails
+   * @return <code>true</code> if the file existed and was removed
    */
   void deleteFromCollection(String collectionId, String fileName) throws NotFoundException, IOException;
 
   /**
-   * Get the URL for a file stored under the given media package and element IDs. MediaPackages may reference elements
-   * that are not yet stored in the working file repository, so this method will return a URI even if the file is not
-   * yet stored.
+   * Removes a file from a collection, and the parent folder if empty
    *
-   * @param mediaPackageID
-   *          the mediapackage identifier
-   * @param mediaPackageElementID
-   *          the element identifier
-   * @return the URI to the file
-   * @throws IllegalArgumentException
-   *           if a URI cannot be created using the arguments provided
-   */
-  URI getURI(String mediaPackageID, String mediaPackageElementID) throws IllegalArgumentException;
-
-  /**
-   * Get the URL for a file stored under the given collection.
-   *
-   * @param collectionID
-   *          the collection id
+   * @param collectionId
+   *          the collection identifier
    * @param fileName
-   *          the file name
-   * @return the file's uri
-   * @throws IllegalArgumentException
-   *           if a URI cannot be created using the arguments provided
+   *          the filename to remove
+   * @param removeCollection
+   *          remove the parent collection folder if empty
+   * @return <code>true</code> if the file existed and was removed
    */
-  URI getCollectionURI(String collectionID, String fileName) throws IllegalArgumentException;
+  void deleteFromCollection(String collectionId, String fileName, boolean removeCollection)
+          throws NotFoundException, IOException;
 
   /**
    * Moves a file from a collection into a mediapackage
    *
-   * @param collectionURI
-   *          the uri pointing to a workspace collection
+   * @param fromCollection
+   *          The collection holding the file
+   * @param fromFileName
+   *          The filename
    * @param toMediaPackage
    *          The media package ID to move the file into
    * @param toMediaPackageElement
@@ -215,41 +221,40 @@ public interface Workspace extends StorageUsage {
    * @param toFileName
    *          the name of the resulting file
    * @return the URI pointing to the file's new location
-   * @throws NotFoundException
-   *           if the element identified by <code>collectionURI</code> cannot be found
-   * @throws IOException
-   *           if either the original element cannot be read or it cannot be moved to the new location
-   * @throws IllegalArgumentException
-   *           if a URI cannot be created using the arguments provided
    */
+  URI moveTo(String fromCollection, String fromFileName, String toMediaPackage, String toMediaPackageElement,
+      String toFileName) throws NotFoundException, IOException;
+
   URI moveTo(URI collectionURI, String toMediaPackage, String toMediaPackageElement, String toFileName)
-          throws NotFoundException, IOException, IllegalArgumentException;
+          throws NotFoundException, IOException;
 
   /**
-   * Cleans up files not belonging to a mediapackage or a collection. If the optional maxAge parameter is set, only
-   * files older than the maxAge are deleted.
+   * A textual representation of available and total storage
    *
-   * @param maxAge
-   *          the maximal age in seconds of a file before deletion is performed
+   * @return Percentage and numeric values of used storage space
    */
-  void cleanup(int maxAge);
+  String getDiskSpace();
 
   /**
-   * Clean up all elements of one media package from the local workspace, not touching the working file repository.
+   * Cleans up collection files older than the number of days passed.
    *
-   * @param mediaPackageId
-   *          Id specifying the media package to remove files for.
+   * @param collectionId
+   *          the collection identifier
+   * @param days
+   *          files older than that will be deleted
    */
+  boolean cleanupOldFilesFromCollection(String collectionId, long days) throws IOException;
+
+
+  /**
+   * Cleans up media files older than the number of days passed.
+   *
+   * @param days
+   *          files older than that will be deleted
+   */
+  boolean cleanupOldFilesFromMediaPackage(long days) throws IOException;
+
   void cleanup(Id mediaPackageId) throws IOException;
-
-  /**
-   * Clean up elements of one media package from the local workspace, not touching the working file repository.
-   *
-   * @param mediaPackageId
-   *          Id specifying the media package to remove files for.
-   * @param filesOnly
-   *          Boolean specifying whether only files or also directories (including the root directory) are deleted.
-   */
   void cleanup(Id mediaPackageId, boolean filesOnly) throws IOException;
 
   /**

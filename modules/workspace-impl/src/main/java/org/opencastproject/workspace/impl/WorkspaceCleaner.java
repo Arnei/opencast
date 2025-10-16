@@ -33,7 +33,9 @@ import org.quartz.impl.StdSchedulerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 
 /** Clear outdated workspace files {@link Workspace}. */
 public class WorkspaceCleaner {
@@ -52,15 +54,30 @@ public class WorkspaceCleaner {
   private final Workspace workspace;
   private final int maxAge;
   private int schedulerPeriod;
+  private List<String> collectionIds;
 
-  protected WorkspaceCleaner(Workspace workspace, int schedulerPeriod, int maxAge) {
+  protected WorkspaceCleaner(Workspace workspace, int schedulerPeriod, int maxAge,
+      List<String> collectionIds) {
     this.workspace = workspace;
     this.maxAge = maxAge;
     this.schedulerPeriod = schedulerPeriod;
+    this.collectionIds = collectionIds;
+
+    if (maxAge <= 0) {
+      logger.debug("No scheduler initialized due to invalid max age setting ({})", schedulerPeriod);
+      quartz = null;
+      return;
+    }
 
     // Continue only if we have a sensible period value
     if (schedulerPeriod <= 0) {
       logger.debug("No scheduler initialized due to invalid scheduling period ({})", schedulerPeriod);
+      quartz = null;
+      return;
+    }
+
+    if (collectionIds == null || collectionIds.size() == 0) {
+      logger.debug("No scheduler initialized due to invalid working file collection ({})", collectionIds);
       quartz = null;
       return;
     }
@@ -79,20 +96,12 @@ public class WorkspaceCleaner {
     }
   }
 
-  public Workspace getWorkspace() {
-    return workspace;
-  }
-
-  public int getMaxAge() {
-    return maxAge;
-  }
-
   /**
    * Set the schedule and start or restart the scheduler.
    */
   public void schedule() {
     if (quartz == null || schedulerPeriod <= 0) {
-      logger.debug("Cancel scheduling of workspace cleaner due to invalid scheduling period");
+      logger.warn("Cancel scheduling of workspace cleaner due to invalid scheduling period");
       return;
     }
     logger.debug("Scheduling workspace cleaner to run every {} seconds.", schedulerPeriod);
@@ -128,6 +137,22 @@ public class WorkspaceCleaner {
     shutdown();
   }
 
+  // call working file repository cleaner to clean up
+  private void cleanup() {
+    for (String collectionId : collectionIds) {
+      try {
+        workspace.cleanupOldFilesFromCollection(collectionId, maxAge);
+      } catch (IOException e) {
+        logger.error("Cleaning of collection with id:{} failed", collectionId);
+      }
+    }
+    try {
+      workspace.cleanupOldFilesFromMediaPackage(maxAge);
+    } catch (IOException e) {
+      logger.error("Cleaning of mediapackages failed");
+    }
+  }
+
   // --
 
   /** Quartz work horse. */
@@ -135,19 +160,18 @@ public class WorkspaceCleaner {
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-      logger.debug("Start workspace cleaner");
+      logger.debug("Start working file repository cleaner");
       try {
         execute((WorkspaceCleaner) jobExecutionContext.getJobDetail().getJobDataMap().get(JOB_PARAM_PARENT));
       } catch (Exception e) {
-        throw new JobExecutionException("An error occurred while cleaning workspace", e);
+        throw new JobExecutionException("An error occurred while cleaning working file repository", e);
       }
-      logger.debug("Finished workspace cleaner");
+      logger.debug("Finished working file repository cleaner");
     }
 
-    private void execute(WorkspaceCleaner workspaceCleaner) {
-      workspaceCleaner.getWorkspace().cleanup(workspaceCleaner.getMaxAge());
+    private void execute(WorkspaceCleaner workingFileRepositoryCleaner) {
+      workingFileRepositoryCleaner.cleanup();
     }
-
   }
 
 }

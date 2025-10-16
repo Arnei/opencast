@@ -108,7 +108,7 @@ public class WorkingFileRepositoryTest {
     InputStream fromRepo = null;
     InputStream headerIn = null;
     try {
-      fromRepo = repo.get(mediaPackageID, mediaPackageElementID);
+      fromRepo = repo.getStream(mediaPackageID, mediaPackageElementID);
       headerIn = getClass().getClassLoader().getResourceAsStream("opencast_header.gif");
       byte[] bytesFromRepo = IOUtils.toByteArray(fromRepo);
       byte[] bytesFromClasspath = IOUtils.toByteArray(headerIn);
@@ -163,7 +163,7 @@ public class WorkingFileRepositoryTest {
     InputStream fromRepo = null;
     InputStream headerIn = null;
     try {
-      fromRepo = repo.getFromCollection(collectionId, filename);
+      fromRepo = repo.getFromCollectionStream(collectionId, filename);
       byte[] bytesFromRepo = IOUtils.toByteArray(fromRepo);
       headerIn = getClass().getClassLoader().getResourceAsStream("opencast_header.gif");
       byte[] bytesFromClasspath = IOUtils.toByteArray(headerIn);
@@ -185,11 +185,11 @@ public class WorkingFileRepositoryTest {
     byte[] bytesFromCollection = null;
     InputStream in = null;
     try {
-      in = repo.getFromCollection(collectionId, filename);
+      in = repo.getFromCollectionStream(collectionId, filename);
       bytesFromCollection = IOUtils.toByteArray(in);
       IOUtils.closeQuietly(in);
       repo.copyTo(collectionId, filename, "copied-mediapackage", "copied-element", newFileName);
-      in = repo.get("copied-mediapackage", "copied-element");
+      in = repo.getStream("copied-mediapackage", "copied-element");
       byte[] bytesFromCopy = IOUtils.toByteArray(in);
       Assert.assertTrue(Arrays.equals(bytesFromCollection, bytesFromCopy));
     } finally {
@@ -202,11 +202,11 @@ public class WorkingFileRepositoryTest {
     String newFileName = "newfile.gif";
     InputStream in = null;
     try {
-      in = repo.getFromCollection(collectionId, filename);
+      in = repo.getFromCollectionStream(collectionId, filename);
       byte[] bytesFromCollection = IOUtils.toByteArray(in);
       IOUtils.closeQuietly(in);
       repo.moveTo(collectionId, filename, "moved-mediapackage", "moved-element", newFileName);
-      in = repo.get("moved-mediapackage", "moved-element");
+      in = repo.getStream("moved-mediapackage", "moved-element");
       byte[] bytesFromMove = IOUtils.toByteArray(in);
       Assert.assertTrue(Arrays.equals(bytesFromCollection, bytesFromMove));
     } finally {
@@ -221,7 +221,7 @@ public class WorkingFileRepositoryTest {
     Assert.assertTrue(result);
     InputStream in = null;
     try {
-      in = repo.getFromCollection(collectionId, filename);
+      in = repo.getFromCollectionStream(collectionId, filename);
       Assert.assertNotNull(in);
     } finally {
       IOUtils.closeQuietly(in);

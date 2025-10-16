@@ -21,285 +21,252 @@
 
 package org.opencastproject.workspace.impl;
 
-import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.expect;
+import static org.junit.Assert.fail;
 
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.SecurityService;
-import org.opencastproject.security.api.TrustedHttpClient;
+import org.opencastproject.systems.OpencastConstants;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.UrlSupport;
-import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.ProtocolVersion;
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.message.BasicStatusLine;
-import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
-
-import javax.servlet.http.HttpServletResponse;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WorkspaceImplTest {
 
-  private WorkspaceImpl workspace;
-
-  private static final String workspaceRoot = "." + File.separator + "target" + File.separator
-          + "junit-workspace-rootdir";
-  private static final String repoRoot = "." + File.separator + "target" + File.separator + "junit-repo-rootdir";
-
-  @Rule
-  public TemporaryFolder testFolder = new TemporaryFolder();
+  private String mediaPackageID = "working-file-test-media-package-1";
+  private String mediaPackageElementID = "working-file-test-element-1";
+  private String collectionId = "collection-1";
+  private String filename = "file.gif";
+  private WorkspaceImpl repo = new WorkspaceImpl();
 
   @Before
-  public void setUp() {
-    workspace = new WorkspaceImpl(workspaceRoot, false);
-    workspace.activate(null);
+  public void setUp() throws Exception {
+    Organization organization = EasyMock.createMock(Organization.class);
+    EasyMock.expect(organization.getId()).andReturn("org1").anyTimes();
+    Map<String, String> orgProps = new HashMap<String, String>();
+    orgProps.put(OpencastConstants.WFR_URL_ORG_PROPERTY, UrlSupport.DEFAULT_BASE_URL);
+    EasyMock.expect(organization.getProperties()).andReturn(orgProps).anyTimes();
+    EasyMock.replay(organization);
+
+    SecurityService securityService = EasyMock.createMock(SecurityService.class);
+    EasyMock.expect(securityService.getOrganization()).andReturn(organization).anyTimes();
+    EasyMock.replay(securityService);
+
+    repo.setSecurityService(securityService);
+    repo.rootDirectory = "target" + File.separator + "repotest";
+    repo.serverUrl = UrlSupport.DEFAULT_BASE_URL;
+    repo.servicePath = WorkspaceImpl.URI_PREFIX;
+    repo.createRootDirectory();
+
+    // Put an image file into the repository using the mediapackage / element storage
+    InputStream in = null;
+    try {
+      in = getClass().getClassLoader().getResourceAsStream("opencast_header.gif");
+      repo.put(mediaPackageID, mediaPackageElementID, "opencast_header.gif", in);
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+
+    // Repeat the put
+    try {
+      in = getClass().getClassLoader().getResourceAsStream("opencast_header.gif");
+      repo.put(mediaPackageID, mediaPackageElementID, "opencast_header.gif", in);
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+
+    // Put an image file into the repository into a collection
+    try {
+      in = getClass().getClassLoader().getResourceAsStream("opencast_header.gif");
+      repo.putInCollection(collectionId, filename, in);
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
   }
 
   @After
   public void tearDown() throws Exception {
-    workspace.deactivate();
-    FileUtils.deleteDirectory(new File(workspaceRoot));
-    FileUtils.deleteDirectory(new File(repoRoot));
+    FileUtils.forceDelete(new File(repo.rootDirectory));
   }
 
   @Test
-  public void testLongFilenames() throws Exception {
-    WorkingFileRepository repo = EasyMock.createNiceMock(WorkingFileRepository.class);
-    EasyMock.expect(repo.getBaseUri()).andReturn(new URI("http://localhost:8080/files")).anyTimes();
-    EasyMock.replay(repo);
-    workspace.setRepository(repo);
-
-    File source = new File("target/test-classes/../test-classes/../test-classes/../test-classes"
-        + "/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes"
-        + "/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes"
-        + "/../test-classes/../test-classes/opencast_header.gif");
-    URL urlToSource = source.toURI().toURL();
-
-    Organization organization = EasyMock.createMock(Organization.class);
-    EasyMock.expect(organization.getId()).andReturn("org1").anyTimes();
-    SecurityService securityService = EasyMock.createMock(SecurityService.class);
-    EasyMock.expect(securityService.getOrganization()).andReturn(organization).anyTimes();
-    EasyMock.replay(securityService, organization);
-    workspace.setSecurityService(securityService);
-
-    final TrustedHttpClient httpClient = EasyMock.createNiceMock(TrustedHttpClient.class);
-    HttpEntity entity = EasyMock.createNiceMock(HttpEntity.class);
-    EasyMock.expect(entity.getContent()).andReturn(new FileInputStream(source));
-    StatusLine statusLine = EasyMock.createNiceMock(StatusLine.class);
-    EasyMock.expect(statusLine.getStatusCode()).andReturn(HttpServletResponse.SC_OK);
-    HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
-    EasyMock.expect(response.getEntity()).andReturn(entity);
-    EasyMock.expect(response.getStatusLine()).andReturn(statusLine).anyTimes();
-    EasyMock.replay(response, entity, statusLine);
-    EasyMock.expect(httpClient.execute(EasyMock.anyObject(HttpUriRequest.class))).andReturn(response);
-    EasyMock.replay(httpClient);
-    workspace.setTrustedHttpClient(httpClient);
-    Assert.assertTrue(urlToSource.toString().length() > 255);
+  public void testPut() throws Exception {
+    // Get the file back from the repository to check whether it's the same file that we put in.
+    InputStream fromRepo = null;
+    InputStream headerIn = null;
     try {
-      Assert.assertNotNull(workspace.get(urlToSource.toURI()));
+      fromRepo = repo.getStream(mediaPackageID, mediaPackageElementID);
+      headerIn = getClass().getClassLoader().getResourceAsStream("opencast_header.gif");
+      byte[] bytesFromRepo = IOUtils.toByteArray(fromRepo);
+      byte[] bytesFromClasspath = IOUtils.toByteArray(headerIn);
+      Assert.assertEquals(bytesFromClasspath.length, bytesFromRepo.length);
+    } finally {
+      IOUtils.closeQuietly(fromRepo);
+      IOUtils.closeQuietly(headerIn);
+    }
+  }
+
+  @Test
+  public void testDelete() throws Exception {
+    // Delete the file and ensure that we can no longer get() it
+    repo.delete(mediaPackageID, mediaPackageElementID);
+    try {
+      Assert.assertTrue(repo.get(mediaPackageID, mediaPackageElementID) == null);
+      fail("File " + mediaPackageID + "/" + mediaPackageElementID + " was not deleted");
     } catch (NotFoundException e) {
-      // This happens on some machines, so we catch and handle it.
+      // This is intended
     }
   }
 
-  // Calls to put() should put the file into the working file repository, but not in the local cache if there's a valid
-  // filesystem mapping present
   @Test
-  public void testPutCachingWithFilesystemMapping() throws Exception {
-    WorkingFileRepository repo = EasyMock.createNiceMock(WorkingFileRepository.class);
-    EasyMock.expect(
-            repo.getURI(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString()))
-            .andReturn(
-                    new URI("http://localhost:8080/files" + WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX
-                            + "foo/bar/header.gif"));
-    EasyMock.expect(
-            repo.put(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString(),
-                    EasyMock.anyObject(InputStream.class))).andReturn(
-            new URI("http://localhost:8080/files" + WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX
-                    + "foo/bar/header.gif"));
-    EasyMock.expect(repo.getBaseUri()).andReturn(new URI("http://localhost:8080/files")).anyTimes();
-    EasyMock.replay(repo);
+  public void testPutBadId() throws Exception {
+    // Try adding a file with a bad ID
+    String badId = "../etc";
+    InputStream in = null;
+    try {
+      in = getClass().getClassLoader().getResourceAsStream("opencast_header.gif");
+      repo.put(badId, mediaPackageElementID, "opencast_header.gif", in);
+      Assert.fail();
+    } catch (Exception e) {
+      // This is intended
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+  }
 
-    workspace.setRepository(repo);
+  @Test
+  public void testGetBadId() throws Exception {
+    String badId = "../etc";
+    try {
+      repo.get(badId, mediaPackageElementID);
+      Assert.fail();
+    } catch (Exception e) {
+    }
+  }
 
-    // Put a stream into the workspace (and hence, the repository)
-    try (InputStream in = getClass().getResourceAsStream("/opencast_header.gif")) {
+  @Test
+  public void testPutIntoCollection() throws Exception {
+    // Get the file back from the repository to check whether it's the same file that we put in.
+    InputStream fromRepo = null;
+    InputStream headerIn = null;
+    try {
+      fromRepo = repo.getFromCollectionStream(collectionId, filename);
+      byte[] bytesFromRepo = IOUtils.toByteArray(fromRepo);
+      headerIn = getClass().getClassLoader().getResourceAsStream("opencast_header.gif");
+      byte[] bytesFromClasspath = IOUtils.toByteArray(headerIn);
+      Assert.assertEquals(bytesFromClasspath.length, bytesFromRepo.length);
+    } finally {
+      IOUtils.closeQuietly(fromRepo);
+      IOUtils.closeQuietly(headerIn);
+    }
+  }
+
+  @Test
+  public void testCollectionSize() throws Exception {
+    Assert.assertEquals(1, repo.getCollectionSize(collectionId));
+  }
+
+  @Test
+  public void testCopy() throws Exception {
+    String newFileName = "newfile.gif";
+    byte[] bytesFromCollection = null;
+    InputStream in = null;
+    try {
+      in = repo.getFromCollectionStream(collectionId, filename);
+      bytesFromCollection = IOUtils.toByteArray(in);
+      IOUtils.closeQuietly(in);
+      repo.copyTo(collectionId, filename, "copied-mediapackage", "copied-element", newFileName);
+      in = repo.getStream("copied-mediapackage", "copied-element");
+      byte[] bytesFromCopy = IOUtils.toByteArray(in);
+      Assert.assertTrue(Arrays.equals(bytesFromCollection, bytesFromCopy));
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+  }
+
+  @Test
+  public void testMove() throws Exception {
+    String newFileName = "newfile.gif";
+    InputStream in = null;
+    try {
+      in = repo.getFromCollectionStream(collectionId, filename);
+      byte[] bytesFromCollection = IOUtils.toByteArray(in);
+      IOUtils.closeQuietly(in);
+      repo.moveTo(collectionId, filename, "moved-mediapackage", "moved-element", newFileName);
+      in = repo.getStream("moved-mediapackage", "moved-element");
+      byte[] bytesFromMove = IOUtils.toByteArray(in);
+      Assert.assertTrue(Arrays.equals(bytesFromCollection, bytesFromMove));
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+  }
+
+  @Test
+  public void testCleanupOldFilesFromCollectionNothingToDelete() throws Exception {
+    // Cleanup files older than 1 day, nothing should be deleted
+    boolean result = repo.cleanupOldFilesFromCollection(collectionId, 1);
+    Assert.assertTrue(result);
+    InputStream in = null;
+    try {
+      in = repo.getFromCollectionStream(collectionId, filename);
       Assert.assertNotNull(in);
-      workspace.put("foo", "bar", "header.gif", in);
+    } finally {
+      IOUtils.closeQuietly(in);
     }
-
-    // Ensure that the file was put into the working file repository
-    EasyMock.verify(repo);
-
-    // Ensure that the file was not cached in the workspace (since there is a configured filesystem mapping)
-    File file = new File(workspaceRoot, "http___localhost_8080_files_foo_bar_header.gif");
-    Assert.assertFalse(file.exists());
   }
 
-  // Calls to put() should put the file into the working file repository and the local cache if there is no valid
-  // filesystem mapping present
   @Test
-  public void testPutCachingWithoutFilesystemMapping() throws Exception {
-    // First, mock up the collaborating working file repository
-    WorkingFileRepository repo = EasyMock.createMock(WorkingFileRepository.class);
-    final Capture<String> capture = EasyMock.newCapture();
-    EasyMock.expect(repo.toSafeName(EasyMock.capture(capture))).andAnswer(capture::getValue).anyTimes();
-    EasyMock.expect(
-            repo.getURI(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString()))
-            .andReturn(
-                    new URI(UrlSupport.concat("http://localhost:8080", WorkingFileRepository.URI_PREFIX,
-                            WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX, "foo", "bar", "header.gif")));
-    EasyMock.expect(
-            repo.put(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString(),
-                    EasyMock.anyObject(InputStream.class))).andReturn(
-            new URI("http://localhost:8080/files" + WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX
-                    + "foo/bar/header.gif"));
-    EasyMock.expect(repo.getBaseUri()).andReturn(new URI("http://localhost:8080/files")).anyTimes();
-    EasyMock.replay(repo);
-    workspace.setRepository(repo);
-
-    // Put a stream into the workspace (and hence, the repository)
-    try (InputStream in = getClass().getResourceAsStream("/opencast_header.gif")) {
-      Assert.assertNotNull(in);
-      workspace.put("foo", "bar", "header.gif", in);
+  public void testCleanupOldFilesFromCollectionSomethingToDelete() throws Exception {
+    // Cleanup files older than 0 days, file should be deleted
+    boolean result = repo.cleanupOldFilesFromCollection(collectionId, 0);
+    Assert.assertTrue(result);
+    try {
+      Assert.assertTrue(repo.getFromCollection(collectionId, filename) == null);
+    } catch (NotFoundException e) {
+      // This is intended
     }
-
-    // Ensure that the file was put into the working file repository
-    EasyMock.verify(repo);
-
-    // Ensure that the file was cached in the workspace (since there is no configured filesystem mapping)
-    File file = Paths.get(
-        workspaceRoot, WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX, "foo", "bar", "header.gif").toFile();
-    Assert.assertTrue(file.exists());
   }
 
   @Test
-  public void testGetWorkspaceFileWithOutPort() throws Exception {
-    WorkingFileRepository repo = EasyMock.createNiceMock(WorkingFileRepository.class);
-    final Capture<String> capture = EasyMock.newCapture();
-    EasyMock.expect(repo.toSafeName(EasyMock.capture(capture))).andAnswer(capture::getValue).anyTimes();
-    EasyMock.expect(repo.getBaseUri()).andReturn(new URI("http://localhost/files")).anyTimes();
-    EasyMock.replay(repo);
-    workspace.setRepository(repo);
-
-    File workspaceFile = workspace.toWorkspaceFile(new URI("http://foo.com/myaccount/videos/bar.mov"));
-    File expected = Paths.get(workspaceRoot, "http_foo.com", "myaccount", "videos", "bar.mov").toFile();
-    Assert.assertEquals(expected.getAbsolutePath(), workspaceFile.getAbsolutePath());
-
-    workspaceFile = workspace.toWorkspaceFile(new URI("http://foo.com:8080/myaccount/videos/bar.mov"));
-    expected = Paths.get(workspaceRoot, "http_foo.com_8080", "myaccount", "videos", "bar.mov").toFile();
-    Assert.assertEquals(expected.getAbsolutePath(), workspaceFile.getAbsolutePath());
-
-    workspaceFile = workspace.toWorkspaceFile(new URI("http://localhost/files/collection/c1/bar.mov"));
-    expected = Paths.get(workspaceRoot, "collection", "c1", "bar.mov").toFile();
-    Assert.assertEquals(expected.getAbsolutePath(), workspaceFile.getAbsolutePath());
-
+  public void testCleanupOldFilesFromNonExistentCollection() throws Exception {
+    boolean result = repo.cleanupOldFilesFromCollection("UNKNOWN", 0);
+    Assert.assertFalse(result);
   }
 
   @Test
-  public void testGetWorkspaceFileWithPort() throws Exception {
-    WorkingFileRepository repo = EasyMock.createNiceMock(WorkingFileRepository.class);
-    final Capture<String> capture = EasyMock.newCapture();
-    EasyMock.expect(repo.toSafeName(EasyMock.capture(capture))).andAnswer(capture::getValue).anyTimes();
-    EasyMock.expect(repo.getBaseUri()).andReturn(new URI("http://localhost:8080/files")).anyTimes();
-    EasyMock.replay(repo);
-    workspace.setRepository(repo);
-
-    File workspaceFile = workspace.toWorkspaceFile(new URI("http://foo.com/myaccount/videos/bar.mov"));
-    File expected = Paths.get(workspaceRoot, "http_foo.com", "myaccount", "videos", "bar.mov").toFile();
-    Assert.assertEquals(expected.getAbsolutePath(), workspaceFile.getAbsolutePath());
-
-    workspaceFile = workspace.toWorkspaceFile(new URI("http://foo.com:8080/myaccount/videos/bar.mov"));
-    expected = Paths.get(workspaceRoot, "http_foo.com_8080", "myaccount", "videos", "bar.mov").toFile();
-    Assert.assertEquals(expected.getAbsolutePath(), workspaceFile.getAbsolutePath());
-
-    workspaceFile = workspace.toWorkspaceFile(new URI("http://localhost:8080/files/collection/c1/bar.mov"));
-    expected = Paths.get(workspaceRoot, "collection", "c1", "bar.mov").toFile();
-    Assert.assertEquals(expected.getAbsolutePath(), workspaceFile.getAbsolutePath());
-
+  public void testCleanupOldFilesFromMediaPackageNothingToDelete() throws Exception {
+    // Cleanup files older than 1 day, nothing should be deleted
+    boolean result = repo.cleanupOldFilesFromMediaPackage(1);
+    Assert.assertTrue(result);
+    File file = null;
+    file = repo.getFile(mediaPackageID, mediaPackageElementID);
+    Assert.assertNotNull(file);
   }
 
   @Test
-  public void testGetNoFilename() throws Exception {
-    final File expectedFile = new File(workspaceRoot + "/http_foo.com/myaccount/videos/unknown");
-    FileUtils.write(expectedFile, "asdf", StandardCharsets.UTF_8);
-    expectedFile.deleteOnExit();
-
-    WorkingFileRepository repo = EasyMock.createNiceMock(WorkingFileRepository.class);
-    EasyMock.expect(repo.getBaseUri()).andReturn(new URI("http://localhost:8080/files")).anyTimes();
-    EasyMock.replay(repo);
-    workspace.setRepository(repo);
-
-    Organization organization = EasyMock.createMock(Organization.class);
-    EasyMock.expect(organization.getId()).andReturn("org1").anyTimes();
-    SecurityService securityService = EasyMock.createMock(SecurityService.class);
-    EasyMock.expect(securityService.getOrganization()).andReturn(organization).anyTimes();
-    EasyMock.replay(securityService, organization);
-    workspace.setSecurityService(securityService);
-
-    HttpEntity httpEntity = EasyMock.createMock(HttpEntity.class);
-    expect(httpEntity.getContent()).andAnswer(() -> IOUtils.toInputStream("", "UTF-8"));
-    CloseableHttpResponse response = EasyMock.createMock(CloseableHttpResponse.class);
-    expect(response.getStatusLine())
-        .andReturn(new BasicStatusLine(new ProtocolVersion("Http", 1, 1), 200, "Good to go"))
-        .anyTimes();
-    expect(response.getEntity()).andReturn(httpEntity);
-    TrustedHttpClient trustedHttpClient = EasyMock.createNiceMock(TrustedHttpClient.class);
-    expect(trustedHttpClient.execute(anyObject(HttpUriRequest.class))).andReturn(response).anyTimes();
-    EasyMock.replay(httpEntity, response, trustedHttpClient);
-    workspace.setTrustedHttpClient(trustedHttpClient);
-
-    File resultingFile = workspace.get(URI.create("http://foo.com/myaccount/videos/"));
-    Assert.assertEquals(expectedFile, resultingFile);
-  }
-
-  @Test
-  public void testCleanup() throws Exception {
-    workspace.cleanup(-1);
-    Assert.assertEquals(0L, workspace.getUsedSpace().get().longValue());
-
-    File file = Paths.get(workspaceRoot, "test", "c1", "bar.mov").toFile();
-    FileUtils.write(file, "asdf", StandardCharsets.UTF_8);
-    file.deleteOnExit();
-
-    Assert.assertEquals(4L, workspace.getUsedSpace().get().longValue());
-
-    workspace.cleanup(0);
-    Assert.assertEquals(0L, workspace.getUsedSpace().get().longValue());
-
-    FileUtils.write(file, "asdf", StandardCharsets.UTF_8);
-    Assert.assertEquals(4L, workspace.getUsedSpace().get().longValue());
-
-    workspace.cleanup(100);
-    Assert.assertEquals(4L, workspace.getUsedSpace().get().longValue());
-
-    Thread.sleep(1100L);
-
-    Assert.assertTrue(Paths.get(workspaceRoot, "test", "c1").toFile().exists());
-    workspace.cleanup(1);
-    Assert.assertEquals(0L, workspace.getUsedSpace().get().longValue());
-    Assert.assertFalse(Paths.get(workspaceRoot, "test").toFile().exists());
+  public void testCleanupOldFilesFromMediaPackageSomethingToDelete() throws Exception {
+    // Cleanup files older than 1 day, something should be deleted
+    boolean result = repo.cleanupOldFilesFromMediaPackage(0);
+    Assert.assertTrue(result);
+    File file = null;
+    try {
+      file = repo.getFile(mediaPackageID, mediaPackageElementID);
+      Assert.fail();
+    } catch (NotFoundException e) {
+      Assert.assertNull(file);
+    }
   }
 
 }

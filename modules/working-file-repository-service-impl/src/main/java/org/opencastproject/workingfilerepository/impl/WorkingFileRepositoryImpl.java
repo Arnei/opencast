@@ -21,7 +21,11 @@
 
 package org.opencastproject.workingfilerepository.impl;
 
+import static org.opencastproject.util.RequireUtil.notNull;
+
 import org.opencastproject.cleanup.RecursiveDirectoryCleaner;
+import org.opencastproject.mediapackage.MediaPackageElement;
+import org.opencastproject.mediapackage.identifier.Id;
 import org.opencastproject.rest.RestConstants;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
@@ -56,6 +60,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
@@ -173,7 +178,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
     // Determine garbage collection period
     int garbageCollectionPeriodInSeconds = -1;
     String period = StringUtils.trimToNull(
-            cc.getBundleContext().getProperty(WORKING_FILE_REPOSITORY_CLEANUP_PERIOD_KEY));
+        cc.getBundleContext().getProperty(WORKING_FILE_REPOSITORY_CLEANUP_PERIOD_KEY));
     if (period != null) {
       try {
         garbageCollectionPeriodInSeconds = Integer.parseInt(period);
@@ -198,7 +203,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
     // Determine which collections should be garbage collected
     List<String> collectionsToCleanUp = null;
     String collectionsToCleanUpStr = StringUtils.trimToNull(
-            cc.getBundleContext().getProperty(WORKING_FILE_REPOSITORY_CLEANUP_COLLECTIONS_KEY));
+        cc.getBundleContext().getProperty(WORKING_FILE_REPOSITORY_CLEANUP_COLLECTIONS_KEY));
     if (collectionsToCleanUpStr != null) {
       collectionsToCleanUp = Arrays.asList(collectionsToCleanUpStr.split("\\s*,\\s*"));
     }
@@ -206,7 +211,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
     // Start cleanup scheduler if we have sensible cleanup values:
     if (garbageCollectionPeriodInSeconds > 0 && maxAgeInDays > 0 && collectionsToCleanUp != null) {
       workingFileRepositoryCleaner = new WorkingFileRepositoryCleaner(this,
-              garbageCollectionPeriodInSeconds, maxAgeInDays, collectionsToCleanUp);
+          garbageCollectionPeriodInSeconds, maxAgeInDays, collectionsToCleanUp);
       workingFileRepositoryCleaner.schedule();
     }
 
@@ -269,15 +274,87 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
     }
   }
 
+  public boolean delete(MediaPackageElement mpe) throws IOException {
+    return delete(mpe.getMediaPackage().getIdentifier().toString(), mpe.getIdentifier());
+  }
+
+  @Override
+  public void delete(URI uri) throws IOException {
+    String uriPath = uri.toString();
+    String[] uriElements = uriPath.split("/");
+    String collectionId = null;
+    boolean isMediaPackage = false;
+
+    logger.trace("delete {}", uriPath);
+
+    if (uriPath.startsWith(getBaseUri().toString())) {
+      if (uriPath.indexOf(WorkingFileRepository.COLLECTION_PATH_PREFIX) > 0) {
+        if (uriElements.length > 2) {
+          collectionId = uriElements[uriElements.length - 2];
+          String filename = uriElements[uriElements.length - 1];
+          deleteFromCollection(collectionId, filename);
+        }
+      } else if (uriPath.indexOf(WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX) > 0) {
+        isMediaPackage = true;
+        if (uriElements.length >= 3) {
+          String mediaPackageId = uriElements[uriElements.length - 3];
+          String elementId = uriElements[uriElements.length - 2];
+          delete(mediaPackageId, elementId);
+        }
+      }
+    }
+  }
+
+  @Override
+  public File get(URI uri) throws NotFoundException, IOException {
+    String uriPath = uri.toString();
+    String[] uriElements = uriPath.split("/");
+    String collectionId = null;
+    boolean isMediaPackage = false;
+
+    logger.trace("delete {}", uriPath);
+
+    if (uriPath.startsWith(getBaseUri().toString())) {
+      if (uriPath.indexOf(WorkingFileRepository.COLLECTION_PATH_PREFIX) > 0) {
+        if (uriElements.length > 2) {
+          collectionId = uriElements[uriElements.length - 2];
+          String filename = uriElements[uriElements.length - 1];
+          return getFromCollection(collectionId, filename);
+        }
+      } else if (uriPath.indexOf(WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX) > 0) {
+        isMediaPackage = true;
+        if (uriElements.length >= 3) {
+          String mediaPackageId = uriElements[uriElements.length - 3];
+          String elementId = uriElements[uriElements.length - 2];
+          return get(mediaPackageId, elementId);
+        }
+      }
+    }
+
+    throw new NotFoundException("Could not get file from " + uri.toString());
+  }
+
   /**
    * {@inheritDoc}
    *
    * @see org.opencastproject.workingfilerepository.api.WorkingFileRepository#get(java.lang.String, java.lang.String)
    */
-  public InputStream get(String mediaPackageID, String mediaPackageElementID) throws NotFoundException, IOException {
+  public File get(String mediaPackageID, String mediaPackageElementID) throws NotFoundException, IOException {
     File f = getFile(mediaPackageID, mediaPackageElementID);
     logger.debug("Attempting to read file {}", f.getAbsolutePath());
-    return new FileInputStream(f);
+    return f;
+  }
+
+  public File get(MediaPackageElement mpe) throws NotFoundException, IOException {
+    return get(mpe.getMediaPackage().getIdentifier().toString(), mpe.getIdentifier());
+  }
+
+  public InputStream getStream(MediaPackageElement mpe) throws NotFoundException, IOException {
+    return getStream(mpe.getMediaPackage().getIdentifier().toString(),mpe.getIdentifier());
+  }
+
+  public InputStream getStream(String mediaPackageID, String mediaPackageElementID) throws NotFoundException, IOException {
+    return new FileInputStream(get(mediaPackageID, mediaPackageElementID));
   }
 
   /**
@@ -348,7 +425,8 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
    * java.lang.String, java.io.InputStream)
    */
   public URI put(String mediaPackageID, String mediaPackageElementID, String filename, InputStream in)
-          throws IOException {
+      throws IOException {
+    notNull(in, "in");
     checkPathSafe(mediaPackageID);
     checkPathSafe(mediaPackageElementID);
     File dir = getElementDirectory(mediaPackageID, mediaPackageElementID);
@@ -516,7 +594,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
    *         if the file cannot be found in the Working File Repository
    */
   protected File getFile(String mediaPackageID, String mediaPackageElementID) throws IllegalStateException,
-          NotFoundException {
+      NotFoundException {
     checkPathSafe(mediaPackageID);
     checkPathSafe(mediaPackageElementID);
     File directory = getElementDirectory(mediaPackageID, mediaPackageElementID);
@@ -536,9 +614,9 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
         throw new NotFoundException("Unable to locate " + f + " in the working file repository");
     } else {
       logger.error("Integrity error: Element directory {} contains more than one element", mediaPackageID + "/"
-              + mediaPackageElementID);
+          + mediaPackageElementID);
       throw new IllegalStateException("Directory " + mediaPackageID + "/" + mediaPackageElementID
-                                              + "does not contain exactly one element");
+          + "does not contain exactly one element");
     }
   }
 
@@ -554,7 +632,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
    *         if either the collection or the file don't exist
    */
   public File getFileFromCollection(String collectionId, String fileName) throws NotFoundException,
-          IllegalArgumentException {
+      IllegalArgumentException {
     checkPathSafe(collectionId);
 
     File directory = null;
@@ -595,7 +673,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
    */
   private File getCollectionDirectory(String collectionId, boolean create) throws IOException {
     File collectionDir = new File(
-            PathSupport.concat(new String[]{rootDirectory, COLLECTION_PATH_PREFIX, collectionId}));
+        PathSupport.concat(new String[]{rootDirectory, COLLECTION_PATH_PREFIX, collectionId}));
     if (!collectionDir.exists()) {
       if (!create)
         return null;
@@ -634,13 +712,17 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
     return files.length;
   }
 
-  public InputStream getFromCollection(String collectionId, String fileName) throws NotFoundException, IOException {
+  public File getFromCollection(String collectionId, String fileName) throws NotFoundException, IOException {
     File f = getFileFromCollection(collectionId, fileName);
     if (f == null || !f.isFile()) {
       throw new NotFoundException("Unable to locate " + f + " in the working file repository");
     }
     logger.debug("Attempting to read file {}", f.getAbsolutePath());
-    return new FileInputStream(f);
+    return f;
+  }
+
+  public InputStream getFromCollectionStream(String collectionId, String fileName) throws NotFoundException, IOException {
+    return new FileInputStream(getFromCollection(collectionId, fileName));
   }
 
   /**
@@ -707,7 +789,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
   }
 
   public URI copyTo(String fromCollection, String fromFileName, String toMediaPackage, String toMediaPackageElement,
-                    String toFileName) throws NotFoundException, IOException {
+      String toFileName) throws NotFoundException, IOException {
     File source = getFileFromCollection(fromCollection, fromFileName);
     if (source == null)
       throw new IllegalArgumentException("Source file " + fromCollection + "/" + fromFileName + " does not exist");
@@ -718,7 +800,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
         FileUtils.forceMkdir(destDir);
       } catch (IOException e) {
         throw new IllegalStateException("could not create mediapackage/element directory '" + destDir.getAbsolutePath()
-                                                + "' : " + e);
+            + "' : " + e);
       }
     }
     File destFile;
@@ -740,20 +822,20 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
    */
   @Override
   public URI moveTo(String fromCollection, String fromFileName, String toMediaPackage, String toMediaPackageElement,
-                    String toFileName) throws NotFoundException, IOException {
+      String toFileName) throws NotFoundException, IOException {
     File source = getFileFromCollection(fromCollection, fromFileName);
     File sourceMd5 = getMd5File(source);
     File destDir = getElementDirectory(toMediaPackage, toMediaPackageElement);
 
     logger.debug("Moving {} from {} to {}/{}", new String[]{fromFileName, fromCollection, toMediaPackage,
-            toMediaPackageElement});
+        toMediaPackageElement});
     if (!destDir.exists()) {
       // we needed to create the directory, but couldn't
       try {
         FileUtils.forceMkdir(destDir);
       } catch (IOException e) {
         throw new IllegalStateException("could not create mediapackage/element directory '" + destDir.getAbsolutePath()
-                                                + "' : " + e);
+            + "' : " + e);
       }
     }
 
@@ -774,6 +856,16 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
       throw new IllegalStateException("unable to copy file" + e);
     }
     return getURI(toMediaPackage, toMediaPackageElement, dest.getName());
+  }
+
+  @Override
+  public URI moveTo(URI collectionURI, String toMediaPackage, String toMediaPackageElement, String toFileName)
+      throws NotFoundException, IOException {
+    String path = collectionURI.toString();
+    String filename = FilenameUtils.getName(path);
+    String collection = getCollection(collectionURI);
+    // move in WFR
+    return moveTo(collection, filename, toMediaPackage, toMediaPackageElement, toFileName);
   }
 
   /**
@@ -849,7 +941,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
     for (int i = 0; i < files.length; i++) {
       try {
         uris[i] = new URI(getBaseUri() + COLLECTION_PATH_PREFIX + collectionId + "/"
-                                  + toSafeName(getSourceFile(files[i]).getName()));
+            + toSafeName(getSourceFile(files[i]).getName()));
       } catch (URISyntaxException e) {
         throw new IllegalStateException("Invalid URI for " + files[i]);
       }
@@ -865,7 +957,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
    *         if the media package element does not exist
    */
   String getMediaPackageElementDigest(String mediaPackageID, String mediaPackageElementID) throws IOException,
-          IllegalStateException, NotFoundException {
+      IllegalStateException, NotFoundException {
     File f = getFile(mediaPackageID, mediaPackageElementID);
     if (f == null)
       throw new NotFoundException(mediaPackageID + "/" + mediaPackageElementID);
@@ -978,7 +1070,7 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
     for (File f : colDir.listFiles()) {
       long lastModified = f.lastModified();
       logger.trace("{} last modified: {}, reference date: {}",
-              f.getName(), new Date(lastModified), new Date(referenceTime));
+          f.getName(), new Date(lastModified), new Date(referenceTime));
       if (lastModified <= referenceTime) {
         // Delete file
         deleteFromCollection(collectionId, f.getName());
@@ -992,8 +1084,36 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
   @Override
   public boolean cleanupOldFilesFromMediaPackage(long days) throws IOException {
     return RecursiveDirectoryCleaner.cleanDirectory(
-            Paths.get(rootDirectory, MEDIAPACKAGE_PATH_PREFIX),
-            Duration.ofDays(days));
+        Paths.get(rootDirectory, MEDIAPACKAGE_PATH_PREFIX),
+        Duration.ofDays(days));
+  }
+
+  @Override
+  public void cleanup(Id mediaPackageId) throws IOException {
+    cleanup(mediaPackageId, false);
+  }
+
+  @Override
+  public void cleanup(Id mediaPackageId, boolean filesOnly) throws IOException {
+    final File mediaPackageDir = workspaceFile(
+        WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX, mediaPackageId.toString());
+
+    if (filesOnly) {
+      logger.debug("Clean workspace media package directory {} (files only)", mediaPackageDir);
+      FileSupport.delete(mediaPackageDir, FileSupport.DELETE_FILES);
+    }
+    else {
+      logger.debug("Clean workspace media package directory {}", mediaPackageDir);
+      FileUtils.deleteDirectory(mediaPackageDir);
+    }
+  }
+
+  private Path workspacePath(String... path) {
+    return Paths.get(rootDirectory, path);
+  }
+
+  private File workspaceFile(String... path) {
+    return workspacePath(path).toFile();
   }
 
   /**
@@ -1035,6 +1155,38 @@ public class WorkingFileRepositoryImpl implements WorkingFileRepository, PathMap
     }
 
     return URI.create(UrlSupport.concat(serverUrl, servicePath));
+  }
+
+  /**
+   * Returns the working file repository collection.
+   * <p>
+   *
+   * <pre>
+   * http://localhost:8080/files/collection/&lt;collection&gt;/ -> &lt;collection&gt;
+   * </pre>
+   *
+   * @param uri
+   *          the working file repository collection uri
+   * @return the collection name
+   */
+  private String getCollection(URI uri) {
+    String path = uri.toString();
+    if (path.indexOf(WorkingFileRepository.COLLECTION_PATH_PREFIX) < 0) {
+      throw new IllegalArgumentException(uri + " must point to a working file repository collection");
+    }
+
+    String collection = FilenameUtils.getPath(path);
+    if (collection.endsWith("/")) {
+      collection = collection.substring(0, collection.length() - 1);
+    }
+    collection = collection.substring(collection.lastIndexOf("/"));
+    collection = collection.substring(collection.lastIndexOf("/") + 1, collection.length());
+    return collection;
+  }
+
+  @Override
+  public String rootDirectory() {
+    return rootDirectory;
   }
 
   /**

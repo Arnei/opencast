@@ -634,7 +634,7 @@ public class IndexServiceImplTest {
     Workspace workspace = EasyMock.createMock(Workspace.class);
     EasyMock.expect(workspace.put(EasyMock.capture(mediapackageIdResult), EasyMock.capture(catalogIdResult),
             EasyMock.capture(filenameResult), EasyMock.capture(catalogResult))).andReturn(new URI("catalog.xml"));
-    EasyMock.expect(workspace.read(getClass().getResource("/dublincore.xml").toURI()))
+    EasyMock.expect(workspace.getStream(getClass().getResource("/dublincore.xml").toURI()))
             .andAnswer(() -> getClass().getResourceAsStream("/dublincore.xml")).anyTimes();
     EasyMock.replay(workspace);
 
@@ -842,7 +842,7 @@ public class IndexServiceImplTest {
     Workspace workspace = EasyMock.createMock(Workspace.class);
     EasyMock.expect(workspace.put(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString(),
             EasyMock.anyObject())).andReturn(getClass().getResource("/dublincore.xml").toURI()).anyTimes();
-    EasyMock.expect(workspace.read(EasyMock.anyObject())).andAnswer(
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class))).andAnswer(
             () -> getClass().getResourceAsStream("/dublincore.xml")).anyTimes();
     EasyMock.replay(workspace);
     CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace).getA();

@@ -127,7 +127,6 @@ public class RenameFilesWorkflowOperationHandler extends AbstractWorkflowOperati
 
     for (var track: trackSelector.select(mediaPackage, false)) {
       var uri = track.getURI();
-      var extension = FilenameUtils.getExtension(uri.toString());
       track.generateIdentifier();
 
       // Prepare placeholders and filename
@@ -139,7 +138,7 @@ public class RenameFilesWorkflowOperationHandler extends AbstractWorkflowOperati
 
       // Put updated filename in working file repository and update the track.
       // Make sure it has a new identifier to prevent conflicts with the old files.
-      try (var in = workspace.read(uri)) {
+      try (var in = workspace.getStream(track)) {
         var newUri = workspace.put(mediaPackageId, track.getIdentifier(), filename, in);
         logger.info("Renaming {} to {}", uri, newUri);
         track.setURI(newUri);

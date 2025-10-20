@@ -681,7 +681,7 @@ public class ProcessSmilWorkflowOperationHandler extends AbstractWorkflowOperati
     }
     Smil smil = null;
     try {
-      File smilFile = workspace.get(catalogs[0].getURI());
+      File smilFile = workspace.get(catalogs[0]);
       // break up chained method for junit smil service mockup
       SmilResponse response = smilService.fromXml(FileUtils.readFileToString(smilFile, "UTF-8"));
       smil = response.getSmil();

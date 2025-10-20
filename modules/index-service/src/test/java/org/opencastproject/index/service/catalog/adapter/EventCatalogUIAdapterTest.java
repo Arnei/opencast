@@ -114,7 +114,7 @@ public class EventCatalogUIAdapterTest {
     URI eventDublincoreURI = getClass().getResource("/catalog-adapter/event-dublincore.xml").toURI();
 
     workspace = EasyMock.createMock(Workspace.class);
-    EasyMock.expect(workspace.read(eventDublincoreURI))
+    EasyMock.expect(workspace.getStream(eventDublincoreURI))
             .andAnswer(() -> new FileInputStream(new File(eventDublincoreURI)));
     EasyMock.replay(workspace);
 

@@ -29,6 +29,7 @@ import org.opencastproject.mediapackage.DefaultMediaPackageSerializerImpl;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.metadata.api.MetadataValue;
 import org.opencastproject.metadata.api.MetadataValues;
 import org.opencastproject.metadata.api.StaticMetadata;
@@ -73,7 +74,7 @@ public final class StaticMetadataServiceDublinCoreImplTest {
     InputStream dcFileDefect = getClass().getResourceAsStream("/dublincore-defect.xml");
     assertNotNull(dcFile);
     // set expectations
-    EasyMock.expect(workspace.read(EasyMock.anyObject())).andAnswer(
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class))).andAnswer(
             () -> EasyMock.getCurrentArguments()[0].toString().contains("-defect") ? dcFileDefect : dcFile).anyTimes();
     // put into replay mode
     EasyMock.replay(workspace);

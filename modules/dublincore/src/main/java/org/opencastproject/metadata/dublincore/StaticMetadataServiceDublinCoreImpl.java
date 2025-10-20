@@ -408,7 +408,7 @@ public class StaticMetadataServiceDublinCoreImpl implements StaticMetadataServic
     try {
       URI uri = catalog.getURI();
       if (serializer != null) uri = serializer.decodeURI(uri);
-      in = workspace.read(uri);
+      in = workspace.getStream(catalog);
       return some((DublinCoreCatalog) DublinCores.read(in));
     } catch (Exception e) {
       logger.warn("Unable to load metadata from catalog '{}'", catalog);

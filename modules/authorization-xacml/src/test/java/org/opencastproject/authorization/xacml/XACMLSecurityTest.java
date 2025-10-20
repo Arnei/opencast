@@ -110,7 +110,7 @@ public class XACMLSecurityTest {
               FileUtils.copyFile(new File(uri.getValue()), dest);
               return dest;
             }).anyTimes();
-    EasyMock.expect(workspace.read(EasyMock.capture(uri))).andAnswer(
+    EasyMock.expect(workspace.getStream(EasyMock.capture(uri))).andAnswer(
             () -> new FileInputStream(uri.getValue().getPath())).anyTimes();
     workspace.delete(EasyMock.anyObject(URI.class));
     EasyMock.expectLastCall().anyTimes();

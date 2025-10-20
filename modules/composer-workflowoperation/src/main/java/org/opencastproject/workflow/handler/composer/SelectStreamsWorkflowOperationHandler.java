@@ -593,7 +593,7 @@ public class SelectStreamsWorkflowOperationHandler extends AbstractWorkflowOpera
 
       // Copy the files on dis and put them into the working file repository
       final URI newUri = workspace.put(track.getMediaPackage().getIdentifier().toString(), copiedTrack.getIdentifier(),
-              targetFilename, workspace.read(track.getURI()));
+              targetFilename, workspace.getStream(track));
       copiedTrack.setURI(newUri);
     } catch (IOException | NotFoundException e) {
       throw new WorkflowOperationException(String.format("Error while copying track %s", track.getIdentifier()), e);

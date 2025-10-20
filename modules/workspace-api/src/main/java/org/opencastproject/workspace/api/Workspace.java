@@ -75,6 +75,7 @@ public interface Workspace extends StorageUsage {
    */
   InputStream getStream(String mediaPackageID, String mediaPackageElementID) throws IOException, NotFoundException;
   InputStream getStream(MediaPackageElement mpe) throws IOException, NotFoundException;
+  InputStream getStream(URI uri) throws IOException, NotFoundException;
   File get(String mediaPackageID, String mediaPackageElementID) throws IOException, NotFoundException;
   File get(MediaPackageElement mpe) throws IOException, NotFoundException;
   File get(URI uri) throws NotFoundException, IOException;

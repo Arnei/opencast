@@ -76,13 +76,13 @@ public class OaiPmhPersistenceTest {
     mp2 = MediaPackageSupport.loadFromClassPath("/mp2.xml");
 
     Workspace workspace = EasyMock.createNiceMock(Workspace.class);
-    EasyMock.expect(workspace.read(uri("series-dublincore.xml")))
+    EasyMock.expect(workspace.getStream(uri("series-dublincore.xml")))
             .andAnswer(() -> getClass().getResourceAsStream("/series-dublincore.xml")).anyTimes();
-    EasyMock.expect(workspace.read(uri("episode-dublincore.xml")))
+    EasyMock.expect(workspace.getStream(uri("episode-dublincore.xml")))
             .andAnswer(() -> getClass().getResourceAsStream("/episode-dublincore.xml")).anyTimes();
-    EasyMock.expect(workspace.read(uri("mpeg7.xml")))
+    EasyMock.expect(workspace.getStream(uri("mpeg7.xml")))
             .andAnswer(() -> getClass().getResourceAsStream("/mpeg7.xml")).anyTimes();
-    EasyMock.expect(workspace.read(uri("series-xacml.xml")))
+    EasyMock.expect(workspace.getStream(uri("series-xacml.xml")))
             .andAnswer(() -> getClass().getResourceAsStream("/series-xacml.xml")).anyTimes();
     EasyMock.replay(workspace);
 

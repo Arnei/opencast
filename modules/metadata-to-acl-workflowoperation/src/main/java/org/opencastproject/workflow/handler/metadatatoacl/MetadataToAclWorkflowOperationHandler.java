@@ -96,7 +96,7 @@ public class MetadataToAclWorkflowOperationHandler extends AbstractWorkflowOpera
     }
     DublinCoreCatalog dcCatalog;
     try {
-      dcCatalog = DublinCoreXmlFormat.read(workspace.read(catalogs[0].getURI()));
+      dcCatalog = DublinCoreXmlFormat.read(workspace.getStream(catalogs[0]));
     } catch (IOException | SAXException | ParserConfigurationException | NotFoundException e) {
       throw new WorkflowOperationException("Unable to load Dublin Core catalog from media package " + mediaPackage, e);
     }

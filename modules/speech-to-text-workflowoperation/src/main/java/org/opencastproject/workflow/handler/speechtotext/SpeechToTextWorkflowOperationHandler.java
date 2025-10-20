@@ -334,7 +334,7 @@ public class
       }
 
       subtitleMediaPackageElement.generateIdentifier();
-      try (InputStream in = workspace.read(output)) {
+      try (InputStream in = workspace.getStream(output)) {
         URI uri = workspace.put(parentMediaPackage.getIdentifier().toString(),
                 subtitleMediaPackageElement.getIdentifier(),
                 FilenameUtils.getName(output.getPath()), in);

@@ -26,6 +26,7 @@ import org.opencastproject.mediapackage.CatalogImpl;
 import org.opencastproject.mediapackage.EName;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCores;
@@ -60,7 +61,7 @@ public class TransferMetadataOperationHandlerTest {
 
     String dc = IOUtils.toString(getClass().getResourceAsStream("/dublincore.xml"), StandardCharsets.UTF_8);
     Workspace workspace = EasyMock.createMock(Workspace.class);
-    EasyMock.expect(workspace.read(EasyMock.anyObject()))
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class)))
             .andAnswer(() -> getClass().getResourceAsStream("/dublincore.xml")).anyTimes();
     EasyMock.expect(workspace.put(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject()))
             .andAnswer(() -> {

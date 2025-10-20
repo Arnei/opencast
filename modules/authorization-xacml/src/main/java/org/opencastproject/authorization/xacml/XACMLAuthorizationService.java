@@ -296,7 +296,7 @@ public class XACMLAuthorizationService implements AuthorizationService {
   /** Load an ACL from the given URI. */
   private Optional<AccessControlList> loadAcl(final URI uri) {
     logger.debug("Load Acl from {}", uri);
-    try (InputStream is = workspace.read(uri)) {
+    try (InputStream is = workspace.getStream(uri)) {
       AccessControlList acl = XACMLUtils.parseXacml(is);
       return Optional.of(acl);
     } catch (NotFoundException e) {

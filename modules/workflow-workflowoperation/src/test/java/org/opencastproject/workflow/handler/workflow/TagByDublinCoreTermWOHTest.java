@@ -24,6 +24,7 @@ import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationInstance.OperationState;
@@ -67,7 +68,7 @@ public class TagByDublinCoreTermWOHTest {
     instance.setMediaPackage(mp);
 
     workspace = EasyMock.createNiceMock(Workspace.class);
-    EasyMock.expect(workspace.read(EasyMock.anyObject()))
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class)))
             .andAnswer(() -> getClass().getResourceAsStream("/dublincore.xml"));
     EasyMock.replay(workspace);
     operationHandler.setWorkspace(workspace);

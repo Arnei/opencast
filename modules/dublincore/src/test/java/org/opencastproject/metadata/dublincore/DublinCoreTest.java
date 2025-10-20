@@ -47,6 +47,7 @@ import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.EName;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElements;
 import org.opencastproject.mediapackage.MediaPackageReferenceImpl;
 import org.opencastproject.mediapackage.NamespaceBindingException;
@@ -134,10 +135,7 @@ public class DublinCoreTest {
     if (!catalogFile2.exists() || !catalogFile2.canRead())
       throw new Exception("Unable to access test catalog 2");
     Workspace workspace = EasyMock.createNiceMock(Workspace.class);
-    EasyMock.expect(workspace.get(EasyMock.anyObject())).andReturn(catalogFile).anyTimes();
-    EasyMock.expect(workspace.get(EasyMock.anyObject(), EasyMock.anyBoolean()))
-            .andReturn(tmpCatalogFile).andReturn(tmpCatalogFile2);
-    EasyMock.expect(workspace.read(EasyMock.anyObject())).andAnswer(() -> new FileInputStream(catalogFile)).anyTimes();
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class))).andAnswer(() -> new FileInputStream(catalogFile)).anyTimes();
     EasyMock.replay(workspace);
     service = new DublinCoreCatalogService();
     service.setWorkspace(workspace);

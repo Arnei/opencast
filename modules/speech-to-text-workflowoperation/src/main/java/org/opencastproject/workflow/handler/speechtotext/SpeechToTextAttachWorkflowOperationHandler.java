@@ -171,7 +171,7 @@ public class SpeechToTextAttachWorkflowOperationHandler extends AbstractWorkflow
       var subtitleElement = appendSubtitleAs == AppendSubtitleAs.attachment ? new AttachmentImpl() : new TrackImpl();
       var elementId = subtitleElement.generateIdentifier();
 
-      try (InputStream in = workspace.read(output)) {
+      try (InputStream in = workspace.getStream(output)) {
         URI uri = workspace.put(mediaPackage.getIdentifier().toString(), elementId,
                 FilenameUtils.getName(output.getPath()), in);
         subtitleElement.setURI(uri);

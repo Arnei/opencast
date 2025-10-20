@@ -322,7 +322,7 @@ public class ProcessSmilWorkflowOperationHandlerTest {
           return uriMP; // default
         }).anyTimes();
 
-    EasyMock.expect(workspace.get(EasyMock.anyObject())).andAnswer(() -> {
+    EasyMock.expect(workspace.get(EasyMock.anyObject(MediaPackageElement.class))).andAnswer(() -> {
       String name;
       try {
         URI uri = (URI) EasyMock.getCurrentArguments()[0];
@@ -405,7 +405,7 @@ public class ProcessSmilWorkflowOperationHandlerTest {
           }
           return uriMP; // default
         }).anyTimes();
-    EasyMock.expect(workspace.get(EasyMock.anyObject()))
+    EasyMock.expect(workspace.get(EasyMock.anyObject(MediaPackageElement.class)))
         .andAnswer(() -> {
           String name;
           try {

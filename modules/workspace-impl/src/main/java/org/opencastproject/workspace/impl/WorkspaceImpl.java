@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -369,6 +370,11 @@ public final class WorkspaceImpl implements Workspace {
   public InputStream getStream(String mediaPackageID, String mediaPackageElementID)
           throws NotFoundException, IOException {
     return new FileInputStream(get(mediaPackageID, mediaPackageElementID));
+  }
+
+  public InputStream getStream(URI uri) throws NotFoundException, IOException {
+    // fall back to get() which should download the file into local workspace if necessary
+    return new DeleteOnCloseFileInputStream(get(uri));
   }
 
   /**
@@ -1198,6 +1204,27 @@ public final class WorkspaceImpl implements Workspace {
     collection = collection.substring(collection.lastIndexOf("/"));
     collection = collection.substring(collection.lastIndexOf("/") + 1, collection.length());
     return collection;
+  }
+
+  private class DeleteOnCloseFileInputStream extends FileInputStream {
+    private File file;
+
+    DeleteOnCloseFileInputStream(File file) throws FileNotFoundException {
+      super(file);
+      this.file = file;
+    }
+
+    public void close() throws IOException {
+      try {
+        super.close();
+      } finally {
+        if (file != null) {
+          logger.debug("Cleaning up {}", file);
+          file.delete();
+          file = null;
+        }
+      }
+    }
   }
 
   @Override

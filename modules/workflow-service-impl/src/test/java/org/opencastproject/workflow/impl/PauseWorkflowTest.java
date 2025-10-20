@@ -35,6 +35,7 @@ import org.opencastproject.mediapackage.DefaultMediaPackageSerializerImpl;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.metadata.api.MediaPackageMetadataService;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AclScope;
@@ -157,7 +158,7 @@ public class PauseWorkflowTest {
 
     workspace = createNiceMock(Workspace.class);
     EasyMock.expect(workspace.getCollectionContents((String) EasyMock.anyObject())).andReturn(new URI[0]);
-    EasyMock.expect(workspace.read(anyObject()))
+    EasyMock.expect(workspace.getStream(anyObject(MediaPackageElement.class)))
             .andAnswer(() -> getClass().getResourceAsStream("/dc-1.xml")).anyTimes();
     EasyMock.replay(workspace);
     service.setWorkspace(workspace);

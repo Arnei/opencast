@@ -502,7 +502,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       try {
         // We first have to copy the media package element into the workspace
         final MediaPackageElement element = (MediaPackageElement) e.clone();
-        try (InputStream inputStream = workspace.read(element.getURI())) {
+        try (InputStream inputStream = workspace.getStream(element)) {
           final URI tmpUri = workspace.put(destination.getIdentifier().toString(), element.getIdentifier(),
               FilenameUtils.getName(element.getURI().toString()), inputStream);
           temporaryFiles.add(tmpUri);

@@ -47,6 +47,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
@@ -83,8 +84,8 @@ public class AbstractFileSystemAssetStoreTest {
   public void setUp() throws Exception {
     final File asset = IoSupport.classPathResourceAsFile("/" + FILE_NAME).get();
     final Workspace workspace = EasyMock.createNiceMock(Workspace.class);
-    EasyMock.expect(workspace.get(EasyMock.anyObject())).andReturn(asset);
-    EasyMock.expect(workspace.get(EasyMock.anyObject(), EasyMock.anyBoolean())).andAnswer(() -> {
+//    EasyMock.expect(workspace.get(EasyMock.anyObject(URI.class))).andReturn(asset).anyTimes();
+    EasyMock.expect(workspace.get(EasyMock.anyObject(URI.class))).andAnswer(() -> {
       File tmp = tmpFolder.newFile();
       FileUtils.copyFile(asset, tmp);
       return tmp;

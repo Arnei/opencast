@@ -1348,7 +1348,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
           File file = null;
           try {
             logger.trace("Calculate checksum for {}", mpe.getURI());
-            file = workspace.get(mpe.getURI(), true);
+            file = workspace.get(mpe);
             mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, file));
           } catch (IOException | NotFoundException e) {
             throw new AssetManagerException(String.format(
@@ -1564,7 +1564,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
       EventIndexUtils.updateEvent(event, mp);
 
       for (Catalog catalog: mp.getCatalogs(MediaPackageElements.EPISODE)) {
-        try (InputStream in = workspace.read(catalog.getURI())) {
+        try (InputStream in = workspace.getStream(catalog)) {
           EventIndexUtils.updateEvent(event, DublinCores.read(in));
         } catch (IOException | NotFoundException e) {
           throw new IllegalStateException(String.format("Unable to load dublin core catalog for event '%s'",
@@ -1577,7 +1577,7 @@ public class AssetManagerImpl extends AbstractIndexProducer implements AssetMana
       for (EventCatalogUIAdapter extendedCatalogUIAdapter : extendedEventCatalogUIAdapters.getOrDefault(orgId,
               Collections.emptyList())) {
         for (Catalog catalog: mp.getCatalogs(extendedCatalogUIAdapter.getFlavor())) {
-          try (InputStream in = workspace.read(catalog.getURI())) {
+          try (InputStream in = workspace.getStream(catalog)) {
             EventIndexUtils.updateEventExtendedMetadata(event, DublinCores.read(in),
                     extendedCatalogUIAdapter.getFlavor());
           } catch (IOException | NotFoundException e) {

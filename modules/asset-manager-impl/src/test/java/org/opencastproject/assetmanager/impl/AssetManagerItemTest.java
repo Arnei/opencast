@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem;
 import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem.DeleteEpisode;
 import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem.TakeSnapshot;
@@ -52,7 +53,7 @@ public class AssetManagerItemTest {
     final Workspace workspace = EasyMock.createNiceMock(Workspace.class);
     EasyMock.expect(workspace.get(EasyMock.anyObject(URI.class)))
             .andReturn(new File(getClass().getResource("/dublincore-a.xml").toURI())).once();
-    EasyMock.expect(workspace.read(EasyMock.anyObject(URI.class)))
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class)))
             .andAnswer(() -> getClass().getResourceAsStream("/dublincore-a.xml")).once();
     EasyMock.replay(workspace);
     final MediaPackage mp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew();

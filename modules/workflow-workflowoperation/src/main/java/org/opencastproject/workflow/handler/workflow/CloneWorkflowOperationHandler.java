@@ -177,8 +177,7 @@ public class CloneWorkflowOperationHandler extends AbstractWorkflowOperationHand
     File sourceFile = null;
     String toFileName = null;
     try {
-      URI sourceURI = element.getURI();
-      sourceFile = workspace.get(sourceURI);
+      sourceFile = workspace.get(element);
 
       toFileName = newElement.getIdentifier();
       String extension = FilenameUtils.getExtension(sourceFile.getName());
@@ -188,7 +187,7 @@ public class CloneWorkflowOperationHandler extends AbstractWorkflowOperationHand
       logger.debug("Start copying element {} to target {}.", sourceFile.getPath(), toFileName);
 
       URI newUri = workspace.put(element.getMediaPackage().getIdentifier().toString(), newElement.getIdentifier(),
-              toFileName, workspace.read(sourceURI));
+              toFileName, workspace.getStream(element));
       newElement.setURI(newUri);
       newElement.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.get(newUri)));
 

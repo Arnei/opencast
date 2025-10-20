@@ -24,6 +24,7 @@ package org.opencastproject.workflow.handler.workflow;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowInstance.WorkflowState;
@@ -73,7 +74,8 @@ public class CloneWorkflowOperationHandlerTest {
 
     // Prepare file to returne from workflow
     File videoFile = new File(getClass().getResource("/av.mov").toURI());
-    EasyMock.expect(workspace.get((URI) EasyMock.anyObject())).andReturn(videoFile).anyTimes();
+    EasyMock.expect(workspace.get(EasyMock.anyObject(MediaPackageElement.class))).andReturn(videoFile).anyTimes();
+    EasyMock.expect(workspace.get(EasyMock.anyObject(URI.class))).andReturn(videoFile).anyTimes();
     EasyMock.replay(workspace);
 
     operationHandler.setWorkspace(workspace);

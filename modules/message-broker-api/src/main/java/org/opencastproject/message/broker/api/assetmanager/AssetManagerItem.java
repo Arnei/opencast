@@ -236,7 +236,7 @@ public abstract class AssetManagerItem implements MessageItem, Serializable {
   public static TakeSnapshot add(Workspace workspace, MediaPackage mp, AccessControlList acl, long version, Date date) {
     String dcXml = null;
     for (Catalog catalog: mp.getCatalogs(MediaPackageElements.EPISODE)) {
-      try (InputStream in = workspace.read(catalog.getURI())) {
+      try (InputStream in = workspace.getStream(catalog)) {
         dcXml = IOUtils.toString(in, StandardCharsets.UTF_8);
       } catch (Exception e) {
         throw new IllegalStateException(String.format("Unable to load dublin core catalog for event '%s'",

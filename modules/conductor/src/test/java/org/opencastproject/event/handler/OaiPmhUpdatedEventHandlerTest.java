@@ -114,7 +114,8 @@ public class OaiPmhUpdatedEventHandlerTest extends EasyMockSupport {
     props.put(OaiPmhUpdatedEventHandler.CFG_TAGS, "archive");
     cut.updated(props);
 
-    expect(workspace.read(anyObject())).andAnswer(() -> getClass().getResourceAsStream("/episode.xml")).anyTimes();
+    expect(workspace.getStream(anyObject(MediaPackageElement.class)))
+        .andAnswer(() -> getClass().getResourceAsStream("/episode.xml")).anyTimes();
   }
 
   /**

@@ -24,6 +24,7 @@ import org.opencastproject.mediapackage.EName;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
@@ -95,7 +96,7 @@ public class SeriesWorkflowOperationHandlerTest {
     capturedStream = Capture.newInstance(CaptureType.FIRST);
     Workspace workspace = EasyMock.createNiceMock(Workspace.class);
     EasyMock.expect(workspace.get(EasyMock.anyObject(URI.class))).andReturn(file).anyTimes();
-    EasyMock.expect(workspace.read(EasyMock.anyObject(URI.class)))
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class)))
             .andAnswer(() -> getClass().getResourceAsStream("/dublincore.xml")).anyTimes();
     EasyMock.expect(workspace.put(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString(),
             EasyMock.capture(capturedStream))).andReturn(uri).anyTimes();

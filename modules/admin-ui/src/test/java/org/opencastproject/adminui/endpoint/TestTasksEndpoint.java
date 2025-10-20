@@ -118,7 +118,7 @@ public class TestTasksEndpoint extends TasksEndpoint {
     Workspace workspace = createNiceMock(Workspace.class);
     expect(workspace.get(anyObject(URI.class)))
             .andReturn(new File(getClass().getResource("/processing-properties.xml").toURI())).anyTimes();
-    expect(workspace.get(anyObject(URI.class), EasyMock.anyBoolean())).andAnswer(() -> {
+    expect(workspace.get(anyObject(URI.class))).andAnswer(() -> {
         File tmp = new File(baseDir, UUID.randomUUID().toString() + "-processing-properties.xml");
         FileUtils.copyFile(new File(getClass().getResource("/processing-properties.xml").toURI()), tmp);
         return tmp;

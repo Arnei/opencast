@@ -672,6 +672,12 @@
                 "2": "${metadata.series} - ${metadata.seriestitle}",
                 "3": "${metadata.presenters}"
             }
+        },
+        "org.opencast.paella.textboxPlugin": {
+          "enabled": true
+        },
+        "org.opencast.paella.quizPlugin": {
+          "enabled": true
         }
     }
 }

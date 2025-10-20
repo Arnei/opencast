@@ -364,13 +364,12 @@ public class WebvttToCutMarksWorkflowOperationHandler extends AbstractWorkflowOp
     if (webvttElements.length != 1) {
       throw new WorkflowOperationException("Couldn't uniqly identify WebVTT Element");
     }
-    URI webvttURI = webvttElements[0].getURI();
 
     // read and parse WebVTT Element
     InputStream webvttIS = null;
     WebVTTSubtitle webvtt;
     try {
-      webvttIS = workspace.read(webvttURI);
+      webvttIS = workspace.getStream(webvttElements[0]);
       WebVTTParser wvparser = new WebVTTParser();
 
       webvtt = wvparser.parse(webvttIS);
@@ -386,7 +385,7 @@ public class WebvttToCutMarksWorkflowOperationHandler extends AbstractWorkflowOp
           logger.debug("WebVTT InputStream is null (mediapackage {})", mp.getIdentifier().toString());
         }
       } catch (IOException e) {
-        logger.warn("Couldn't close '{}' properly (mediapackage {})", webvttURI.toString(), mp.getIdentifier().toString());
+        logger.warn("Couldn't close '{}' properly (mediapackage {})", webvttElements[0].getURI().toString(), mp.getIdentifier().toString());
       }
     }
 

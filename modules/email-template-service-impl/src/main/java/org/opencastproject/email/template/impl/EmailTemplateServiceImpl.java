@@ -169,7 +169,7 @@ public class EmailTemplateServiceImpl implements EmailTemplateService {
 
     for (Catalog c : catalogElements) {
       DublinCoreCatalog dc;
-      try (InputStream in = workspace.read(c.getURI())) {
+      try (InputStream in = workspace.getStream(c)) {
         dc = DublinCores.read(in);
       } catch (Exception e) {
         logger.warn("Error when populating catalog data", e);

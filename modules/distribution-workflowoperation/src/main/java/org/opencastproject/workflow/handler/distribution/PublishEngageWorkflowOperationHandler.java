@@ -405,10 +405,9 @@ public class PublishEngageWorkflowOperationHandler extends AbstractWorkflowOpera
 
         if (StringUtils.isBlank(mediaPackageForSearch.getTitle())) {
           var dcUri = Arrays.stream(mediaPackageForSearch.getCatalogs(MediaPackageElements.EPISODE))
-              .findFirst()
-              .map(MediaPackageElement::getURI);
+              .findFirst();
           if (dcUri.isPresent()) {
-            try (var in = workspace.read(dcUri.get())) {
+            try (var in = workspace.getStream(dcUri.get())) {
               DublinCoreXmlFormat.read(in)
                   .get(DublinCore.PROPERTY_TITLE)
                   .stream()

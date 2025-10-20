@@ -71,13 +71,14 @@ public final class DublinCoreUtil {
   public static DublinCoreCatalog loadDublinCore(Workspace workspace, MediaPackageElement mpe) {
     URI uri = mpe.getURI();
     logger.debug("Loading DC catalog from {}", uri);
-    try (InputStream in = workspace.read(uri)) {
+    try (InputStream in = workspace.getStream(mpe)) {
       return DublinCores.read(in);
     } catch (Exception e) {
       logger.error("Unable to load metadata from catalog '{}'", mpe, e);
       throw new RuntimeException(e);
     }
   }
+
 
   /**
    * Define equality on DublinCoreCatalogs. Two DublinCores are considered equal if they have the same properties and if

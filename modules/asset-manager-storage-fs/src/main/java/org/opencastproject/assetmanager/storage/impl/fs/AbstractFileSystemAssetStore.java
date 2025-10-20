@@ -96,7 +96,7 @@ public abstract class AbstractFileSystemAssetStore implements AssetStore {
 
   private File getUniqueFileFromWorkspace(Source source) {
     try {
-      return getWorkspace().get(source.getUri(), true);
+      return getWorkspace().get(source.getUri());
     } catch (NotFoundException e) {
       logger.error("Source file '{}' does not exist", source.getUri());
       throw new AssetStoreException(e);

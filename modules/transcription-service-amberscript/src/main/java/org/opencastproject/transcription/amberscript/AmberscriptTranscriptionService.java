@@ -421,7 +421,7 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
 
     if (languageFromDublinCore) {
       for (Catalog catalog : track.getMediaPackage().getCatalogs(MediaPackageElements.EPISODE)) {
-        try (InputStream in = workspace.read(catalog.getURI())) {
+        try (InputStream in = workspace.getStream(catalog)) {
           DublinCoreCatalog dublinCatalog = DublinCores.read(in);
           String dublinCoreLang = dublinCatalog.getFirst(DublinCore.PROPERTY_LANGUAGE);
           if (dublinCoreLang != null) {
@@ -456,7 +456,7 @@ public class AmberscriptTranscriptionService extends AbstractJobProducer impleme
     if (speakerFromDublinCore) {
       Set<String> speakers = new HashSet<>();
       for (Catalog catalog : track.getMediaPackage().getCatalogs(MediaPackageElements.EPISODE)) {
-        try (InputStream in = workspace.read(catalog.getURI())) {
+        try (InputStream in = workspace.getStream(catalog)) {
           DublinCoreCatalog dublinCatalog = DublinCores.read(in);
           if (speakerMetadataField.equals(SpeakerMetadataField.creator)
                   || speakerMetadataField.equals(SpeakerMetadataField.both)) {

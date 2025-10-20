@@ -234,11 +234,14 @@ public class DuplicateEventWorkflowOperationHandlerTest {
     reset(workspace, assetManager, distributionService);
 
     URI uriDc = getClass().getResource("/dublincore.xml").toURI();
-    for (int i = 0; i < numberOfCopies; i++) {
-      expect(workspace.read(eq(URI.create("dublincore.xml")))).andReturn(new FileInputStream(new File(uriDc)))
-              .times(1);
-    }
-    expect(workspace.get(anyObject())).andReturn(new File(getClass().getResource("/av.mov").toURI())).anyTimes();
+    expect(workspace.getStream(anyObject(MediaPackageElement.class)))
+        .andReturn(new FileInputStream(new File(uriDc)))
+        .times(numberOfCopies);
+    //    for (int i = 0; i < numberOfCopies; i++) {
+//      expect(workspace.getStream(anyObject(MediaPackageElement.class))).andReturn(new FileInputStream(new File(uriDc)))
+//              .times(1);
+//    }
+    expect(workspace.get(anyObject(MediaPackageElement.class))).andReturn(new File(getClass().getResource("/av.mov").toURI())).anyTimes();
     expect(workspace.put(anyString(), anyString(), eq("dublincore.xml"), anyObject()))
         .andReturn(uriDc).times(numberOfCopies);
     replay(workspace);

@@ -37,6 +37,7 @@ import static org.xmlmatchers.xpath.XpathReturnType.returningANumber;
 
 import org.opencastproject.db.DBSession;
 import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageSupport;
 import org.opencastproject.metadata.dublincore.Precision;
 import org.opencastproject.oaipmh.Granularity;
@@ -257,7 +258,7 @@ public class OaiPmhRepositoryPersistenceTest {
               "/episode-dublincore.xml").toURI());
       final File seriesDublinCore = new File(OaiPmhRepositoryPersistenceTest.class
               .getResource("/series-dublincore.xml").toURI());
-      expect(workspace.read(EasyMock.anyObject())).andAnswer(() -> {
+      expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class))).andAnswer(() -> {
         final String uri = getCurrentArguments()[0].toString();
         if ("dublincore.xml".equals(uri))
           return new FileInputStream(episodeDublinCore);

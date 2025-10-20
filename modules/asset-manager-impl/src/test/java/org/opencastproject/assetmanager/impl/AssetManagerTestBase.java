@@ -128,9 +128,9 @@ public abstract class AssetManagerTestBase {
     final Workspace workspace = EasyMock.createNiceMock(Workspace.class);
     EasyMock.expect(workspace.get(EasyMock.anyObject(URI.class)))
             .andReturn(IoSupport.classPathResourceAsFile("/dublincore-a.xml").get()).anyTimes();
-    EasyMock.expect(workspace.read(EasyMock.anyObject(URI.class)))
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject(MediaPackageElement.class)))
             .andAnswer(() -> getClass().getResourceAsStream("/dublincore-a.xml")).anyTimes();
-    EasyMock.expect(workspace.get(EasyMock.anyObject(URI.class), EasyMock.anyBoolean())).andAnswer(() -> {
+    EasyMock.expect(workspace.get(EasyMock.anyObject(MediaPackageElement.class))).andAnswer(() -> {
       File tmp = tempFolder.newFile();
       FileUtils.copyFile(new File(getClass().getResource("/dublincore-a.xml").toURI()), tmp);
       return tmp;

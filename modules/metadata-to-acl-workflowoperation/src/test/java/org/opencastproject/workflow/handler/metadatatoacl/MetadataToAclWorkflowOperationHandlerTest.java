@@ -62,7 +62,7 @@ public class MetadataToAclWorkflowOperationHandlerTest {
 
     // Mock workspace
     Workspace workspace = EasyMock.createMock(Workspace.class);
-    EasyMock.expect(workspace.read(EasyMock.anyObject()))
+    EasyMock.expect(workspace.getStream(EasyMock.anyObject()))
             .andAnswer(() -> this.getClass().getResourceAsStream("/dublincore.xml"))
             .anyTimes();
 

@@ -1734,7 +1734,7 @@ public class IndexServiceImpl implements IndexService {
               URI catalogUrl = workspace.put(mp.getIdentifier().toString(), elementId, "dublincore.xml", in);
               MediaPackageElement mpe = mp.add(catalogUrl, MediaPackageElement.Type.Catalog, MediaPackageElements.SERIES);
               mpe.setIdentifier(elementId);
-              mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.read(catalogUrl)));
+              mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.getStream(catalogUrl)));
               if (StringUtils.isNotBlank(oldSeriesId)) {
                 for (String tag : seriesDcTags) {
                   mpe.addTag(tag);
@@ -1785,7 +1785,7 @@ public class IndexServiceImpl implements IndexService {
                 MediaPackageElement mpe = mp.add(catalogUrl, MediaPackageElement.Type.Catalog,
                         MediaPackageElementFlavor.flavor(seriesElementType, "series"));
                 mpe.setIdentifier(elementId);
-                mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.read(catalogUrl)));
+                mpe.setChecksum(Checksum.create(ChecksumType.DEFAULT_TYPE, workspace.getStream(catalogUrl)));
                 if (StringUtils.isNotBlank(oldSeriesId)) {
                   if (seriesExtDcTags.containsKey(seriesElementType)) {
                     for (String tag : seriesExtDcTags.get(seriesElementType)) {

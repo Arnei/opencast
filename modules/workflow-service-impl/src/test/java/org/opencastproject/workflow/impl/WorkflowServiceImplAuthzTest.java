@@ -34,6 +34,7 @@ import org.opencastproject.elasticsearch.index.ElasticsearchIndex;
 import org.opencastproject.elasticsearch.index.objects.event.EventSearchQuery;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.metadata.api.MediaPackageMetadataService;
 import org.opencastproject.security.api.AccessControlEntry;
 import org.opencastproject.security.api.AccessControlList;
@@ -190,7 +191,7 @@ public class WorkflowServiceImplAuthzTest {
     // Workspace
     workspace = EasyMock.createNiceMock(Workspace.class);
     EasyMock.expect(workspace.getCollectionContents((String) EasyMock.anyObject())).andReturn(new URI[0]);
-    EasyMock.expect(workspace.read(anyObject()))
+    EasyMock.expect(workspace.getStream(anyObject(MediaPackageElement.class)))
             .andAnswer(() -> getClass().getResourceAsStream("/dc-1.xml")).anyTimes();
     EasyMock.replay(workspace);
 

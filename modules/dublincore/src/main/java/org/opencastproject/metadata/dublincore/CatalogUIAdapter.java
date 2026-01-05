@@ -71,6 +71,8 @@ public interface CatalogUIAdapter {
    */
   DublinCoreMetadataCollection getRawFields();
 
+  DublinCoreMetadataCollection getRawFieldsWithoutCollection();
+
   /**
    * Returns all fields of this catalog in a raw data format. Allows to hand over custom queries to fill the collection
    * of a metadata field (defined by its output id) from a list provider.

@@ -140,6 +140,14 @@ public class DublinCoreMetadataCollection {
     }
   }
 
+  public void addFieldWithoutCollection(final MetadataField metadataField, final Optional<String> valueOpt, final ListProvidersService listProvidersService) {
+    if (valueOpt.isPresent()) {
+      addFieldWithoutCollection(metadataField, Collections.singletonList(valueOpt.get()), listProvidersService);
+    } else {
+      addFieldWithoutCollection(metadataField, Collections.emptyList(), listProvidersService);
+    }
+  }
+
   /**
    * Set value to a metadata field of unknown type
    */
@@ -214,6 +222,18 @@ public class DublinCoreMetadataCollection {
 
     metadataField.setIsTranslatable(getCollectionIsTranslatable(metadataField, listProvidersService));
     metadataField.setCollection(getCollection(metadataField, listProvidersService, collectionQueryOverrideOpt));
+
+    addField(metadataField);
+  }
+
+  public void addFieldWithoutCollection(final MetadataField metadataField, final List<String> values, final ListProvidersService listProvidersService) {
+    final List<String> filteredValues = values.stream().filter(StringUtils::isNotBlank).collect(Collectors.toList());
+
+    if (!filteredValues.isEmpty()) {
+      setValueFromDCCatalog(filteredValues, metadataField);
+    }
+
+    metadataField.setIsTranslatable(getCollectionIsTranslatable(metadataField, listProvidersService));
 
     addField(metadataField);
   }

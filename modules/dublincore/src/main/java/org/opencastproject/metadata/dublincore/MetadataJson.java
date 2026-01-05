@@ -59,6 +59,7 @@ public final class MetadataJson {
   private static final String JSON_KEY_VALUE = "value";
   private static final String JSON_KEY_COLLECTION = "collection";
   private static final String JSON_KEY_TRANSLATABLE = "translatable";
+  private static final String JSON_KEY_LISTPROVIDER = "listprovider";
   private static final String JSON_KEY_DELIMITER = "delimiter";
   private static final String JSON_KEY_DIFFERENT_VALUES = "differentValues";
   private static final String KEY_METADATA_TITLE = "title";
@@ -377,6 +378,9 @@ public final class MetadataJson {
 
     if (f.isTranslatable() != null) {
       json.addProperty(JSON_KEY_TRANSLATABLE, f.isTranslatable());
+    }
+    if (f.getListprovider() != null) {
+      json.addProperty(JSON_KEY_LISTPROVIDER, f.getListprovider());
     }
     if (f.getDelimiter() != null) {
       json.addProperty(JSON_KEY_DELIMITER, f.getDelimiter());

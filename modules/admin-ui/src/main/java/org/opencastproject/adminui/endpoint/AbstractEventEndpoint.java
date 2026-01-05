@@ -2401,7 +2401,8 @@ public abstract class AbstractEventEndpoint {
     // We do this after extended metadata because we want to overwrite any extended metadata adapters with the same
     // flavor instead of the other way around.
     EventCatalogUIAdapter commonCatalogUiAdapter = getIndexService().getCommonEventCatalogUIAdapter();
-    DublinCoreMetadataCollection commonMetadata = commonCatalogUiAdapter.getRawFields(getCollectionQueryDisable());
+    DublinCoreMetadataCollection commonMetadata = commonCatalogUiAdapter.getRawFieldsWithoutCollection();
+//    DublinCoreMetadataCollection commonMetadata = commonCatalogUiAdapter.getRawFields(getCollectionQueryDisable());
 
     if (commonMetadata.getOutputFields().containsKey(DublinCore.PROPERTY_CREATED.getLocalName()))
       commonMetadata.removeField(commonMetadata.getOutputFields().get(DublinCore.PROPERTY_CREATED.getLocalName()));

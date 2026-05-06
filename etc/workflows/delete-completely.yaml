@@ -1,0 +1,40 @@
+id: delete-completely
+title: Delete Completely
+tags:
+  - archive
+description: |-
+  Blood for the blood god
+state-mappings:
+  - state: running
+    value: EVENTS.EVENTS.STATE_MAPPING.DELETING
+  - state: failing
+    value: EVENTS.EVENTS.STATE_MAPPING.DELETING
+operations:
+  - id: include
+    description: Retract the recording
+    configurations:
+      - workflow-id: retract
+
+  - id: retract-configure
+    exception-handler-workflow: partial-error
+    description: Retract from internal publication channel
+    configurations:
+      - channel-id: internal
+
+  - id: snapshot
+    exception-handler-workflow: partial-error
+    description: Archiving state of retracted recording
+
+  - id: delete-event
+    exception-handler-workflow: partial-error
+    description: Actually delete the event
+
+  - id: cleanup
+    fail-on-error: false
+    description: Remove temporary processing artifacts
+    configurations:
+      # On systems with shared workspace or working file repository
+      # you want to set this option to false.
+      - delete-external: true
+      # ACLs are required again when working through ActiveMQ messages
+      - preserve-flavors: security/*

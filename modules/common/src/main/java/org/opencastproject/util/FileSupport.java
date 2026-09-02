@@ -377,24 +377,30 @@ public final class FileSupport {
 
   /** Compare two files by their canonical paths. */
   public static boolean isEqual(File a, File b) {
-    try {
-      return a.getCanonicalPath().equals(b.getCanonicalPath());
-    } catch (IOException e) {
-      return false;
-    }
+    return realOrNormalizedPath(a).equals(realOrNormalizedPath(b));
   }
 
   /**
    * Check if <code>a</code> is a parent of <code>b</code>. This can only be the case if <code>a</code> is a directory
-   * and a sub path of <code>b</code>. <code>isParent(a, a) == true</code>.
+   * and a sub path of <code>b</code>. <code>isParent(a, a) == false</code>.
    */
   public static boolean isParent(File a, File b) {
+    final Path aPath = realOrNormalizedPath(a);
+    final Path bPath = realOrNormalizedPath(b);
+    return !aPath.equals(bPath) && bPath.startsWith(aPath);
+  }
+
+  /**
+   * Resolves symlinks and normalizes the path of <code>f</code>, the way {@link File#getCanonicalPath()} would, but
+   * without requiring <code>f</code> to exist: existing files are resolved with {@link Path#toRealPath}, and files
+   * that don't exist fall back to lexical normalization only.
+   */
+  private static Path realOrNormalizedPath(File f) {
+    final Path path = f.toPath();
     try {
-      final String aCanonical = a.getCanonicalPath();
-      final String bCanonical = b.getCanonicalPath();
-      return (!aCanonical.equals(bCanonical) && bCanonical.startsWith(aCanonical));
+      return path.toRealPath();
     } catch (IOException e) {
-      return false;
+      return path.toAbsolutePath().normalize();
     }
   }
 

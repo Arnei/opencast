@@ -33,10 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -110,14 +107,6 @@ public final class FileSupport {
    */
   public static File copy(File sourceFile, File targetFile, boolean overwrite) throws IOException {
 
-    // This variable is used when the channel copy files, and stores the maximum size of the file parts copied from
-    // source to target
-    final int chunk = 1024 * 1024 * 512; // 512 MB
-
-    // This variable is used when the cannel copy fails completely, as the size of the memory buffer used to copy the
-    // data from one stream to the other.
-    final int bufferSize = 1024 * 1024; // 1 MB
-
     File dest = determineDestination(targetFile, sourceFile, overwrite);
 
     // We are copying a directory
@@ -135,68 +124,8 @@ public final class FileSupport {
       // If dest is not an "absolute file", getParentFile may return null, even if there *is* a parent file.
       // That's why "getAbsoluteFile" is used here
       dest.getAbsoluteFile().getParentFile().mkdirs();
-      if (dest.exists()) {
-        delete(dest);
-      }
-
-      FileChannel sourceChannel = null;
-      FileChannel targetChannel = null;
-      FileInputStream sourceStream = null;
-      FileOutputStream targetStream = null;
-      long size = 0;
-
-      try {
-        sourceStream = new FileInputStream(sourceFile);
-        targetStream = new FileOutputStream(dest);
-        try {
-          sourceChannel = sourceStream.getChannel();
-          targetChannel = targetStream.getChannel();
-          size = targetChannel.transferFrom(sourceChannel, 0, sourceChannel.size());
-        } catch (IOException ioe) {
-          logger.warn("Got IOException using Channels for copying.");
-        } finally {
-          // This has to be in "finally", because in 64-bit machines the channel copy may fail to copy the whole file
-          // without causing a exception
-          if ((sourceChannel != null) && (targetChannel != null) && (size < sourceFile.length())) {
-            // Failing back to using FileChannels *but* with chunks and not altogether
-            logger.info("Trying to copy the file in chunks using Channels");
-            while (size < sourceFile.length()) {
-              size += targetChannel.transferFrom(sourceChannel, size, chunk);
-            }
-          }
-        }
-      } catch (IOException ioe) {
-        if ((sourceStream != null) && (targetStream != null) && (size < sourceFile.length())) {
-          logger.warn("Got IOException using Channels for copying in chunks. Trying to use stream copy instead...");
-          int copied = 0;
-          byte[] buffer = new byte[bufferSize];
-          while ((copied = sourceStream.read(buffer, 0, buffer.length)) != -1) {
-            targetStream.write(buffer, 0, copied);
-          }
-        } else {
-          throw ioe;
-        }
-      } finally {
-        if (sourceChannel != null) {
-          sourceChannel.close();
-        }
-        if (sourceStream != null) {
-          sourceStream.close();
-        }
-        if (targetChannel != null) {
-          targetChannel.close();
-        }
-        if (targetStream != null) {
-          targetStream.close();
-        }
-      }
-
-      if (sourceFile.length() != dest.length()) {
-        logger.warn("Source " + sourceFile + " and target " + dest + " do not have the same length");
-        // TOOD: Why would this happen?
-        // throw new IOException("Source " + sourceLocation + " and target " +
-        // dest + " do not have the same length");
-      }
+      // determineDestination already guarantees that dest either doesn't exist or overwrite is true
+      Files.copy(sourceFile.toPath(), dest.toPath(), REPLACE_EXISTING);
     }
     return dest;
   }
